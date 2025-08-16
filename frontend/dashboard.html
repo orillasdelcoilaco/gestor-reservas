@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Gestor de Reservas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+
+    <div class="min-h-screen">
+        <nav class="bg-white shadow-md">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <div class="flex-shrink-0">
+                        <h1 class="text-2xl font-bold text-gray-800">Gestor de Reservas</h1>
+                    </div>
+                    <div id="auth-info" class="flex items-center space-x-4">
+                        </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="px-4 py-6 sm:px-0">
+                <div class="bg-white p-8 rounded-lg shadow-lg">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-4">Bienvenido al Dashboard</h2>
+                    <p class="text-gray-600 mb-6">Desde aquí podrás gestionar todas las funcionalidades de tu complejo turístico. Selecciona una opción del menú para comenzar.</p>
+                    
+                    <div id="menu-funcionalidades" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <a href="#" class="bg-gray-200 p-6 rounded-lg text-center font-semibold text-gray-700 hover:bg-gray-300 transition">
+                            Ver Reservas Activas (Próximamente)
+                        </a>
+                        <a href="#" class="bg-gray-200 p-6 rounded-lg text-center font-semibold text-gray-700 hover:bg-gray-300 transition">
+                            Generar Mensajes (Próximamente)
+                        </a>
+                         <a href="#" class="bg-gray-200 p-6 rounded-lg text-center font-semibold text-gray-700 hover:bg-gray-300 transition">
+                            Subir Reportes (Próximamente)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
+            authDomain: "reservas-sodc.firebaseapp.com",
+            projectId: "reservas-sodc",
+            storageBucket: "reservas-sodc.appspot.com",
+            messagingSenderId: "17783383809",
+            appId: "1:17783383809:web:329694a3dc2df074f7d800"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const authInfo = document.getElementById('auth-info');
+
+        // Protege la página: si no hay usuario, lo manda al login
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // Si hay usuario, muestra su email y el botón para cerrar sesión
+                authInfo.innerHTML = `
+                    <span class="text-sm text-gray-600">${user.email}</span>
+                    <button id="logout-btn" class="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700">
+                        Cerrar Sesión
+                    </button>
+                `;
+                document.getElementById('logout-btn').addEventListener('click', async () => {
+                    await signOut(auth);
+                });
+            } else {
+                // Si no hay usuario, lo redirige a la página de login
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Reservas - Iniciar Sesión</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+    <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
+                <input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <div>
+                <label for="login-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                <input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Acceder
+            </button>
+        </form>
+        <p id="login-error" class="text-red-500 text-center mt-4 hidden"></p>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+
+        // --- Configuración de Firebase ---
+        // ¡IMPORTANTE! Reemplaza esto con la configuración de tu proyecto de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
+            authDomain: "reservas-sodc.firebaseapp.com",
+            projectId: "reservas-sodc",
+            storageBucket: "reservas-sodc.appspot.com",
+            messagingSenderId: "17783383809",
+            appId: "1:17783383809:web:329694a3dc2df074f7d800"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+
+        // Si el usuario ya está logueado, lo redirige al dashboard
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                window.location.href = 'dashboard.html';
+            }
+        });
+
+        // Maneja el evento de login
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = loginForm['login-email'].value;
+            const password = loginForm['login-password'].value;
+
+            try {
+                loginError.classList.add('hidden');
+                await signInWithEmailAndPassword(auth, email, password);
+                // La redirección la maneja onAuthStateChanged
+            } catch (error) {
+                console.error("Falló el inicio de sesión:", error.message);
+                loginError.textContent = 'Credenciales incorrectas. Inténtalo de nuevo.';
+                loginError.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -5,36 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Gestor de Reservas</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
 <body class="bg-gray-100">
 
     <div class="min-h-screen">
-        <nav class="bg-white shadow-md">
+        <!-- Barra de Navegación Superior -->
+        <nav class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     <div class="flex-shrink-0">
-                        <h1 class="text-2xl font-bold text-gray-800">Gestor de Reservas</h1>
+                        <h1 class="text-xl font-bold text-gray-800">Gestor de Reservas</h1>
                     </div>
                     <div id="auth-info" class="flex items-center space-x-4">
-                        </div>
+                        <!-- Se rellena con JS -->
+                    </div>
                 </div>
             </div>
         </nav>
 
+        <!-- Contenido Principal -->
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="px-4 py-6 sm:px-0">
-                <div class="bg-white p-8 rounded-lg shadow-lg">
-                    <h2 class="text-3xl font-bold text-gray-900 mb-4">Bienvenido al Dashboard</h2>
-                    <p class="text-gray-600 mb-6">Desde aquí podrás gestionar todas las funcionalidades de tu complejo turístico. Selecciona una opción del menú para comenzar.</p>
+                <div class="bg-white p-8 rounded-lg shadow">
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-4">Bienvenido al Dashboard</h2>
+                    <p class="text-gray-600 mb-6">Selecciona una funcionalidad para comenzar a gestionar tu complejo.</p>
                     
+                    <!-- Menú de Funcionalidades -->
                     <div id="menu-funcionalidades" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <a href="#" class="bg-gray-200 p-6 rounded-lg text-center font-semibold text-gray-700 hover:bg-gray-300 transition">
-                            Ver Reservas Activas (Próximamente)
+                        <!-- CAMBIO: El primer enlace ahora es funcional -->
+                        <a href="reservas.html" class="bg-indigo-50 border border-indigo-200 p-6 rounded-lg text-center font-medium text-indigo-800 hover:bg-indigo-100 hover:shadow-sm transition">
+                            Ver Reservas Activas
                         </a>
-                        <a href="#" class="bg-gray-200 p-6 rounded-lg text-center font-semibold text-gray-700 hover:bg-gray-300 transition">
+                        <a href="#" class="bg-gray-50 border border-gray-200 p-6 rounded-lg text-center font-medium text-gray-600 hover:bg-gray-100 hover:shadow-sm transition">
                             Generar Mensajes (Próximamente)
                         </a>
-                         <a href="#" class="bg-gray-200 p-6 rounded-lg text-center font-semibold text-gray-700 hover:bg-gray-300 transition">
+                        <a href="#" class="bg-gray-50 border border-gray-200 p-6 rounded-lg text-center font-medium text-gray-600 hover:bg-gray-100 hover:shadow-sm transition">
                             Subir Reportes (Próximamente)
                         </a>
                     </div>
@@ -60,21 +71,16 @@
         const auth = getAuth(app);
         const authInfo = document.getElementById('auth-info');
 
-        // Protege la página: si no hay usuario, lo manda al login
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // Si hay usuario, muestra su email y el botón para cerrar sesión
                 authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600">${user.email}</span>
-                    <button id="logout-btn" class="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-md hover:bg-red-700">
+                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
+                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">
                         Cerrar Sesión
                     </button>
                 `;
-                document.getElementById('logout-btn').addEventListener('click', async () => {
-                    await signOut(auth);
-                });
+                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
             } else {
-                // Si no hay usuario, lo redirige a la página de login
                 window.location.href = 'index.html';
             }
         });

@@ -10,7 +10,7 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-1.00">
     <div class="min-h-screen">
         <!-- Barra de Navegación -->
         <nav class="bg-white shadow-sm">
@@ -25,19 +25,24 @@
         <!-- Contenido Principal -->
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-8 rounded-lg shadow">
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Bienvenido al Dashboard</h2>
-                <p class="text-gray-600 mb-6">Selecciona una funcionalidad para comenzar.</p>
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo</h2>
+                <p class="text-gray-600 mb-6">Sigue estos pasos en orden para actualizar y gestionar tus reservas.</p>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- CAMBIO: Este es el nuevo flujo principal -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Paso 1: Sincronizar -->
                     <a href="sincronizar.html" class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow">
-                        1. Sincronizar y Cargar Datos
+                        <span class="text-3xl">①</span>
+                        <p class="mt-2">Sincronizar y Cargar Datos</p>
                     </a>
-                    <a href="reservas.html" class="bg-white border border-gray-200 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">
-                        2. Ver Reservas Consolidadas
+                    <!-- Paso 2: Procesar -->
+                    <a href="procesar.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow">
+                        <span class="text-3xl">②</span>
+                        <p class="mt-2">Procesar y Consolidar</p>
                     </a>
-                    <a href="#" class="bg-white border border-gray-200 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">
-                        Generar Mensajes (Próximamente)
+                    <!-- Paso 3: Ver Reservas -->
+                    <a href="reservas.html" class="bg-white border border-gray-300 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">
+                        <span class="text-3xl">③</span>
+                        <p class="mt-2">Ver Reservas Consolidadas</p>
                     </a>
                 </div>
             </div>

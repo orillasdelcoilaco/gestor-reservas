@@ -4,18 +4,17 @@ const admin = require('firebase-admin');
 
 // --- Importar archivos de rutas ---
 const reservasRoutes = require('./routes/reservas');
-const sincronizarRoutes = require('./routes/sincronizar'); // <-- AÑADIDO
+const sincronizarRoutes = require('./routes/sincronizar');
+const consolidarRoutes = require('./routes/consolidar'); // <-- AÑADIDO
 
-// --- Inicialización de Firebase Admin SDK (Método Robusto) ---
+// --- Inicialización de Firebase Admin SDK ---
 if (process.env.RENDER) {
-  // En producción (Render)
   const serviceAccount = require('/etc/secrets/serviceAccountKey.json');
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
   console.log("Firebase Admin SDK inicializado en modo Producción (Render).");
 } else {
-  // En desarrollo (local)
   const serviceAccount = require('./serviceAccountKey.json');
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -37,7 +36,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api', reservasRoutes(db));
-app.use('/api', sincronizarRoutes(db)); // <-- AÑADIDO
+app.use('/api', sincronizarRoutes(db));
+app.use('/api', consolidarRoutes(db)); // <-- AÑADIDO
 
 // --- Iniciar el Servidor ---
 app.listen(PORT, () => {

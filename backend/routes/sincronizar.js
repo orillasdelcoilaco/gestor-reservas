@@ -3,7 +3,7 @@ const router = express.Router();
 const driveService = require('../services/driveService');
 const config = require('../config');
 const csv = require('csv-parser');
-const XLSX = require('xlsx'); // <-- USAMOS LA NUEVA LIBRERÍA XLSX (SheetJS)
+const XLSX = require('xlsx'); // Usamos la librería robusta para .xls y .xlsx
 const stream = require('stream');
 
 /**
@@ -24,15 +24,15 @@ function parseCsvStream(fileStream) {
 
 /**
  * Convierte un stream de datos a un buffer de memoria.
- * @param {stream.Readable} stream - El stream de entrada.
+ * @param {stream.Readable} streamValue - El stream de entrada.
  * @returns {Promise<Buffer>} Una promesa que se resuelve con el buffer del stream.
  */
-function streamToBuffer(stream) {
+function streamToBuffer(streamValue) {
     return new Promise((resolve, reject) => {
         const chunks = [];
-        stream.on('data', (chunk) => chunks.push(chunk));
-        stream.on('end', () => resolve(Buffer.concat(chunks)));
-        stream.on('error', (err) => reject(err));
+        streamValue.on('data', (chunk) => chunks.push(chunk));
+        streamValue.on('end', () => resolve(Buffer.concat(chunks)));
+        streamValue.on('error', (err) => reject(err));
     });
 }
 
@@ -42,12 +42,10 @@ function streamToBuffer(stream) {
  * @returns {Promise<Array<Object>>} Una promesa que se resuelve con un array de objetos (filas).
  */
 async function parseExcelStream(fileStream) {
-    // La librería 'xlsx' necesita leer el archivo completo desde un buffer
     const buffer = await streamToBuffer(fileStream);
     const workbook = XLSX.read(buffer);
-    const sheetName = workbook.SheetNames[0]; // Tomamos la primera hoja
+    const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    // Convertimos la hoja a formato JSON
     const jsonData = XLSX.utils.sheet_to_json(worksheet);
     return jsonData;
 }
@@ -62,19 +60,24 @@ async function saveDataToFirestore(db, collectionName, data) {
     const collectionRef = db.collection(collectionName);
     console.log(`Borrando datos antiguos de la colección: ${collectionName}...`);
     
-    const snapshot = await collectionRef.limit(500).get();
-    if (snapshot.size > 0) {
-        const batchDelete = db.batch();
-        snapshot.docs.forEach(doc => batchDelete.delete(doc.ref));
-        await batchDelete.commit();
-    }
+    // Borra todos los documentos existentes en la colección en lotes de 500
+    let snapshot;
+    do {
+        snapshot = await collectionRef.limit(500).get();
+        if (snapshot.size > 0) {
+            const batchDelete = db.batch();
+            snapshot.docs.forEach(doc => batchDelete.delete(doc.ref));
+            await batchDelete.commit();
+        }
+    } while (snapshot.size > 0);
 
     console.log(`Guardando ${data.length} nuevos registros en ${collectionName}...`);
+    // Sube los nuevos datos en lotes de 500 para no exceder los límites de Firestore
     for (let i = 0; i < data.length; i += 500) {
         const batchUpload = db.batch();
         const chunk = data.slice(i, i + 500);
         chunk.forEach(row => {
-            const docRef = collectionRef.doc();
+            const docRef = collectionRef.doc(); // Firestore genera un ID automático
             batchUpload.set(docRef, row);
         });
         await batchUpload.commit();
@@ -99,6 +102,7 @@ module.exports = (db) => {
         booking: 'No se encontró archivo nuevo.',
       };
 
+      // Procesar y guardar archivo SODC (CSV)
       if (sodcFile) {
         console.log(`Descargando y procesando archivo SODC: ${sodcFile.name}`);
         const fileStream = await driveService.downloadFile(drive, sodcFile.id);
@@ -107,10 +111,10 @@ module.exports = (db) => {
         summary.sodc = `Archivo ${sodcFile.name} procesado. Se guardaron ${sodcData.length} registros.`;
       }
 
+      // Procesar y guardar archivo Booking (XLSX o XLS)
       if (bookingFile) {
         console.log(`Descargando y procesando archivo Booking: ${bookingFile.name}`);
         const fileStream = await driveService.downloadFile(drive, bookingFile.id);
-        // Usamos la nueva función para parsear Excel
         const bookingData = await parseExcelStream(fileStream);
         await saveDataToFirestore(db, 'reportes_booking_raw', bookingData);
         summary.booking = `Archivo ${bookingFile.name} procesado. Se guardaron ${bookingData.length} registros.`;

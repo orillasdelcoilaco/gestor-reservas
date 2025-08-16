@@ -3,7 +3,7 @@
 const config = {
   // ID de la carpeta en Google Drive donde se almacenan los reportes.
   // Reemplaza 'TU_ID_DE_CARPETA_AQUI' con el ID real de tu carpeta.
-  DRIVE_FOLDER_ID: '1xAZcGboZeYEf9hvYnmAy8jjUjK8X6PwE',
+  DRIVE_FOLDER_ID: '1ED6xW0Ti_nBgRr_EzbYJ9XG1AxvfiUrx',
 
   // Patrones para identificar los archivos de reporte.
   // No cambies esto a menos que los nombres de tus archivos cambien.

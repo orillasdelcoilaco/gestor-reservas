@@ -9,57 +9,61 @@
     module.exports = (db) => {
       /**
        * GET /api/reservas
-       * Obtiene una lista consolidada de todas las reservas de las colecciones
-       * 'reservasBooking' y 'reservasSODC'.
+       * Obtiene una lista consolidada de todas las reservas.
        */
       router.get('/reservas', async (req, res) => {
+        console.log("Petición recibida en /api/reservas"); // Log para saber que la ruta se activó
         try {
-          // Referencias a las colecciones en Firestore
           const reservasBookingRef = db.collection('reservasBooking');
           const reservasSODCRef = db.collection('reservasSODC');
 
-          // Realiza ambas consultas a la base de datos en paralelo para mayor eficiencia
           const [bookingSnapshot, sodcSnapshot] = await Promise.all([
             reservasBookingRef.get(),
             reservasSODCRef.get()
           ]);
 
+          console.log(`Se encontraron ${bookingSnapshot.size} reservas de Booking y ${sodcSnapshot.size} de SODC.`);
+
           const todasLasReservas = [];
 
-          // Procesa los documentos de la colección 'reservasBooking'
+          // Procesa las reservas de Booking de forma segura
           bookingSnapshot.forEach(doc => {
-            const data = doc.data();
-            // Normaliza los datos a un formato unificado
+            const data = doc.data() || {}; // Asegura que 'data' sea un objeto aunque no haya datos
             todasLasReservas.push({
               id: doc.id,
               canal: 'Booking',
-              nombre: data['Nombre del cliente (o clientes)'] || 'N/A',
-              llegada: data['Entrada'] || 'N/A',
-              salida: data['Salida'] || 'N/A',
-              estado: data['Estado'] || 'N/A'
+              // Usamos 'optional chaining' (?.) para evitar errores si un campo no existe
+              nombre: data['Nombre del cliente (o clientes)'] ?? 'N/A',
+              llegada: data['Entrada'] ?? 'N/A',
+              salida: data['Salida'] ?? 'N/A',
+              estado: data['Estado'] ?? 'N/A'
             });
           });
 
-          // Procesa los documentos de la colección 'reservasSODC'
+          // Procesa las reservas de SODC de forma segura
           sodcSnapshot.forEach(doc => {
-            const data = doc.data();
-            // Normaliza los datos a un formato unificado
+            const data = doc.data() || {}; // Asegura que 'data' sea un objeto
+            const nombreCompleto = `${data['Nombre'] || ''} ${data['Apellido'] || ''}`.trim();
             todasLasReservas.push({
               id: doc.id,
               canal: 'SODC',
-              nombre: `${data['Nombre'] || ''} ${data['Apellido'] || ''}`.trim() || 'N/A',
-              llegada: data['Día de llegada'] || 'N/A',
-              salida: data['Día de salida'] || 'N/A',
-              estado: data['Estado'] || 'N/A'
+              nombre: nombreCompleto || 'N/A',
+              llegada: data['Día de llegada'] ?? 'N/A',
+              salida: data['Día de salida'] ?? 'N/A',
+              estado: data['Estado'] ?? 'N/A'
             });
           });
-
-          // Envía la lista consolidada de reservas como respuesta
+          
+          console.log(`Procesamiento completado. Total de reservas: ${todasLasReservas.length}`);
           res.status(200).json(todasLasReservas);
 
         } catch (error) {
-          console.error("Error al obtener las reservas:", error);
-          res.status(500).json({ error: 'Error interno del servidor al obtener las reservas.' });
+          // Si ocurre un error, lo registramos con más detalle
+          console.error("ERROR DETALLADO al obtener las reservas:", error);
+          res.status(500).json({ 
+            error: 'Error interno del servidor al procesar las reservas.',
+            detalle: error.message 
+          });
         }
       });
 

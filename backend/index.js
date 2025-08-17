@@ -28,7 +28,12 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Middlewares ---
-app.use(cors());
+// --- Middlewares ---
+const corsOptions = {
+  origin: 'https://www.orillasdelcoilaco.cl',
+  optionsSuccessStatus: 200 // Para navegadores antiguos
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- Rutas ---

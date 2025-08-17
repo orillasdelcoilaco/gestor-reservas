@@ -35,7 +35,7 @@ function processDolarCsv(db, buffer) {
     readableStream.push(null);
 
     readableStream
-      .pipe(csv()) // Asume que las cabeceras son 'Dia' y 'Valor'
+      .pipe(csv({ separator: ';' })) // Especificamos que el separador es punto y coma
       .on('data', (data) => {
         // Limpieza y validación de cada fila
         const fechaStr = data.Dia;

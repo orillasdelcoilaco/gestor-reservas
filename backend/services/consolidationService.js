@@ -24,9 +24,19 @@ function parseCurrency(value) {
     return 0;
 }
 
+/**
+ * Limpia y normaliza un número de teléfono chileno.
+ * @param {string} phone - El número de teléfono.
+ * @returns {string|null} El número normalizado (ej: "56975180855") o null.
+ */
 function cleanPhoneNumber(phone) {
     if (!phone) return null;
-    return phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
+    let cleaned = phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
+    // **CORRECCIÓN: Si es un número chileno de 9 dígitos que empieza con 9, le añade el 56**
+    if (cleaned.length === 9 && cleaned.startsWith('9')) {
+        return `56${cleaned}`;
+    }
+    return cleaned;
 }
 
 function cleanCabanaName(cabanaName) {
@@ -49,10 +59,8 @@ async function processChannel(db, channel) {
         const rawData = doc.data();
         
         const isBooking = channel === 'Booking';
-        
-        // **CORRECCIÓN: Se añade '|| ""' para evitar el error si el campo está vacío**
         const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']) || "";
-        const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "";
+        const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre";
 
         const reservaData = {
             reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString() || `SIN_ID_${Date.now()}`,
@@ -74,9 +82,9 @@ async function processChannel(db, channel) {
             continue;
         }
 
-        let clienteId = reservaData.telefono ? reservaData.telefono : reservaData.email?.toLowerCase();
+        let clienteId = reservaData.telefono; // El teléfono es la clave principal
         if (!clienteId) {
-            console.warn(`Reserva omitida por falta de teléfono/email: ${reservaData.reservaIdOriginal}`);
+            console.warn(`Reserva omitida por falta de teléfono: ${reservaData.reservaIdOriginal}`);
             continue;
         }
         const clienteRef = db.collection('clientes').doc(clienteId);
@@ -118,7 +126,8 @@ async function processChannel(db, channel) {
                 valorOriginal: reservaData.alojamientos.length > 0 ? (reservaData.valorOriginal / reservaData.alojamientos.length) : 0,
                 valorCLP: valorCLP,
                 valorDolarDia: valorDolarDia,
-                clienteId: clienteId
+                clienteId: clienteId,
+                clienteNombre: reservaData.nombreCompleto // <-- GUARDAMOS EL NOMBRE AQUÍ
             }, { merge: true });
         }
         batch.delete(doc.ref);

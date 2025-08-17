@@ -4,28 +4,29 @@ const router = express.Router();
 module.exports = (db) => {
   /**
    * GET /api/reservas
-   * Obtiene la lista de reservas desde la colección consolidada 'reservas'.
+   * Obtiene la lista de reservas consolidadas, ordenadas por fecha de llegada.
    */
   router.get('/reservas', async (req, res) => {
     try {
       const reservasRef = db.collection('reservas');
-      const snapshot = await reservasRef.get();
+      // **CORRECCIÓN: Ordenamos por fecha de llegada, de más nueva a más antigua**
+      const snapshot = await reservasRef.orderBy('fechaLlegada', 'desc').get();
 
       if (snapshot.empty) {
-        return res.status(200).json([]); // Devuelve un array vacío si no hay reservas
+        return res.status(200).json([]);
       }
 
       const todasLasReservas = [];
       snapshot.forEach(doc => {
         const data = doc.data();
-        // Formateamos las fechas de Timestamp a un formato legible
         const llegada = data.fechaLlegada ? data.fechaLlegada.toDate().toLocaleDateString('es-CL') : 'N/A';
         const salida = data.fechaSalida ? data.fechaSalida.toDate().toLocaleDateString('es-CL') : 'N/A';
 
         todasLasReservas.push({
           id: doc.id,
           canal: data.canal || 'N/A',
-          nombre: data.clienteId || 'N/A', // Temporalmente mostramos el ID del cliente
+          // **CORRECCIÓN: Usamos el campo 'clienteNombre' que guardamos**
+          nombre: data.clienteNombre || 'Sin Nombre',
           llegada: llegada,
           salida: salida,
           estado: data.estado || 'N/A',

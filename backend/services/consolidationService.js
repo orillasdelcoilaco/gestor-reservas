@@ -7,22 +7,41 @@ function parseDate(dateValue) {
     if (!dateValue) return null;
     if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
     if (typeof dateValue === 'number') {
+        // Corrección para fechas de Excel
         return new Date(Date.UTC(1899, 11, 30, 0, 0, 0, 0) + dateValue * 86400000);
     }
     if (typeof dateValue === 'string') {
+        // Intenta parsear formatos como DD/MM/YYYY
         const date = new Date(dateValue.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
         if (!isNaN(date)) return date;
     }
     return null;
 }
 
-function parseCurrency(value) {
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-        return parseFloat(value.replace(/[^0-9.,-]/g, '').replace(',', '.')) || 0;
-    }
-    return 0;
+/**
+ * Parsea un valor monetario en formato string a un número, diferenciando por moneda.
+ * @param {string} value - El valor monetario como texto.
+ * @param {string} currency - La moneda ('CLP' o 'USD').
+ * @returns {number} El valor parseado como número.
+ */
+function parseCurrency(value, currency = 'USD') {
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') return 0;
+
+  if (currency === 'CLP') {
+    // Para CLP (ej: "$99.000"), removemos todo lo que no sea un dígito.
+    const digitsOnly = value.replace(/\D/g, '');
+    return parseInt(digitsOnly, 10) || 0;
+  }
+  
+  // Para USD (ej: "739.92 USD" o "1,234.56"), manejamos separadores de miles y decimales.
+  // Removemos todo excepto números, comas y puntos.
+  const numberString = value.replace(/[^0-9.,]/g, '');
+  // Asumimos que la coma es separador de miles y el punto es decimal.
+  const cleanedForFloat = numberString.replace(/,/g, '');
+  return parseFloat(cleanedForFloat) || 0;
 }
+
 
 /**
  * Limpia y normaliza un número de teléfono.
@@ -32,7 +51,6 @@ function parseCurrency(value) {
 function cleanPhoneNumber(phone) {
     if (!phone) return null;
     let cleaned = phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
-    // **CORRECCIÓN: Si es un número chileno de 9 dígitos que empieza con 9, le añade el 56**
     if (cleaned.length === 9 && cleaned.startsWith('9')) {
         return `56${cleaned}`;
     }
@@ -41,8 +59,6 @@ function cleanPhoneNumber(phone) {
 
 function cleanCabanaName(cabanaName) {
     if (!cabanaName) return '';
-    // Elimina la palabra " 1" solo si va precedida de un número (ej: "Cabaña 10 1" -> "Cabaña 10")
-    // pero no la eliminará de "Cabaña 1".
     let cleanedName = cabanaName.replace(/(\d+)(\s+1)$/, '$1').trim();
     return cleanedName;
 }
@@ -75,7 +91,8 @@ async function processChannel(db, channel) {
             fechaReserva: parseDate(isBooking ? rawData['Fecha de reserva'] : rawData['Fecha']),
             estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
             invitados: parseInt(rawData['Personas'] || rawData['Adultos/Invitados'] || 0),
-            valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total']),
+            // --- CAMBIO CLAVE AQUÍ ---
+            valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP'),
             monedaOriginal: isBooking ? 'USD' : 'CLP',
             alojamientos: alojamientosRaw.toString().split(',').map(c => cleanCabanaName(c.trim()))
         };
@@ -85,7 +102,7 @@ async function processChannel(db, channel) {
             continue;
         }
 
-        let clienteId = reservaData.telefono; // El teléfono es la clave principal
+        let clienteId = reservaData.telefono;
         if (!clienteId) {
             console.warn(`Reserva omitida por falta de teléfono: ${reservaData.reservaIdOriginal}`);
             continue;
@@ -130,7 +147,7 @@ async function processChannel(db, channel) {
                 valorCLP: valorCLP,
                 valorDolarDia: valorDolarDia,
                 clienteId: clienteId,
-                clienteNombre: reservaData.nombreCompleto // <-- GUARDAMOS EL NOMBRE AQUÍ
+                clienteNombre: reservaData.nombreCompleto
             }, { merge: true });
         }
         batch.delete(doc.ref);

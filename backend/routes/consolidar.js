@@ -1,21 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const { processChannel } = require('../services/consolidationService');
+const { updateTodaysDolarValue } = require('../services/dolarService'); // <-- 1. IMPORTAR
 
 module.exports = (db) => {
   /**
    * POST /api/consolidar
-   * Activa el proceso de consolidación para todos los canales.
-   * Lee los datos de las colecciones _raw, los procesa y los guarda en las colecciones finales.
+   * Actualiza el valor del dólar del día y luego consolida los datos de los canales.
    */
-  router.post('/consolidar', async (req, res) => {
+  router.post('/consolidar', async (req, res) => { // <-- 2. HACER ASYNC
     console.log('Iniciando proceso de consolidación de datos...');
     try {
+      // --- 3. NUEVO PASO ---
+      // Asegura que el valor del dólar de hoy esté actualizado antes de continuar.
+      await updateTodaysDolarValue(db);
+      console.log('Verificación del valor del dólar completada.');
+      // --- FIN NUEVO PASO ---
+
       // Ejecutamos el procesamiento para ambos canales en paralelo
       const [sodcSummary, bookingSummary] = await Promise.all([
         processChannel(db, 'SODC'),
         processChannel(db, 'Booking')
-        // A futuro, aquí podríamos añadir processChannel(db, 'Airbnb')
       ]);
 
       res.status(200).json({

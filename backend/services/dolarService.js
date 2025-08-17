@@ -9,6 +9,45 @@ const monthMap = {
 };
 
 /**
+ * ACTUALIZACIÓN DIARIA
+ * Verifica si el valor del dólar para el día de hoy existe en Firestore.
+ * Si no existe, lo obtiene de una API y lo guarda.
+ * @param {admin.firestore.Firestore} db - La instancia de Firestore.
+ */
+async function updateTodaysDolarValue(db) {
+  const today = new Date();
+  const dateStr = today.toISOString().split('T')[0];
+  const dolarRef = db.collection('valorDolar').doc(dateStr);
+
+  const doc = await dolarRef.get();
+  if (doc.exists) {
+    console.log(`El valor del dólar para hoy (${dateStr}) ya existe en la base de datos.`);
+    return;
+  }
+
+  console.log(`Valor para hoy (${dateStr}) no encontrado. Actualizando desde la API...`);
+  try {
+    const apiUrl = `https://api.frankfurter.app/latest?from=USD&to=CLP`;
+    const response = await fetch(apiUrl);
+    if (response.ok) {
+      const data = await response.json();
+      const valor = data.rates.CLP;
+      if (valor) {
+        await dolarRef.set({
+          valor: valor,
+          fecha: admin.firestore.Timestamp.fromDate(new Date(dateStr + 'T00:00:00Z')),
+        });
+        console.log(`Valor de hoy (${valor}) guardado exitosamente en Firestore.`);
+      }
+    } else {
+      console.error(`No se pudo obtener el valor de hoy desde la API. Status: ${response.status}`);
+    }
+  } catch (error) {
+    console.error('Error al actualizar el valor del dólar de hoy:', error.message);
+  }
+}
+
+/**
  * PROCESAMIENTO DE CSV TIPO MATRIZ (VERSIÓN ROBUSTA)
  * Lee un buffer de archivo CSV con formato de matriz (Día/Mes) y lo guarda en Firestore.
  * @param {admin.firestore.Firestore} db - La instancia de Firestore.
@@ -29,19 +68,14 @@ function processDolarCsv(db, buffer, year) {
     readableStream
       .pipe(csv({ separator: ';' }))
       .on('data', (row) => {
-        // LÓGICA A PRUEBA DE ERRORES: LEER POR POSICIÓN, NO POR NOMBRE
         const keys = Object.keys(row);
-        if (keys.length < 2) return; // Si la fila no tiene al menos día y un mes, la ignoramos.
+        if (keys.length < 2) return;
 
-        const dayHeader = keys[0]; // La primera columna siempre es el día
+        const dayHeader = keys[0];
         const day = parseInt(row[dayHeader]);
 
-        if (isNaN(day)) {
-            // console.log(`Fila ignorada, valor de día no es un número:`, row[dayHeader]);
-            return; 
-        }
+        if (isNaN(day)) return; 
 
-        // Iterar sobre el resto de las columnas (los meses)
         for (let i = 1; i < keys.length; i++) {
           const monthName = keys[i];
           const monthKey = monthName.trim().toLowerCase().substring(0, 3);
@@ -95,7 +129,13 @@ function processDolarCsv(db, buffer, year) {
   });
 }
 
-// --- La función getValorDolar se mantiene exactamente igual ---
+/**
+ * OBTENCIÓN DE VALOR PARA CONSOLIDACIÓN (LÓGICA MEJORADA)
+ * Obtiene el valor del dólar para una fecha. Si no existe, busca el del día anterior más cercano.
+ * @param {admin.firestore.Firestore} db - La instancia de Firestore.
+ * @param {Date} targetDate - La fecha para la cual se busca el valor del dólar.
+ * @returns {Promise<number>} El valor del dólar para la fecha dada.
+ */
 async function getValorDolar(db, targetDate) {
   if (!(targetDate instanceof Date) || isNaN(targetDate)) {
     console.error('Fecha objetivo inválida:', targetDate);
@@ -108,13 +148,23 @@ async function getValorDolar(db, targetDate) {
     if (doc.exists && doc.data().valor) {
       return doc.data().valor;
     }
-    console.warn(`Valor para ${dateStr} no encontrado. Buscando el más reciente...`);
-    const snapshot = await db.collection('valorDolar').orderBy('fecha', 'desc').limit(1).get();
+
+    // Si no se encuentra, buscar el valor en la fecha más cercana anterior a la solicitada.
+    console.warn(`Valor para ${dateStr} no encontrado. Buscando el valor anterior más cercano...`);
+    const q = db.collection('valorDolar')
+      .where('fecha', '<=', admin.firestore.Timestamp.fromDate(targetDate))
+      .orderBy('fecha', 'desc')
+      .limit(1);
+      
+    const snapshot = await q.get();
+
     if (!snapshot.empty) {
       const ultimoValor = snapshot.docs[0].data().valor;
-      console.log(`Usando el último valor de respaldo encontrado: ${ultimoValor}`);
+      const fechaEncontrada = snapshot.docs[0].id;
+      console.log(`Usando el valor de respaldo de la fecha ${fechaEncontrada}: ${ultimoValor}`);
       return ultimoValor;
     }
+    
     const valorPorDefecto = 950;
     console.error('No se encontró ningún valor de respaldo. Usando valor por defecto.');
     return valorPorDefecto;
@@ -127,4 +177,5 @@ async function getValorDolar(db, targetDate) {
 module.exports = {
   getValorDolar,
   processDolarCsv,
+  updateTodaysDolarValue, // Exportamos la nueva función
 };

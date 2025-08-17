@@ -52,10 +52,11 @@ async function processChannel(db, channel) {
         
         // **CORRECCIÓN: Se añade '|| ""' para evitar el error si el campo está vacío**
         const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']) || "";
+        const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "";
 
         const reservaData = {
             reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString() || `SIN_ID_${Date.now()}`,
-            nombreCompleto: isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim(),
+            nombreCompleto: nombreCompletoRaw,
             email: rawData['Email'] || rawData['Correo'] || null,
             telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']),
             fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),

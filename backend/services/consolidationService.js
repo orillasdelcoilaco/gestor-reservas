@@ -41,7 +41,10 @@ function cleanPhoneNumber(phone) {
 
 function cleanCabanaName(cabanaName) {
     if (!cabanaName) return '';
-    return cabanaName.replace(/(\s+1)$/, '').trim();
+    // Elimina la palabra " 1" solo si va precedida de un número (ej: "Cabaña 10 1" -> "Cabaña 10")
+    // pero no la eliminará de "Cabaña 1".
+    let cleanedName = cabanaName.replace(/(\d+)(\s+1)$/, '$1').trim();
+    return cleanedName;
 }
 
 async function processChannel(db, channel) {

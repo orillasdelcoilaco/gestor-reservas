@@ -35,13 +35,15 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <!-- NUEVO ORDEN DE COLUMNAS -->
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre Cliente</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+                                <!-- ORDEN DE COLUMNAS FINAL -->
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Reserva</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Llegada</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salida</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabaña</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Noches</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
                             </tr>
@@ -94,17 +96,18 @@
                 const row = document.createElement('tr');
                 row.className = "hover:bg-gray-50";
                 
-                // Formatear el valor a moneda chilena
                 const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')}`;
 
-                // NUEVO ORDEN DE CELDAS
+                // ORDEN DE CELDAS FINAL
                 row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${reserva.nombre}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.telefono}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.llegada}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.salida}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.alojamiento}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-800">${reserva.totalNoches}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorFormateado}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.telefono}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.estado}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
                 `;
@@ -141,6 +144,7 @@
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
             const filteredReservas = allReservas.filter(r => 
+                (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
                 (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
                 (r.telefono && r.telefono.toLowerCase().includes(searchTerm)) ||
                 (r.canal && r.canal.toLowerCase().includes(searchTerm)) ||

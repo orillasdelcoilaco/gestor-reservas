@@ -22,12 +22,13 @@ module.exports = (db) => {
           reservaIdOriginal: data.reservaIdOriginal || 'N/A',
           canal: data.canal || 'N/A',
           nombre: data.clienteNombre || 'Sin Nombre',
-          telefono: data.clienteId || 'N/A', // El ID del cliente es el teléfono
+          telefono: data.clienteId || 'N/A',
           llegada: llegada,
           salida: salida,
           estado: data.estado || 'N/A',
           alojamiento: data.alojamiento || 'N/A',
-          valorCLP: data.valorCLP || 0 // <-- CAMBIO CLAVE AQUÍ
+          valorCLP: data.valorCLP || 0,
+          totalNoches: data.totalNoches || 0 // <-- CAMBIO CLAVE AQUÍ
         });
       });
 

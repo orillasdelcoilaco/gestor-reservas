@@ -1,84 +1,41 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Listado de Reservas - Orillas del Coilaco</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 p-8">
-    <div class="max-w-7xl mx-auto bg-white p-6 rounded-lg shadow-lg">
-        <h1 class="text-3xl font-bold mb-6 text-gray-800">Reservas del Complejo</h1>
+const express = require('express');
+const router = express.Router();
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full bg-white border">
-                <thead class="bg-gray-800 text-white">
-                    <tr>
-                        <th class="py-3 px-4 uppercase font-semibold text-sm text-left">Check-in</th>
-                        <th class="py-3 px-4 uppercase font-semibold text-sm text-left">Check-out</th>
-                        <th class="py-3 px-4 uppercase font-semibold text-sm text-left">Nombre Cliente</th>
-                        <th class="py-3 px-4 uppercase font-semibold text-sm text-left">Teléfono</th>
-                        <th class="py-3 px-4 uppercase font-semibold text-sm text-left">Alojamiento</th>
-                        <th class="py-3 px-4 uppercase font-semibold text-sm text-left">Origen</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-700" id="reservas-tbody">
-                    </tbody>
-            </table>
-        </div>
-        <div id="loading" class="text-center py-4">Cargando reservas...</div>
-    </div>
+// La conexión a la base de datos (db) se pasa como un parámetro, no se importa.
+module.exports = (db) => {
+  router.get('/reservas', async (req, res) => {
+    try {
+      const snapshot = await db.collection('reservas').orderBy('fechaLlegada', 'desc').get();
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const tbody = document.getElementById('reservas-tbody');
-            const loadingIndicator = document.getElementById('loading');
+      if (snapshot.empty) {
+        return res.status(200).json([]);
+      }
 
-            // La URL debe apuntar a tu backend desplegado en Render
-            const apiUrl = 'https://tu-backend-en-render.onrender.com/api/reservas';
+      const todasLasReservas = [];
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const llegada = data.fechaLlegada ? data.fechaLlegada.toDate().toLocaleDateString('es-CL') : 'N/A';
+        const salida = data.fechaSalida ? data.fechaSalida.toDate().toLocaleDateString('es-CL') : 'N/A';
 
-            fetch(apiUrl)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Error en la solicitud: ${response.statusText}`);
-                    }
-                    return response.json();
-                })
-                .then(reservas => {
-                    loadingIndicator.style.display = 'none';
-                    tbody.innerHTML = ''; // Limpiar el tbody antes de agregar nuevos datos
-
-                    if (reservas.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No hay reservas para mostrar.</td></tr>';
-                        return;
-                    }
-
-                    reservas.forEach(reserva => {
-                        const row = document.createElement('tr');
-                        row.classList.add('border-b');
-
-                        // --- CORRECCIÓN FINAL: Asegurar el orden correcto de los datos ---
-                        row.innerHTML = `
-                            <td class="py-3 px-4">${reserva.fecha_checkin}</td>
-                            <td class="py-3 px-4">${reserva.fecha_checkout}</td>
-                            <td class="py-3 px-4 font-medium">${reserva.nombre_cliente}</td>
-                            <td class="py-3 px-4">${reserva.telefono_cliente}</td>
-                            <td class="py-3 px-4">${reserva.alojamiento}</td>
-                            <td class="py-3 px-4">
-                                <span class="px-2 py-1 font-semibold leading-tight ${reserva.origen === 'SODC' ? 'text-green-700 bg-green-100' : 'text-blue-700 bg-blue-100'} rounded-full">
-                                    ${reserva.origen}
-                                </span>
-                            </td>
-                        `;
-                        tbody.appendChild(row);
-                    });
-                })
-                .catch(error => {
-                    loadingIndicator.style.display = 'none';
-                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-red-500">Error al cargar las reservas: ${error.message}</td></tr>`;
-                    console.error('Error en fetch:', error);
-                });
+        todasLasReservas.push({
+          id: doc.id,
+          reservaIdOriginal: data.reservaIdOriginal || 'N/A',
+          canal: data.canal || 'N/A',
+          nombre: data.clienteNombre || 'Sin Nombre',
+          telefono: data.clienteId || 'N/A', // El ID del cliente es el teléfono
+          llegada: llegada,
+          salida: salida,
+          estado: data.estado || 'N/A',
+          alojamiento: data.alojamiento || 'N/A'
         });
-    </script>
-</body>
-</html>
+      });
+
+      res.status(200).json(todasLasReservas);
+    } catch (error) {
+      console.error("Error al obtener las reservas consolidadas:", error);
+      res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+  });
+
+  return router;
+};

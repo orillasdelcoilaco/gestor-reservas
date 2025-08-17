@@ -1,120 +1,142 @@
-/**
- * consolidationService.js
- * * Este servicio se encarga de procesar los datos brutos de los reportes
- * y consolidarlos en las colecciones finales 'clientes' y 'reservas'.
- */
+const admin = require('firebase-admin');
+const { getValorDolar } = require('./dolarService');
 
-// --- CORRECCIÓN: Usar una ruta absoluta para mayor robustez ---
-const path = require('path');
-const { db } = require(path.join(__dirname, '..', 'config', 'firebase')); 
+// --- Funciones de Ayuda para Limpieza y Formato ---
 
-// Suponiendo que tienes un dolarService, aunque no se use en esta lógica específica.
-// const { getDollarValue } = require('./dolarService');
+function parseDate(dateValue) {
+    if (!dateValue) return null;
+    if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
+    if (typeof dateValue === 'number') {
+        return new Date(Date.UTC(1899, 11, 30, 0, 0, 0, 0) + dateValue * 86400000);
+    }
+    if (typeof dateValue === 'string') {
+        const date = new Date(dateValue.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
+        if (!isNaN(date)) return date;
+    }
+    return null;
+}
 
-// --- NUEVA FUNCIÓN ---
-// Normaliza el número de teléfono para asegurar que comience con +56.
-// Maneja varios formatos comunes en Chile.
-const normalizePhoneNumber = (phone) => {
-  if (!phone) return '';
-  
-  // Elimina espacios, guiones y el signo '+' si ya existe al principio
-  let cleanPhone = phone.toString().replace(/[\s\-+]/g, '');
-
-  // Si el número empieza con '569', ya es casi correcto, solo le falta el '+'
-  if (cleanPhone.startsWith('569')) {
-    return `+${cleanPhone}`;
-  }
-  
-  // Si empieza con '9' y tiene 9 dígitos, es un móvil al que le falta el '56'
-  if (cleanPhone.startsWith('9') && cleanPhone.length === 9) {
-    return `+56${cleanPhone}`;
-  }
-
-  // Si tiene 8 dígitos, probablemente le falta el '9' inicial y el '56'
-  if (cleanPhone.length === 8) {
-    return `+569${cleanPhone}`;
-  }
-
-  // Fallback para otros casos, asumiendo que es un número que necesita el prefijo
-  if (!cleanPhone.startsWith('56')) {
-    return `+56${cleanPhone}`;
-  }
-
-  return `+${cleanPhone}`;
-};
+function parseCurrency(value) {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        return parseFloat(value.replace(/[^0-9.,-]/g, '').replace(',', '.')) || 0;
+    }
+    return 0;
+}
 
 /**
- * Procesa los datos de las colecciones _raw, los limpia, y los guarda
- * en las colecciones finales: 'clientes' y 'reservas'.
+ * Limpia y normaliza un número de teléfono.
+ * @param {string} phone - El número de teléfono.
+ * @returns {string|null} El número normalizado (ej: "56975180855") o null.
  */
-const consolidateData = async () => {
-  console.log("Iniciando consolidación de datos...");
-
-  const sodcSnapshot = await db.collection('reportes_sodc_raw').get();
-  const bookingSnapshot = await db.collection('reportes_booking_raw').get();
-  const clients = new Map(); // Usamos un Map para manejar clientes únicos por teléfono
-
-  // 1. Procesar y consolidar clientes
-  console.log("Procesando clientes de SODC...");
-  sodcSnapshot.forEach(doc => {
-    const data = doc.data();
-    const phone = normalizePhoneNumber(data.customer_phone);
-    if (phone && !clients.has(phone)) {
-      clients.set(phone, {
-        nombre: data.customer_name || 'Sin Nombre',
-        telefono: phone,
-        email: data.customer_email || ''
-      });
+function cleanPhoneNumber(phone) {
+    if (!phone) return null;
+    let cleaned = phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
+    // **CORRECCIÓN: Si es un número chileno de 9 dígitos que empieza con 9, le añade el 56**
+    if (cleaned.length === 9 && cleaned.startsWith('9')) {
+        return `56${cleaned}`;
     }
-  });
-  
-  // (Opcional) Repetir el proceso para clientes de Booking si es necesario
-  // ...
+    return cleaned;
+}
 
-  // Guardar clientes únicos en Firestore
-  const clientBatch = db.batch();
-  for (const [phone, clientData] of clients.entries()) {
-    const clientRef = db.collection('clientes').doc(phone); 
-    clientBatch.set(clientRef, clientData, { merge: true });
-  }
-  await clientBatch.commit();
-  console.log(`${clients.size} clientes únicos guardados.`);
+function cleanCabanaName(cabanaName) {
+    if (!cabanaName) return '';
+    return cabanaName.replace(/(\s+1)$/, '').trim();
+}
 
-  // 2. Procesar y consolidar reservas
-  console.log("Procesando reservas...");
-  const reservationBatch = db.batch();
-
-  for (const doc of sodcSnapshot.docs) {
-    const data = doc.data();
-    const bookingId = data.booking_id; 
-
-    if (bookingId) {
-      const reservationRef = db.collection('reservas').doc(bookingId.toString());
-      const clientPhone = normalizePhoneNumber(data.customer_phone);
-      
-      const clientInfo = clients.get(clientPhone);
-      const clientName = clientInfo ? clientInfo.nombre : 'Cliente no encontrado';
-
-      reservationBatch.set(reservationRef, {
-        fecha_checkin: new Date(data.checkin_date),
-        fecha_checkout: new Date(data.checkout_date),
-        alojamiento: data.listing_name || 'Alojamiento no especificado',
-        telefono_cliente: clientPhone,
-        nombre_cliente: clientName,
-        origen: 'SODC',
-        precio_total: parseFloat(data.total_payout) || 0,
-        estado: data.status || 'Desconocido',
-      }, { merge: true });
+async function processChannel(db, channel) {
+    const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
+    const rawDocsSnapshot = await db.collection(rawCollectionName).get();
+    
+    if (rawDocsSnapshot.empty) {
+        return `No hay nuevos reportes para procesar de ${channel}.`;
     }
-  }
 
-  // (Opcional) Repetir el proceso para reservas de Booking
-  // ...
+    console.log(`Procesando ${rawDocsSnapshot.size} registros de ${channel}...`);
+    const batch = db.batch();
 
-  await reservationBatch.commit();
-  console.log("Reservas consolidadas y guardadas.");
-  
-  return { message: "Datos consolidados exitosamente." };
+    for (const doc of rawDocsSnapshot.docs) {
+        const rawData = doc.data();
+        
+        const isBooking = channel === 'Booking';
+        const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']) || "";
+        const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre";
+
+        const reservaData = {
+            reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString() || `SIN_ID_${Date.now()}`,
+            nombreCompleto: nombreCompletoRaw,
+            email: rawData['Email'] || rawData['Correo'] || null,
+            telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']),
+            fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),
+            fechaSalida: parseDate(isBooking ? rawData['Salida'] : rawData['Día de salida']),
+            fechaReserva: parseDate(isBooking ? rawData['Fecha de reserva'] : rawData['Fecha']),
+            estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
+            invitados: parseInt(rawData['Personas'] || rawData['Adultos/Invitados'] || 0),
+            valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total']),
+            monedaOriginal: isBooking ? 'USD' : 'CLP',
+            alojamientos: alojamientosRaw.toString().split(',').map(c => cleanCabanaName(c.trim()))
+        };
+
+        if (!reservaData.fechaLlegada || !reservaData.fechaSalida) {
+            console.warn(`Reserva omitida por fechas inválidas: ${reservaData.reservaIdOriginal}`);
+            continue;
+        }
+
+        let clienteId = reservaData.telefono; // El teléfono es la clave principal
+        if (!clienteId) {
+            console.warn(`Reserva omitida por falta de teléfono: ${reservaData.reservaIdOriginal}`);
+            continue;
+        }
+        const clienteRef = db.collection('clientes').doc(clienteId);
+        batch.set(clienteRef, {
+            firstname: reservaData.nombreCompleto.split(' ')[0],
+            lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
+            email: reservaData.email,
+            phone: reservaData.telefono
+        }, { merge: true });
+
+        for (const cabana of reservaData.alojamientos) {
+            if (!cabana) continue;
+
+            const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
+            const reservaRef = db.collection('reservas').doc(idCompuesto);
+
+            let valorCLP = reservaData.valorOriginal;
+            let valorDolarDia = null;
+
+            if (isBooking) {
+                valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);
+                const precioPorCabanaUSD = reservaData.alojamientos.length > 0 ? (reservaData.valorOriginal / reservaData.alojamientos.length) : 0;
+                valorCLP = Math.round(precioPorCabanaUSD * valorDolarDia * 1.19);
+            }
+
+            const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
+
+            batch.set(reservaRef, {
+                reservaIdOriginal: reservaData.reservaIdOriginal,
+                canal: channel,
+                estado: reservaData.estado,
+                fechaReserva: reservaData.fechaReserva ? admin.firestore.Timestamp.fromDate(reservaData.fechaReserva) : null,
+                fechaLlegada: admin.firestore.Timestamp.fromDate(reservaData.fechaLlegada),
+                fechaSalida: admin.firestore.Timestamp.fromDate(reservaData.fechaSalida),
+                totalNoches: totalNoches > 0 ? totalNoches : 1,
+                invitados: reservaData.invitados,
+                alojamiento: cabana,
+                monedaOriginal: reservaData.monedaOriginal,
+                valorOriginal: reservaData.alojamientos.length > 0 ? (reservaData.valorOriginal / reservaData.alojamientos.length) : 0,
+                valorCLP: valorCLP,
+                valorDolarDia: valorDolarDia,
+                clienteId: clienteId,
+                clienteNombre: reservaData.nombreCompleto // <-- GUARDAMOS EL NOMBRE AQUÍ
+            }, { merge: true });
+        }
+        batch.delete(doc.ref);
+    }
+
+    await batch.commit();
+    return `Se procesaron y consolidaron ${rawDocsSnapshot.size} registros de ${channel}.`;
+}
+
+module.exports = {
+  processChannel,
 };
-
-module.exports = { consolidateData };

@@ -1,45 +1,40 @@
+// backend/routes/reservas.js
+
 const express = require('express');
 const router = express.Router();
+const { db } = require('../config/firebase');
 
-module.exports = (db) => {
-  /**
-   * GET /api/reservas
-   * Obtiene la lista de reservas consolidadas, ordenadas por fecha de llegada.
-   */
-  router.get('/reservas', async (req, res) => {
-    try {
-      const reservasRef = db.collection('reservas');
-      // **CORRECCIÓN: Ordenamos por fecha de llegada, de más nueva a más antigua**
-      const snapshot = await reservasRef.orderBy('fechaLlegada', 'desc').get();
+router.get('/', async (req, res) => {
+  try {
+    const reservasSnapshot = await db.collection('reservas')
+      .orderBy('fecha_checkin', 'desc') // <--- CORRECCIÓN: Ordenar por fecha
+      .get();
 
-      if (snapshot.empty) {
-        return res.status(200).json([]);
-      }
-
-      const todasLasReservas = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const llegada = data.fechaLlegada ? data.fechaLlegada.toDate().toLocaleDateString('es-CL') : 'N/A';
-        const salida = data.fechaSalida ? data.fechaSalida.toDate().toLocaleDateString('es-CL') : 'N/A';
-
-        todasLasReservas.push({
-          id: doc.id,
-          canal: data.canal || 'N/A',
-          // **CORRECCIÓN: Usamos el campo 'clienteNombre' que guardamos**
-          nombre: data.clienteNombre || 'Sin Nombre',
-          llegada: llegada,
-          salida: salida,
-          estado: data.estado || 'N/A',
-          alojamiento: data.alojamiento || 'N/A'
-        });
-      });
-
-      res.status(200).json(todasLasReservas);
-    } catch (error) {
-      console.error("Error al obtener las reservas consolidadas:", error);
-      res.status(500).json({ error: 'Error interno del servidor.' });
+    if (reservasSnapshot.empty) {
+      return res.status(404).json({ message: "No se encontraron reservas." });
     }
-  });
 
-  return router;
-};
+    const reservas = [];
+    reservasSnapshot.forEach(doc => {
+      const data = doc.data();
+      reservas.push({
+        id: doc.id,
+        // Asegúrate de convertir las fechas a un formato legible si es necesario
+        fecha_checkin: data.fecha_checkin.toDate().toLocaleDateString('es-CL'),
+        fecha_checkout: data.fecha_checkout.toDate().toLocaleDateString('es-CL'),
+        nombre_cliente: data.nombre_cliente, // <--- Dato que ya viene del consolidationService
+        telefono_cliente: data.telefono_cliente,
+        alojamiento: data.alojamiento, // <--- Dato que ya viene del consolidationService
+        origen: data.origen,
+      });
+    });
+
+    res.status(200).json(reservas);
+
+  } catch (error) {
+    console.error("Error al obtener las reservas:", error);
+    res.status(500).json({ message: "Error interno del servidor." });
+  }
+});
+
+module.exports = router;

@@ -1,96 +1,118 @@
-// backend/services/consolidationService.js
+/**
+ * consolidationService.js
+ * * Este servicio se encarga de procesar los datos brutos de los reportes
+ * y consolidarlos en las colecciones finales 'clientes' y 'reservas'.
+ */
 
-const { db } = require('../config/firebase');
-const { getDollarValue } = require('./dolarService');
+// --- CORRECCIÓN: Usar una ruta absoluta para mayor robustez ---
+const path = require('path');
+const { db } = require(path.join(__dirname, '..', 'config', 'firebase')); 
+
+// Suponiendo que tienes un dolarService, aunque no se use en esta lógica específica.
+// const { getDollarValue } = require('./dolarService');
 
 // --- NUEVA FUNCIÓN ---
-// Normaliza el número de teléfono para que siempre empiece con "+56"
+// Normaliza el número de teléfono para asegurar que comience con +56.
+// Maneja varios formatos comunes en Chile.
 const normalizePhoneNumber = (phone) => {
   if (!phone) return '';
-  let cleanPhone = phone.toString().replace(/\s+/g, '').replace('+', '');
-  if (cleanPhone.startsWith('569')) {
-    cleanPhone = cleanPhone.substring(2);
-  } else if (cleanPhone.startsWith('9')) {
-    // Si empieza con 9, es probable que sea un móvil chileno
-    cleanPhone = cleanPhone.substring(1);
-  }
   
-  // Si después de limpiar, tiene 8 dígitos, asumimos que es un móvil sin el 9 inicial
-  if (cleanPhone.length === 8) {
-      cleanPhone = '9' + cleanPhone;
-  }
+  // Elimina espacios, guiones y el signo '+' si ya existe al principio
+  let cleanPhone = phone.toString().replace(/[\s\-+]/g, '');
 
-  if (cleanPhone.startsWith('56')) {
+  // Si el número empieza con '569', ya es casi correcto, solo le falta el '+'
+  if (cleanPhone.startsWith('569')) {
     return `+${cleanPhone}`;
   }
   
-  // Asumimos que es un número local de 9 dígitos que necesita el prefijo
-  if (cleanPhone.length === 9 && cleanPhone.startsWith('9')) {
+  // Si empieza con '9' y tiene 9 dígitos, es un móvil al que le falta el '56'
+  if (cleanPhone.startsWith('9') && cleanPhone.length === 9) {
     return `+56${cleanPhone}`;
   }
 
-  return `+56${cleanPhone}`; // Fallback para otros casos
+  // Si tiene 8 dígitos, probablemente le falta el '9' inicial y el '56'
+  if (cleanPhone.length === 8) {
+    return `+569${cleanPhone}`;
+  }
+
+  // Fallback para otros casos, asumiendo que es un número que necesita el prefijo
+  if (!cleanPhone.startsWith('56')) {
+    return `+56${cleanPhone}`;
+  }
+
+  return `+${cleanPhone}`;
 };
 
-
-// --- FUNCIÓN PRINCIPAL MODIFICADA ---
+/**
+ * Procesa los datos de las colecciones _raw, los limpia, y los guarda
+ * en las colecciones finales: 'clientes' y 'reservas'.
+ */
 const consolidateData = async () => {
-  // ... (código existente para obtener reportes raw)
+  console.log("Iniciando consolidación de datos...");
+
   const sodcSnapshot = await db.collection('reportes_sodc_raw').get();
   const bookingSnapshot = await db.collection('reportes_booking_raw').get();
-  const clients = new Map();
+  const clients = new Map(); // Usamos un Map para manejar clientes únicos por teléfono
 
-  // --- Procesamiento de clientes (AQUÍ SE USA LA NORMALIZACIÓN) ---
+  // 1. Procesar y consolidar clientes
+  console.log("Procesando clientes de SODC...");
   sodcSnapshot.forEach(doc => {
     const data = doc.data();
-    const phone = normalizePhoneNumber(data.customer_phone); // <--- CORRECCIÓN
+    const phone = normalizePhoneNumber(data.customer_phone);
     if (phone && !clients.has(phone)) {
       clients.set(phone, {
-        nombre: data.customer_name,
+        nombre: data.customer_name || 'Sin Nombre',
         telefono: phone,
         email: data.customer_email || ''
       });
     }
   });
   
-  // ... (lógica similar para clientes de Booking si aplica)
+  // (Opcional) Repetir el proceso para clientes de Booking si es necesario
+  // ...
 
-  // Guardar clientes únicos
+  // Guardar clientes únicos en Firestore
   const clientBatch = db.batch();
   for (const [phone, clientData] of clients.entries()) {
-    const clientRef = db.collection('clientes').doc(phone);
+    const clientRef = db.collection('clientes').doc(phone); 
     clientBatch.set(clientRef, clientData, { merge: true });
   }
   await clientBatch.commit();
-  console.log('Clientes consolidados y guardados.');
+  console.log(`${clients.size} clientes únicos guardados.`);
 
-  // --- Procesamiento de reservas (AQUÍ SE AÑADE EL NOMBRE DEL CLIENTE) ---
+  // 2. Procesar y consolidar reservas
+  console.log("Procesando reservas...");
   const reservationBatch = db.batch();
 
   for (const doc of sodcSnapshot.docs) {
     const data = doc.data();
-    const bookingId = data.booking_id;
+    const bookingId = data.booking_id; 
+
     if (bookingId) {
-      const reservationRef = db.collection('reservas').doc(bookingId);
-      const clientPhone = normalizePhoneNumber(data.customer_phone); // <--- CORRECCIÓN
-      const clientName = clients.get(clientPhone)?.nombre || 'Nombre no encontrado'; // <--- CORRECCIÓN
+      const reservationRef = db.collection('reservas').doc(bookingId.toString());
+      const clientPhone = normalizePhoneNumber(data.customer_phone);
+      
+      const clientInfo = clients.get(clientPhone);
+      const clientName = clientInfo ? clientInfo.nombre : 'Cliente no encontrado';
 
       reservationBatch.set(reservationRef, {
         fecha_checkin: new Date(data.checkin_date),
         fecha_checkout: new Date(data.checkout_date),
-        alojamiento: data.listing_name, // <-- DATO CLAVE
+        alojamiento: data.listing_name || 'Alojamiento no especificado',
         telefono_cliente: clientPhone,
-        nombre_cliente: clientName, // <-- AÑADIDO
+        nombre_cliente: clientName,
         origen: 'SODC',
-        // ... otros campos que necesites
+        precio_total: parseFloat(data.total_payout) || 0,
+        estado: data.status || 'Desconocido',
       }, { merge: true });
     }
   }
 
-  // ... (lógica similar para reservas de Booking)
+  // (Opcional) Repetir el proceso para reservas de Booking
+  // ...
 
   await reservationBatch.commit();
-  console.log('Reservas consolidadas y guardadas.');
+  console.log("Reservas consolidadas y guardadas.");
   
   return { message: "Datos consolidados exitosamente." };
 };

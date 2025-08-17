@@ -35,12 +35,14 @@ function processDolarCsv(db, buffer) {
     readableStream.push(null);
 
     readableStream
-      .pipe(csv({ separator: ';' })) // Especificamos que el separador es punto y coma
+      .pipe(csv({ 
+    separator: ';',
+    mapHeaders: ({ header }) => header.trim().toLowerCase().replace('í', 'i')
+}))
       .on('data', (data) => {
         // Limpieza y validación de cada fila
-        const fechaStr = data.Dia;
-        const valorStr = data.Valor;
-
+        const fechaStr = data.dia;
+        const valorStr = data.valor;
         if (fechaStr && valorStr) {
           const fecha = parseDate(fechaStr);
           const valor = parseFloat(valorStr.replace('.', '').replace(',', '.'));

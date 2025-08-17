@@ -2,13 +2,11 @@
 
 const config = {
   // ID de la carpeta en Google Drive donde se almacenan los reportes.
-  // Reemplaza 'TU_ID_DE_CARPETA_AQUI' con el ID real de tu carpeta.
-  DRIVE_FOLDER_ID: '1ED6xW0Ti_nBgRr_EzbYJ9XG1AxvfiUrx',
+  DRIVE_FOLDER_ID: '1ED6xW0Ti_nBgRr_EzbYJ9XG1AxvfiUrx', // <-- Asegúrate de que este ID sea el correcto
 
   // Patrones para identificar los archivos de reporte.
-  // No cambies esto a menos que los nombres de tus archivos cambien.
   SODC_FILE_PATTERN: 'mphb-bookings',
-  BOOKING_FILE_PATTERN: 'Check-in',
+  BOOKING_FILE_PATTERN: 'Check-in con datos de contacto', // <-- ACTUALIZADO
 };
 
 module.exports = config;

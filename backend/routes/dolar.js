@@ -1,26 +1,32 @@
 const express = require('express');
 const router = express.Router();
-const { preloadDollarValues } = require('../services/dolarService'); // Importaremos una nueva función
+const multer = require('multer');
+const { processDolarCsv } = require('../services/dolarService');
+
+// Configuración de Multer para guardar el archivo temporalmente en memoria
+const upload = multer({ storage: multer.memoryStorage() });
 
 module.exports = (db) => {
   /**
-   * POST /api/dolar/precargar
-   * Inicia el proceso de precarga de valores históricos del dólar.
+   * POST /api/dolar/upload-csv
+   * Recibe un archivo CSV con los valores del dólar y lo procesa.
    */
-  router.post('/dolar/precargar', async (req, res) => {
-    console.log('Solicitud recibida para precargar valores del dólar...');
+  router.post('/dolar/upload-csv', upload.single('dolarFile'), async (req, res) => {
+    console.log('Solicitud recibida para cargar CSV de valores del dólar.');
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No se ha subido ningún archivo.' });
+    }
+
     try {
-      // No usamos await aquí para que la respuesta sea inmediata
-      // y el proceso largo corra en segundo plano.
-      preloadDollarValues(db); 
-
-      res.status(202).json({ 
-        message: 'El proceso de precarga ha comenzado en segundo plano. Revisa los logs del servidor para ver el progreso.' 
+      const summary = await processDolarCsv(db, req.file.buffer);
+      res.status(200).json({
+        message: 'Archivo CSV procesado exitosamente.',
+        summary: summary,
       });
-
     } catch (error) {
-      console.error('Error al iniciar la precarga:', error);
-      res.status(500).json({ error: 'No se pudo iniciar el proceso de precarga.' });
+      console.error('Error al procesar el archivo CSV:', error);
+      res.status(500).json({ error: 'Falló el procesamiento del archivo CSV.' });
     }
   });
 

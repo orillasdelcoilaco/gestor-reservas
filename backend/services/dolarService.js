@@ -1,72 +1,90 @@
 const admin = require('firebase-admin');
+const csv = require('csv-parser');
+const stream = require('stream');
 
 /**
- * Pausa la ejecución durante un número determinado de milisegundos.
- * @param {number} ms - Milisegundos para esperar.
+ * Parsea una fecha en formato DD/MM/YYYY a un objeto Date en UTC.
+ * @param {string} dateString - La fecha como texto (ej: "15/07/2024").
+ * @returns {Date|null} Un objeto Date o null si el formato es inválido.
  */
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-/**
- * Formatea un objeto Date a una cadena YYYY-MM-DD en UTC.
- * @param {Date} date - El objeto Date a formatear.
- * @returns {string} La fecha formateada.
- */
-function formatDate(date) {
-  return date.toISOString().split('T')[0];
+function parseDate(dateString) {
+  const parts = dateString.split('/');
+  if (parts.length === 3) {
+    // new Date(year, monthIndex, day)
+    const date = new Date(Date.UTC(parts[2], parts[1] - 1, parts[0]));
+    if (!isNaN(date)) {
+      return date;
+    }
+  }
+  return null;
 }
 
 /**
- * PRECARGA DE DATOS HISTÓRICOS
- * Obtiene todos los valores del dólar desde una fecha de inicio hasta hoy y los guarda en Firestore.
+ * PROCESAMIENTO DE CSV
+ * Lee un buffer de archivo CSV, lo parsea y guarda los valores en Firestore.
  * @param {admin.firestore.Firestore} db - La instancia de Firestore.
+ * @param {Buffer} buffer - El buffer del archivo CSV.
+ * @returns {Promise<Object>} Un resumen del proceso.
  */
-async function preloadDollarValues(db) {
-  console.log('Iniciando precarga de valores históricos del dólar...');
-  const startDate = new Date('2022-01-01T00:00:00Z');
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+function processDolarCsv(db, buffer) {
+  return new Promise((resolve, reject) => {
+    const results = [];
+    const readableStream = new stream.Readable();
+    readableStream._read = () => {}; // Implementación vacía necesaria
+    readableStream.push(buffer);
+    readableStream.push(null);
 
-  let currentDate = startDate;
-  while (currentDate <= today) {
-    const dateStr = formatDate(currentDate);
-    const dolarRef = db.collection('valorDolar').doc(dateStr);
+    readableStream
+      .pipe(csv()) // Asume que las cabeceras son 'Dia' y 'Valor'
+      .on('data', (data) => {
+        // Limpieza y validación de cada fila
+        const fechaStr = data.Dia;
+        const valorStr = data.Valor;
 
-    try {
-      const doc = await dolarRef.get();
-      if (doc.exists) {
-        console.log(`Valor para ${dateStr} ya existe. Omitiendo.`);
-      } else {
-        const apiUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=CLP`;
-        const response = await fetch(apiUrl);
-        if (response.ok) {
-          const data = await response.json();
-          const valor = data.rates.CLP;
-          if (valor) {
-            await dolarRef.set({
-              valor: valor,
-              fecha: admin.firestore.Timestamp.fromDate(new Date(dateStr + 'T00:00:00Z')),
-            });
-            console.log(`Valor ${valor} para ${dateStr} guardado exitosamente.`);
+        if (fechaStr && valorStr) {
+          const fecha = parseDate(fechaStr);
+          const valor = parseFloat(valorStr.replace('.', '').replace(',', '.'));
+
+          if (fecha && !isNaN(valor)) {
+            results.push({ fecha, valor });
           }
-        } else {
-          console.warn(`No se pudo obtener el valor para ${dateStr}. Status: ${response.status}`);
         }
-        // Pausa de 100ms para no sobrecargar la API
-        await sleep(100);
-      }
-    } catch (error) {
-      console.error(`Error procesando la fecha ${dateStr}:`, error.message);
-    }
-    // Avanzar al día siguiente
-    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-  }
-  console.log('--- Proceso de precarga finalizado. ---');
+      })
+      .on('end', async () => {
+        if (results.length === 0) {
+          return resolve({ processed: 0, errors: 0 });
+        }
+        
+        console.log(`Procesando ${results.length} registros del CSV...`);
+        const batch = db.batch();
+        
+        results.forEach(record => {
+          const dateId = record.fecha.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+          const docRef = db.collection('valorDolar').doc(dateId);
+          batch.set(docRef, {
+            valor: record.valor,
+            fecha: admin.firestore.Timestamp.fromDate(record.fecha),
+          });
+        });
+
+        try {
+          await batch.commit();
+          console.log('Batch commit exitoso.');
+          resolve({ processed: results.length, errors: 0 });
+        } catch (error) {
+          console.error("Error al hacer batch commit:", error);
+          reject(error);
+        }
+      })
+      .on('error', (error) => {
+        reject(error);
+      });
+  });
 }
 
 /**
  * OBTENCIÓN DE VALOR PARA CONSOLIDACIÓN
  * Obtiene el valor del dólar para una fecha específica desde Firestore.
- * Si la fecha es futura, devuelve el valor más reciente disponible.
  * @param {admin.firestore.Firestore} db - La instancia de Firestore.
  * @param {Date} targetDate - La fecha para la cual se busca el valor del dólar.
  * @returns {Promise<number>} El valor del dólar para la fecha dada.
@@ -74,21 +92,18 @@ async function preloadDollarValues(db) {
 async function getValorDolar(db, targetDate) {
   if (!(targetDate instanceof Date) || isNaN(targetDate)) {
     console.error('Fecha objetivo inválida:', targetDate);
-    return 950; // Valor de respaldo
+    return 950;
   }
 
-  const dateStr = formatDate(targetDate);
+  const dateStr = targetDate.toISOString().split('T')[0];
   const dolarRef = db.collection('valorDolar').doc(dateStr);
 
   try {
     const doc = await dolarRef.get();
     if (doc.exists && doc.data().valor) {
-      //console.log(`Valor para ${dateStr} encontrado en Firestore: ${doc.data().valor}`);
       return doc.data().valor;
     }
 
-    // Si no se encuentra (porque es una fecha futura o la precarga no ha llegado a ese día),
-    // buscamos el valor más reciente guardado en la base de datos.
     console.warn(`Valor para ${dateStr} no encontrado. Buscando el más reciente...`);
     const snapshot = await db.collection('valorDolar').orderBy('fecha', 'desc').limit(1).get();
 
@@ -98,18 +113,17 @@ async function getValorDolar(db, targetDate) {
       return ultimoValor;
     }
 
-    // Como último recurso, si la base de datos está completamente vacía.
     const valorPorDefecto = 950;
     console.error('No se encontró ningún valor de respaldo. Usando valor por defecto.');
     return valorPorDefecto;
 
   } catch (error) {
     console.error(`Error crítico obteniendo valor del dólar para ${dateStr}: ${error.message}`);
-    return 950; // Retornar valor de respaldo en caso de error grave.
+    return 950;
   }
 }
 
 module.exports = {
   getValorDolar,
-  preloadDollarValues, // Exportamos la nueva función
+  processDolarCsv, // Exportamos la nueva función
 };

@@ -36,12 +36,12 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nº Reserva</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Alojamiento</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre Cliente</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Alojamiento</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Llegada</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salida</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                             </tr>
                         </thead>
@@ -92,14 +92,15 @@
             reservas.forEach(reserva => {
                 const row = document.createElement('tr');
                 row.className = "hover:bg-gray-50";
+                // CELDAS ACTUALIZADAS AL ORDEN SOLICITADO
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-500">${reserva.reservaIdOriginal}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">${reserva.alojamiento}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.nombre}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-800">${reserva.alojamiento}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.telefono}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.llegada}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.salida}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.estado}</td>
                 `;
                 reservasTableBody.appendChild(row);

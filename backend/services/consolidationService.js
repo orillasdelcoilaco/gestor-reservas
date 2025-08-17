@@ -24,26 +24,15 @@ function parseCurrency(value) {
     return 0;
 }
 
-/**
- * Limpia un número de teléfono, quitando caracteres especiales y el prefijo '+'.
- * @param {string} phone - El número de teléfono a limpiar.
- * @returns {string|null} El número de teléfono limpio o null.
- */
 function cleanPhoneNumber(phone) {
     if (!phone) return null;
     return phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
 }
 
-/**
- * Corrige nombres de cabañas mal formateados.
- * @param {string} cabanaName - El nombre de la cabaña.
- * @returns {string} El nombre corregido.
- */
 function cleanCabanaName(cabanaName) {
     if (!cabanaName) return '';
-    return cabanaName.replace(/(\s+1)$/, '').trim(); // Elimina " 1" al final
+    return cabanaName.replace(/(\s+1)$/, '').trim();
 }
-
 
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
@@ -60,6 +49,10 @@ async function processChannel(db, channel) {
         const rawData = doc.data();
         
         const isBooking = channel === 'Booking';
+        
+        // **CORRECCIÓN: Se añade '|| ""' para evitar el error si el campo está vacío**
+        const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']) || "";
+
         const reservaData = {
             reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString() || `SIN_ID_${Date.now()}`,
             nombreCompleto: isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim(),
@@ -72,7 +65,7 @@ async function processChannel(db, channel) {
             invitados: parseInt(rawData['Personas'] || rawData['Adultos/Invitados'] || 0),
             valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total']),
             monedaOriginal: isBooking ? 'USD' : 'CLP',
-            alojamientos: (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento'])?.toString().split(',').map(c => cleanCabanaName(c.trim())) || []
+            alojamientos: alojamientosRaw.toString().split(',').map(c => cleanCabanaName(c.trim()))
         };
 
         if (!reservaData.fechaLlegada || !reservaData.fechaSalida) {
@@ -80,7 +73,6 @@ async function processChannel(db, channel) {
             continue;
         }
 
-        // --- LÓGICA DE CLIENTE CORREGIDA: Prioriza el teléfono ---
         let clienteId = reservaData.telefono ? reservaData.telefono : reservaData.email?.toLowerCase();
         if (!clienteId) {
             console.warn(`Reserva omitida por falta de teléfono/email: ${reservaData.reservaIdOriginal}`);

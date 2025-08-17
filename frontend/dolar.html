@@ -17,7 +17,6 @@
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
-                    <!-- Añadiremos un enlace a esta página en el dashboard más adelante -->
                     <div id="auth-info" class="flex items-center space-x-4"></div>
                 </div>
             </div>
@@ -27,9 +26,15 @@
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-2">Cargar Archivo CSV del Valor del Dólar</h2>
-                <p class="text-gray-600 mb-6">Selecciona uno de los archivos CSV (Dolar 2022.csv, Dolar 2023.csv, etc.) para cargar sus valores a la base de datos. Repite el proceso para cada archivo.</p>
+                <p class="text-gray-600 mb-6">Selecciona un archivo CSV (ej: Dolar 2022.csv), ingresa el año correspondiente y presiona "Cargar". Repite el proceso para cada archivo.</p>
                 
                 <form id="upload-form" class="mt-4 space-y-4">
+                    <!-- NUEVO CAMPO PARA EL AÑO -->
+                    <div>
+                        <label for="year-input" class="block text-sm font-medium text-gray-700">Año del Archivo</label>
+                        <input type="number" id="year-input" name="year" placeholder="Ej: 2022" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"/>
+                    </div>
+
                     <div>
                         <label for="dolar-file-input" class="block text-sm font-medium text-gray-700">Archivo CSV</label>
                         <input type="file" id="dolar-file-input" name="dolarFile" accept=".csv" required class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
@@ -64,24 +69,25 @@
         const authInfo = document.getElementById('auth-info');
         const uploadForm = document.getElementById('upload-form');
         const fileInput = document.getElementById('dolar-file-input');
+        const yearInput = document.getElementById('year-input'); // <-- OBTENEMOS EL INPUT DEL AÑO
         const uploadBtn = document.getElementById('upload-btn');
         const uploadStatus = document.getElementById('upload-status');
 
         function showStatus(message, isError = false) {
             uploadStatus.innerHTML = message;
             uploadStatus.className = `mt-6 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
-            if (isError) {
-                 uploadStatus.classList.add('bg-red-100', 'text-red-800');
-            } else {
-                 uploadStatus.classList.add('bg-green-100', 'text-green-800');
-            }
             uploadStatus.classList.remove('hidden');
         }
 
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const year = yearInput.value;
             if (!fileInput.files.length) {
                 showStatus('Por favor, selecciona un archivo.', true);
+                return;
+            }
+            if (!year) {
+                showStatus('Por favor, ingresa el año.', true);
                 return;
             }
 
@@ -91,6 +97,7 @@
 
             const formData = new FormData();
             formData.append('dolarFile', fileInput.files[0]);
+            formData.append('year', year); // <-- AÑADIMOS EL AÑO AL FORMULARIO
 
             try {
                 const response = await fetch(`${API_BASE_URL}/api/dolar/upload-csv`, {
@@ -104,8 +111,8 @@
                     throw new Error(result.error || 'Ocurrió un error desconocido.');
                 }
 
-                showStatus(`<strong>Éxito:</strong> ${result.message}<br>Se procesaron ${result.summary.processed} registros.`, false);
-                uploadForm.reset(); // Limpiar el input del archivo
+                showStatus(`<strong>Éxito para el año ${year}:</strong> ${result.message}<br>Se procesaron ${result.summary.processed} registros.`, false);
+                uploadForm.reset();
 
             } catch (error) {
                 console.error('Error al subir el archivo:', error);

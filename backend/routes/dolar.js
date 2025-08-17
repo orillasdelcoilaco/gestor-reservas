@@ -9,17 +9,23 @@ const upload = multer({ storage: multer.memoryStorage() });
 module.exports = (db) => {
   /**
    * POST /api/dolar/upload-csv
-   * Recibe un archivo CSV con los valores del dólar y lo procesa.
+   * Recibe un archivo CSV y el año correspondiente, y procesa los valores del dólar.
    */
   router.post('/dolar/upload-csv', upload.single('dolarFile'), async (req, res) => {
     console.log('Solicitud recibida para cargar CSV de valores del dólar.');
 
+    const year = req.body.year; // <-- OBTENEMOS EL AÑO
+    
     if (!req.file) {
       return res.status(400).json({ error: 'No se ha subido ningún archivo.' });
     }
+    if (!year || isNaN(parseInt(year))) {
+      return res.status(400).json({ error: 'El año es requerido y debe ser un número.' });
+    }
 
     try {
-      const summary = await processDolarCsv(db, req.file.buffer);
+      // Pasamos el año a la función de procesamiento
+      const summary = await processDolarCsv(db, req.file.buffer, parseInt(year)); 
       res.status(200).json({
         message: 'Archivo CSV procesado exitosamente.',
         summary: summary,

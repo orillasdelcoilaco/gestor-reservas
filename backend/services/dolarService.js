@@ -2,66 +2,68 @@ const admin = require('firebase-admin');
 const csv = require('csv-parser');
 const stream = require('stream');
 
-/**
- * Parsea una fecha en formato DD/MM/YYYY a un objeto Date en UTC.
- * @param {string} dateString - La fecha como texto (ej: "15/07/2024").
- * @returns {Date|null} Un objeto Date o null si el formato es inválido.
- */
-function parseDate(dateString) {
-  const parts = dateString.split('/');
-  if (parts.length === 3) {
-    // new Date(year, monthIndex, day)
-    const date = new Date(Date.UTC(parts[2], parts[1] - 1, parts[0]));
-    if (!isNaN(date)) {
-      return date;
-    }
-  }
-  return null;
-}
+// Mapeo de nombres de meses en español a su número (0-11)
+const monthMap = {
+  'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5,
+  'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'nov': 10, 'dic': 11
+};
 
 /**
- * PROCESAMIENTO DE CSV
- * Lee un buffer de archivo CSV, lo parsea y guarda los valores en Firestore.
+ * PROCESAMIENTO DE CSV TIPO MATRIZ
+ * Lee un buffer de archivo CSV con formato de matriz (Día/Mes) y lo guarda en Firestore.
  * @param {admin.firestore.Firestore} db - La instancia de Firestore.
  * @param {Buffer} buffer - El buffer del archivo CSV.
+ * @param {number} year - El año correspondiente a los datos del archivo.
  * @returns {Promise<Object>} Un resumen del proceso.
  */
-function processDolarCsv(db, buffer) {
+function processDolarCsv(db, buffer, year) {
   return new Promise((resolve, reject) => {
-    const results = [];
+    const recordsToSave = [];
+
     const readableStream = new stream.Readable();
-    readableStream._read = () => {}; // Implementación vacía necesaria
+    readableStream._read = () => {};
     readableStream.push(buffer);
     readableStream.push(null);
 
     readableStream
-      .pipe(csv({ 
-    separator: ';',
-    mapHeaders: ({ header }) => header.trim().toLowerCase().replace('í', 'i')
-}))
-      .on('data', (data) => {
-        // Limpieza y validación de cada fila
-        const fechaStr = data.dia;
-        const valorStr = data.valor;
-        if (fechaStr && valorStr) {
-          const fecha = parseDate(fechaStr);
-          const valor = parseFloat(valorStr.replace('.', '').replace(',', '.'));
+      .pipe(csv({ separator: ';' }))
+      .on('data', (row) => {
+        const day = parseInt(row['Día']);
+        if (isNaN(day)) return; // Si la primera columna no es un día válido, ignorar la fila
 
-          if (fecha && !isNaN(valor)) {
-            results.push({ fecha, valor });
+        // Iterar sobre las claves de la fila (que son los meses)
+        for (const monthName of Object.keys(row)) {
+          if (monthName === 'Día') continue; // Ignorar la columna del día
+
+          const monthKey = monthName.trim().toLowerCase().substring(0, 3);
+          const monthIndex = monthMap[monthKey];
+
+          if (monthIndex !== undefined) {
+            const valorStr = row[monthName];
+            if (valorStr) {
+              const valor = parseFloat(valorStr.replace('.', '').replace(',', '.'));
+              if (!isNaN(valor)) {
+                // Crear la fecha en UTC para evitar problemas de zona horaria
+                const fecha = new Date(Date.UTC(year, monthIndex, day));
+                // Validar que la fecha es correcta (ej: no procesar 31 de Febrero)
+                if (fecha.getUTCMonth() === monthIndex) {
+                  recordsToSave.push({ fecha, valor });
+                }
+              }
+            }
           }
         }
       })
       .on('end', async () => {
-        if (results.length === 0) {
+        if (recordsToSave.length === 0) {
           return resolve({ processed: 0, errors: 0 });
         }
         
-        console.log(`Procesando ${results.length} registros del CSV...`);
+        console.log(`Procesando ${recordsToSave.length} registros del CSV para el año ${year}...`);
         const batch = db.batch();
         
-        results.forEach(record => {
-          const dateId = record.fecha.toISOString().split('T')[0]; // Formato YYYY-MM-DD
+        recordsToSave.forEach(record => {
+          const dateId = record.fecha.toISOString().split('T')[0];
           const docRef = db.collection('valorDolar').doc(dateId);
           batch.set(docRef, {
             valor: record.valor,
@@ -72,7 +74,7 @@ function processDolarCsv(db, buffer) {
         try {
           await batch.commit();
           console.log('Batch commit exitoso.');
-          resolve({ processed: results.length, errors: 0 });
+          resolve({ processed: recordsToSave.length, errors: 0 });
         } catch (error) {
           console.error("Error al hacer batch commit:", error);
           reject(error);
@@ -84,13 +86,7 @@ function processDolarCsv(db, buffer) {
   });
 }
 
-/**
- * OBTENCIÓN DE VALOR PARA CONSOLIDACIÓN
- * Obtiene el valor del dólar para una fecha específica desde Firestore.
- * @param {admin.firestore.Firestore} db - La instancia de Firestore.
- * @param {Date} targetDate - La fecha para la cual se busca el valor del dólar.
- * @returns {Promise<number>} El valor del dólar para la fecha dada.
- */
+// --- La función getValorDolar se mantiene exactamente igual que antes ---
 async function getValorDolar(db, targetDate) {
   if (!(targetDate instanceof Date) || isNaN(targetDate)) {
     console.error('Fecha objetivo inválida:', targetDate);
@@ -127,5 +123,5 @@ async function getValorDolar(db, targetDate) {
 
 module.exports = {
   getValorDolar,
-  processDolarCsv, // Exportamos la nueva función
+  processDolarCsv,
 };

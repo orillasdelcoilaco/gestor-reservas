@@ -6,6 +6,7 @@ const admin = require('firebase-admin');
 const reservasRoutes = require('./routes/reservas');
 const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar'); // <-- AÑADIDO
+const dolarRoutes = require('./routes/dolar'); // <-- AÑADIR ESTA LÍNEA
 
 // --- Inicialización de Firebase Admin SDK ---
 if (process.env.RENDER) {
@@ -38,6 +39,7 @@ app.get('/', (req, res) => {
 app.use('/api', reservasRoutes(db));
 app.use('/api', sincronizarRoutes(db));
 app.use('/api', consolidarRoutes(db)); // <-- AÑADIDO
+app.use('/api', dolarRoutes(db)); // <-- AÑADIR ESTA LÍNEA
 
 // --- Iniciar el Servidor ---
 app.listen(PORT, () => {

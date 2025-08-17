@@ -26,7 +26,8 @@ module.exports = (db) => {
           llegada: llegada,
           salida: salida,
           estado: data.estado || 'N/A',
-          alojamiento: data.alojamiento || 'N/A'
+          alojamiento: data.alojamiento || 'N/A',
+          valorCLP: data.valorCLP || 0 // <-- CAMBIO CLAVE AQUÍ
         });
       });
 

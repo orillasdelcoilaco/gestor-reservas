@@ -1,7 +1,7 @@
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
 
-// --- Las funciones de ayuda (parseDate, parseCurrency, etc.) se mantienen igual ---
+// --- Funciones de ayuda (sin cambios) ---
 function parseDate(dateValue) {
     if (!dateValue) return null;
     if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
@@ -39,6 +39,7 @@ function cleanCabanaName(cabanaName) {
     return cleanedName;
 }
 
+// --- LÓGICA DE CONSOLIDACIÓN MEJORADA ---
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
     const rawDocsSnapshot = await db.collection(rawCollectionName).get();
@@ -46,15 +47,23 @@ async function processChannel(db, channel) {
         return `No hay nuevos reportes para procesar de ${channel}.`;
     }
 
-    // Obtenemos un mapa de TODAS las reservas existentes para una verificación eficiente
-    const allExistingReservations = new Map();
+    // 1. Cargar datos existentes en memoria para búsquedas rápidas
+    const existingReservations = new Map();
     const allReservasSnapshot = await db.collection('reservas').get();
     allReservasSnapshot.forEach(doc => {
-        allExistingReservations.set(doc.id, doc.data());
+        existingReservations.set(doc.id, doc.data());
     });
-    console.log(`Se encontraron ${allExistingReservations.size} reservas existentes para verificar.`);
 
-    console.log(`Procesando ${rawDocsSnapshot.size} registros de ${channel}...`);
+    const existingClientsByPhone = new Map();
+    const allClientsSnapshot = await db.collection('clientes').get();
+    allClientsSnapshot.forEach(doc => {
+        const clientData = doc.data();
+        if (clientData.phone) {
+            existingClientsByPhone.set(clientData.phone, doc.id);
+        }
+    });
+    console.log(`Cargados ${existingReservations.size} reservas y ${existingClientsByPhone.size} clientes para verificación.`);
+
     const batch = db.batch();
 
     for (const doc of rawDocsSnapshot.docs) {
@@ -80,28 +89,43 @@ async function processChannel(db, channel) {
         };
 
         if (!reservaData.fechaLlegada || !reservaData.fechaSalida) continue;
-        let clienteId = reservaData.telefono;
-        if (!clienteId) continue;
-
-        const clienteRef = db.collection('clientes').doc(clienteId);
-        batch.set(clienteRef, {
-            firstname: reservaData.nombreCompleto.split(' ')[0],
-            lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
-            email: reservaData.email,
-            phone: reservaData.telefono
-        }, { merge: true });
-
+        
         for (const cabana of reservaData.alojamientos) {
             if (!cabana) continue;
 
             const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
             const reservaRef = db.collection('reservas').doc(idCompuesto);
+            let clienteId;
+
+            const existingReservation = existingReservations.get(idCompuesto);
+
+            if (existingReservation && existingReservation.clienteId) {
+                // PRIORIDAD 1: La reserva ya existe, reutilizamos su ID de cliente.
+                clienteId = existingReservation.clienteId;
+                console.log(`Reserva ${idCompuesto} ya existe. Reutilizando clienteId: ${clienteId}`);
+            } else if (reservaData.telefono && existingClientsByPhone.has(reservaData.telefono)) {
+                // PRIORIDAD 2: La reserva es nueva, pero encontramos un cliente con el mismo teléfono.
+                clienteId = existingClientsByPhone.get(reservaData.telefono);
+                console.log(`Reserva nueva, cliente encontrado por teléfono ${reservaData.telefono}. Usando clienteId: ${clienteId}`);
+            } else {
+                // PRIORIDAD 3: La reserva y el cliente son nuevos. Creamos un nuevo cliente.
+                const newClientRef = db.collection('clientes').doc();
+                clienteId = newClientRef.id;
+                
+                batch.set(newClientRef, {
+                    firstname: reservaData.nombreCompleto.split(' ')[0],
+                    lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
+                    email: reservaData.email,
+                    phone: reservaData.telefono
+                });
+                // Lo añadimos al mapa para encontrarlo en futuras iteraciones de este mismo proceso
+                if(reservaData.telefono) existingClientsByPhone.set(reservaData.telefono, clienteId);
+                console.log(`Cliente nuevo. Creando con ID: ${clienteId} y teléfono ${reservaData.telefono}`);
+            }
 
             let valorCLP = reservaData.valorOriginal;
-            let valorDolarDia = null;
-
             if (isBooking) {
-                valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);
+                const valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);
                 const precioPorCabanaUSD = reservaData.alojamientos.length > 0 ? (reservaData.valorOriginal / reservaData.alojamientos.length) : 0;
                 valorCLP = Math.round(precioPorCabanaUSD * valorDolarDia * 1.19);
             }
@@ -110,6 +134,9 @@ async function processChannel(db, channel) {
 
             const dataToSave = {
                 reservaIdOriginal: reservaData.reservaIdOriginal,
+                clienteId: clienteId, // <-- ID de cliente único
+                clienteNombre: reservaData.nombreCompleto,
+                // ... (resto de los campos)
                 canal: channel,
                 estado: reservaData.estado,
                 fechaReserva: reservaData.fechaReserva ? admin.firestore.Timestamp.fromDate(reservaData.fechaReserva) : null,
@@ -121,27 +148,19 @@ async function processChannel(db, channel) {
                 monedaOriginal: reservaData.monedaOriginal,
                 valorOriginal: reservaData.alojamientos.length > 0 ? (reservaData.valorOriginal / reservaData.alojamientos.length) : 0,
                 valorCLP: valorCLP,
-                valorDolarDia: valorDolarDia,
-                clienteId: clienteId,
-                clienteNombre: reservaData.nombreCompleto
             };
 
-            // --- LÓGICA DE "CANDADO" MEJORADA ---
-            if (allExistingReservations.has(idCompuesto)) {
-                const existingData = allExistingReservations.get(idCompuesto);
-                if (existingData.valorManual) {
-                    dataToSave.valorCLP = existingData.valorCLP;
-                    dataToSave.valorOriginalCLP = existingData.valorOriginalCLP;
+            if (existingReservation) {
+                if (existingReservation.valorManual) {
+                    dataToSave.valorCLP = existingReservation.valorCLP;
+                    dataToSave.valorOriginalCLP = existingReservation.valorOriginalCLP;
                     dataToSave.valorManual = true;
-                    console.log(`Respetando valor manual para la reserva ${idCompuesto}.`);
                 }
-                if (existingData.nombreManual) {
-                    dataToSave.clienteNombre = existingData.clienteNombre;
+                if (existingReservation.nombreManual) {
+                    dataToSave.clienteNombre = existingReservation.clienteNombre;
                     dataToSave.nombreManual = true;
-                    console.log(`Respetando nombre manual para la reserva ${idCompuesto}.`);
                 }
             }
-
             batch.set(reservaRef, dataToSave, { merge: true });
         }
         batch.delete(doc.ref);

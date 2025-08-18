@@ -62,11 +62,18 @@
     <!-- VENTANA MODAL PARA EDITAR -->
     <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Valor de Reserva</h3>
-            <div class="mt-4">
-                <p class="text-sm text-gray-600" id="modal-description">Modifica el valor de la reserva.</p>
-                <div class="mt-2">
-                    <label for="valor-input" class="block text-sm font-medium text-gray-700" id="modal-label">Nuevo Valor (CLP)</label>
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Reserva</h3>
+            <div class="mt-4 space-y-4">
+                <div>
+                    <label for="nombre-input" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
+                    <input type="text" id="nombre-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="telefono-input" class="block text-sm font-medium text-gray-700">Teléfono</label>
+                    <input type="text" id="telefono-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="valor-input" class="block text-sm font-medium text-gray-700" id="modal-label">Valor (CLP)</label>
                     <input type="number" id="valor-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
                 <div id="modal-status" class="mt-2 text-sm"></div>
@@ -102,10 +109,11 @@
         
         const modal = document.getElementById('edit-modal');
         const modalTitle = document.getElementById('modal-title');
-        const modalDescription = document.getElementById('modal-description');
         const modalLabel = document.getElementById('modal-label');
         const modalStatus = document.getElementById('modal-status');
         const valorInput = document.getElementById('valor-input');
+        const nombreInput = document.getElementById('nombre-input');
+        const telefonoInput = document.getElementById('telefono-input');
         const saveBtn = document.getElementById('save-btn');
         const cancelBtn = document.getElementById('cancel-btn');
 
@@ -126,20 +134,22 @@
                 const row = document.createElement('tr');
                 row.className = "hover:bg-gray-50";
                 
-                // --- CAMBIO CLAVE AQUÍ ---
-                // Añadimos el ícono si el valor es manual
-                const iconoManual = reserva.valorManual ? '✏️' : '';
-                const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')} ${iconoManual}`;
+                const iconoValorManual = reserva.valorManual ? '✏️' : '';
+                const iconoNombreManual = reserva.nombreManual ? '✏️' : '';
+                const iconoTelefonoManual = reserva.telefonoManual ? '✏️' : '';
+                const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')} ${iconoValorManual}`;
+                const nombreFormateado = `${reserva.nombre} ${iconoNombreManual}`;
+                const telefonoFormateado = `${reserva.telefono} ${iconoTelefonoManual}`;
 
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${reserva.nombre}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${nombreFormateado}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.llegada}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.salida}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.alojamiento}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-800">${reserva.totalNoches}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorFormateado}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.telefono}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${telefonoFormateado}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.estado}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -177,17 +187,18 @@
             reservaParaEditar = allReservas.find(r => r.id === id);
             const reservasDelGrupo = allReservas.filter(r => r.reservaIdOriginal === reservaIdOriginal);
             
+            nombreInput.value = reservaParaEditar.nombre;
+            telefonoInput.value = reservaParaEditar.telefono;
+
             if (reservasDelGrupo.length > 1) {
                 const totalGrupo = reservasDelGrupo.reduce((sum, r) => sum + r.valorCLP, 0);
-                modalTitle.textContent = `Editar Grupo de Reserva ${reservaIdOriginal}`;
-                modalDescription.textContent = `Esta reserva tiene ${reservasDelGrupo.length} cabañas. El nuevo valor se distribuirá proporcionalmente.`;
-                modalLabel.textContent = `Nuevo Valor TOTAL del Grupo (CLP)`;
+                modalTitle.textContent = `Editar Grupo de Reserva N° ${reservaIdOriginal}`;
+                modalLabel.textContent = `Valor TOTAL del Grupo (CLP)`;
                 valorInput.value = totalGrupo;
                 reservaParaEditar.esGrupo = true;
             } else {
-                modalTitle.textContent = `Editar Reserva Individual`;
-                modalDescription.textContent = `Modifica el valor para la cabaña ${reservaParaEditar.alojamiento}.`;
-                modalLabel.textContent = `Nuevo Valor (CLP)`;
+                modalTitle.textContent = `Editar Reserva N° ${reservaIdOriginal}`;
+                modalLabel.textContent = `Valor (CLP)`;
                 valorInput.value = reservaParaEditar.valorCLP;
                 reservaParaEditar.esGrupo = false;
             }
@@ -196,19 +207,28 @@
 
         async function handleSave() {
             const nuevoValor = parseInt(valorInput.value);
-            if (isNaN(nuevoValor)) {
-                modalStatus.textContent = 'Por favor, ingresa un valor numérico válido.';
-                modalStatus.className = 'mt-2 text-sm text-red-600';
-                return;
-            }
+            const nuevoNombre = nombreInput.value.trim();
+            const nuevoTelefono = telefonoInput.value.trim();
 
-            let url, body;
+            const bodyPayload = {};
+            let url;
+
             if (reservaParaEditar.esGrupo) {
                 url = `${API_BASE_URL}/api/reservas/grupo/${reservaParaEditar.reservaIdOriginal}`;
-                body = JSON.stringify({ nuevoTotalCLP: nuevoValor });
+                if (!isNaN(nuevoValor)) bodyPayload.nuevoTotalCLP = nuevoValor;
+                if (nuevoNombre) bodyPayload.clienteNombre = nuevoNombre;
+                if (nuevoTelefono) bodyPayload.telefono = nuevoTelefono;
             } else {
                 url = `${API_BASE_URL}/api/reservas/${reservaParaEditar.id}`;
-                body = JSON.stringify({ valorCLP: nuevoValor });
+                if (!isNaN(nuevoValor)) bodyPayload.valorCLP = nuevoValor;
+                if (nuevoNombre) bodyPayload.clienteNombre = nuevoNombre;
+                if (nuevoTelefono) bodyPayload.telefono = nuevoTelefono;
+            }
+
+            if (Object.keys(bodyPayload).length === 0) {
+                modalStatus.textContent = 'No hay cambios para guardar.';
+                modalStatus.className = 'mt-2 text-sm text-yellow-600';
+                return;
             }
 
             saveBtn.disabled = true;
@@ -219,7 +239,7 @@
                 const response = await fetch(url, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: body
+                    body: JSON.stringify(bodyPayload)
                 });
 
                 if (!response.ok) {

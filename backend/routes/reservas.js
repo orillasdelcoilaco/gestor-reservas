@@ -25,7 +25,8 @@ module.exports = (db) => {
           alojamiento: data.alojamiento || 'N/A',
           valorCLP: data.valorCLP || 0,
           totalNoches: data.totalNoches || 0,
-          valorManual: data.valorManual || false // <-- Enviamos la bandera al frontend
+          valorManual: data.valorManual || false,
+          nombreManual: data.nombreManual || false
         });
       });
       res.status(200).json(todasLasReservas);
@@ -39,23 +40,33 @@ module.exports = (db) => {
   router.put('/reservas/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const { valorCLP } = req.body;
-      if (valorCLP === undefined || typeof valorCLP !== 'number') {
-        return res.status(400).json({ error: 'El campo valorCLP es requerido y debe ser un número.' });
-      }
+      const { valorCLP, clienteNombre } = req.body;
       
       const reservaRef = db.collection('reservas').doc(id);
       const doc = await reservaRef.get();
       if (!doc.exists) {
         return res.status(404).json({ error: 'La reserva no existe.' });
       }
-      const valorActual = doc.data().valorCLP;
 
-      await reservaRef.update({ 
-        valorCLP: valorCLP,
-        valorOriginalCLP: valorActual, // Guardamos el valor original
-        valorManual: true // Activamos el "candado"
-      });
+      const updateData = {};
+      const originalData = doc.data();
+
+      if (valorCLP !== undefined && typeof valorCLP === 'number') {
+        updateData.valorCLP = valorCLP;
+        updateData.valorOriginalCLP = originalData.valorCLP;
+        updateData.valorManual = true;
+      }
+
+      if (clienteNombre !== undefined && typeof clienteNombre === 'string') {
+        updateData.clienteNombre = clienteNombre;
+        updateData.nombreManual = true;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        return res.status(400).json({ error: 'No se proporcionaron campos para actualizar.' });
+      }
+
+      await reservaRef.update(updateData);
       res.status(200).json({ message: 'Reserva actualizada correctamente.' });
     } catch (error) {
       console.error("Error al actualizar la reserva:", error);
@@ -67,10 +78,7 @@ module.exports = (db) => {
   router.put('/reservas/grupo/:reservaIdOriginal', async (req, res) => {
     try {
         const { reservaIdOriginal } = req.params;
-        const { nuevoTotalCLP } = req.body;
-        if (nuevoTotalCLP === undefined || typeof nuevoTotalCLP !== 'number') {
-            return res.status(400).json({ error: 'El campo nuevoTotalCLP es requerido y debe ser un número.' });
-        }
+        const { nuevoTotalCLP, clienteNombre } = req.body;
 
         const query = db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal);
         const snapshot = await query.get();
@@ -78,31 +86,41 @@ module.exports = (db) => {
             return res.status(404).json({ error: 'No se encontraron reservas para el ID de grupo proporcionado.' });
         }
 
-        let totalActualCLP = 0;
-        const reservasDelGrupo = [];
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            totalActualCLP += data.valorCLP;
-            reservasDelGrupo.push({ id: doc.id, valorCLP: data.valorCLP });
-        });
-
         const batch = db.batch();
-        reservasDelGrupo.forEach(reserva => {
-            const docRef = db.collection('reservas').doc(reserva.id);
-            let nuevoValorIndividual;
-            if (totalActualCLP === 0) {
-                nuevoValorIndividual = Math.round(nuevoTotalCLP / reservasDelGrupo.length);
-            } else {
-                const proporcion = reserva.valorCLP / totalActualCLP;
-                nuevoValorIndividual = Math.round(nuevoTotalCLP * proporcion);
-            }
-            batch.update(docRef, { 
-                valorCLP: nuevoValorIndividual,
-                valorOriginalCLP: reserva.valorCLP, // Guardamos el valor original de cada una
-                valorManual: true // Activamos el "candado"
-            });
-        });
 
+        if (clienteNombre !== undefined) {
+            snapshot.forEach(doc => {
+                const docRef = db.collection('reservas').doc(doc.id);
+                batch.update(docRef, { clienteNombre: clienteNombre, nombreManual: true });
+            });
+        }
+
+        if (nuevoTotalCLP !== undefined) {
+            let totalActualCLP = 0;
+            const reservasDelGrupo = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                totalActualCLP += data.valorCLP;
+                reservasDelGrupo.push({ id: doc.id, valorCLP: data.valorCLP });
+            });
+
+            reservasDelGrupo.forEach(reserva => {
+                const docRef = db.collection('reservas').doc(reserva.id);
+                let nuevoValorIndividual;
+                if (totalActualCLP === 0) {
+                    nuevoValorIndividual = Math.round(nuevoTotalCLP / reservasDelGrupo.length);
+                } else {
+                    const proporcion = reserva.valorCLP / totalActualCLP;
+                    nuevoValorIndividual = Math.round(nuevoTotalCLP * proporcion);
+                }
+                batch.update(docRef, { 
+                    valorCLP: nuevoValorIndividual,
+                    valorOriginalCLP: reserva.valorCLP,
+                    valorManual: true
+                });
+            });
+        }
+        
         await batch.commit();
         res.status(200).json({ message: `Grupo de reserva ${reservaIdOriginal} actualizado correctamente.` });
     } catch (error) {

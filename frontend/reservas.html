@@ -59,7 +59,7 @@
         </main>
     </div>
 
-    <!-- VENTANA MODAL PARA EDITAR (INICIALMENTE OCULTA) -->
+    <!-- VENTANA MODAL PARA EDITAR -->
     <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
             <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Valor de Reserva</h3>
@@ -69,7 +69,6 @@
                     <label for="valor-input" class="block text-sm font-medium text-gray-700" id="modal-label">Nuevo Valor (CLP)</label>
                     <input type="number" id="valor-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
-                 <!-- Contenedor para mensajes de error/éxito -->
                 <div id="modal-status" class="mt-2 text-sm"></div>
             </div>
             <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
@@ -78,7 +77,6 @@
             </div>
         </div>
     </div>
-
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
@@ -128,7 +126,10 @@
                 const row = document.createElement('tr');
                 row.className = "hover:bg-gray-50";
                 
-                const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')}`;
+                // --- CAMBIO CLAVE AQUÍ ---
+                // Añadimos el ícono si el valor es manual
+                const iconoManual = reserva.valorManual ? '✏️' : '';
+                const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')} ${iconoManual}`;
 
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
@@ -168,7 +169,7 @@
         }
 
         function handleEditClick(event) {
-            modalStatus.innerHTML = ''; // Limpiar mensajes anteriores
+            modalStatus.innerHTML = '';
             const button = event.target;
             const id = button.dataset.id;
             const reservaIdOriginal = button.dataset.reservaIdOriginal;

@@ -46,14 +46,13 @@ async function processChannel(db, channel) {
         return `No hay nuevos reportes para procesar de ${channel}.`;
     }
 
-    // --- PASO 1: OBTENER RESERVAS CON "CANDADO" ---
-    // Creamos un mapa de todas las reservas existentes que tienen el candado activado.
-    const lockedReservations = new Map();
-    const lockedSnapshot = await db.collection('reservas').where('valorManual', '==', true).get();
-    lockedSnapshot.forEach(doc => {
-        lockedReservations.set(doc.id, doc.data());
+    // Obtenemos un mapa de TODAS las reservas existentes para una verificación eficiente
+    const allExistingReservations = new Map();
+    const allReservasSnapshot = await db.collection('reservas').get();
+    allReservasSnapshot.forEach(doc => {
+        allExistingReservations.set(doc.id, doc.data());
     });
-    console.log(`Se encontraron ${lockedReservations.size} reservas con valor manual bloqueado.`);
+    console.log(`Se encontraron ${allExistingReservations.size} reservas existentes para verificar.`);
 
     console.log(`Procesando ${rawDocsSnapshot.size} registros de ${channel}...`);
     const batch = db.batch();
@@ -127,14 +126,20 @@ async function processChannel(db, channel) {
                 clienteNombre: reservaData.nombreCompleto
             };
 
-            // --- PASO 2: RESPETAR EL "CANDADO" ---
-            // Si la reserva está en nuestro mapa de "bloqueadas", mantenemos sus valores manuales.
-            if (lockedReservations.has(idCompuesto)) {
-                const lockedData = lockedReservations.get(idCompuesto);
-                dataToSave.valorCLP = lockedData.valorCLP;
-                dataToSave.valorOriginalCLP = lockedData.valorOriginalCLP;
-                dataToSave.valorManual = true;
-                console.log(`Respetando valor manual para la reserva ${idCompuesto}.`);
+            // --- LÓGICA DE "CANDADO" MEJORADA ---
+            if (allExistingReservations.has(idCompuesto)) {
+                const existingData = allExistingReservations.get(idCompuesto);
+                if (existingData.valorManual) {
+                    dataToSave.valorCLP = existingData.valorCLP;
+                    dataToSave.valorOriginalCLP = existingData.valorOriginalCLP;
+                    dataToSave.valorManual = true;
+                    console.log(`Respetando valor manual para la reserva ${idCompuesto}.`);
+                }
+                if (existingData.nombreManual) {
+                    dataToSave.clienteNombre = existingData.clienteNombre;
+                    dataToSave.nombreManual = true;
+                    console.log(`Respetando nombre manual para la reserva ${idCompuesto}.`);
+                }
             }
 
             batch.set(reservaRef, dataToSave, { merge: true });

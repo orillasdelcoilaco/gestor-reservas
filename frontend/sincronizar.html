@@ -87,7 +87,6 @@
         const syncDriveBtn = document.getElementById('sync-drive-btn');
         const syncStatus = document.getElementById('sync-status');
         
-        // Lógica para el formulario de Airbnb (la implementaremos después)
         const airbnbForm = document.getElementById('airbnb-form');
         const airbnbStatus = document.getElementById('airbnb-status');
 
@@ -113,7 +112,9 @@
                     throw new Error(result.error || 'Ocurrió un error desconocido en el servidor.');
                 }
                 
-                let summaryHtml = `<strong>${result.message}</strong><ul class="list-disc list-inside mt-2"><li>SODC: ${result.summary.sodc}</li><li>Booking: ${result.summary.booking}</li></ul>`;
+                // --- CAMBIO CLAVE AQUÍ ---
+                // Ahora solo mostramos el mensaje simple que nos da el servidor.
+                let summaryHtml = `<strong>${result.message}</strong>`;
                 showStatus(syncStatus, summaryHtml, false);
 
             } catch (error) {

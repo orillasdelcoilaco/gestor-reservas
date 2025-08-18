@@ -119,6 +119,7 @@
 
         let allReservas = [];
         let reservaParaEditar = null;
+        let reservasDelGrupo = []; // <-- CORRECCIÓN: Declarada aquí para ser accesible por ambas funciones
 
         function renderTable(reservas) {
             reservasTableBody.innerHTML = '';
@@ -185,7 +186,7 @@
             const reservaIdOriginal = button.dataset.reservaIdOriginal;
             
             reservaParaEditar = allReservas.find(r => r.id === id);
-            const reservasDelGrupo = allReservas.filter(r => r.reservaIdOriginal === reservaIdOriginal);
+            reservasDelGrupo = allReservas.filter(r => r.reservaIdOriginal === reservaIdOriginal); // <-- CORRECCIÓN: Asignamos a la variable global
             
             nombreInput.value = reservaParaEditar.nombre;
             telefonoInput.value = reservaParaEditar.telefono;
@@ -215,14 +216,15 @@
 
             if (reservaParaEditar.esGrupo) {
                 url = `${API_BASE_URL}/api/reservas/grupo/${reservaParaEditar.reservaIdOriginal}`;
-                if (!isNaN(nuevoValor)) bodyPayload.nuevoTotalCLP = nuevoValor;
-                if (nuevoNombre) bodyPayload.clienteNombre = nuevoNombre;
-                if (nuevoTelefono) bodyPayload.telefono = nuevoTelefono;
+                const totalActualGrupo = reservasDelGrupo.reduce((s, r) => s + r.valorCLP, 0);
+                if (!isNaN(nuevoValor) && nuevoValor !== totalActualGrupo) bodyPayload.nuevoTotalCLP = nuevoValor;
+                if (nuevoNombre && nuevoNombre !== reservaParaEditar.nombre) bodyPayload.clienteNombre = nuevoNombre;
+                if (nuevoTelefono && nuevoTelefono !== reservaParaEditar.telefono) bodyPayload.telefono = nuevoTelefono;
             } else {
                 url = `${API_BASE_URL}/api/reservas/${reservaParaEditar.id}`;
-                if (!isNaN(nuevoValor)) bodyPayload.valorCLP = nuevoValor;
-                if (nuevoNombre) bodyPayload.clienteNombre = nuevoNombre;
-                if (nuevoTelefono) bodyPayload.telefono = nuevoTelefono;
+                if (!isNaN(nuevoValor) && nuevoValor !== reservaParaEditar.valorCLP) bodyPayload.valorCLP = nuevoValor;
+                if (nuevoNombre && nuevoNombre !== reservaParaEditar.nombre) bodyPayload.clienteNombre = nuevoNombre;
+                if (nuevoTelefono && nuevoTelefono !== reservaParaEditar.telefono) bodyPayload.telefono = nuevoTelefono;
             }
 
             if (Object.keys(bodyPayload).length === 0) {

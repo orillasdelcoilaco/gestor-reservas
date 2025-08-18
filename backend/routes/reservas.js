@@ -8,7 +8,6 @@ module.exports = (db) => {
       const snapshot = await db.collection('reservas').orderBy('fechaLlegada', 'desc').get();
       if (snapshot.empty) return res.status(200).json([]);
 
-      // Obtenemos todos los clientes para poder buscar sus teléfonos
       const clientsMap = new Map();
       const clientsSnapshot = await db.collection('clientes').get();
       clientsSnapshot.forEach(doc => {
@@ -24,13 +23,14 @@ module.exports = (db) => {
         todasLasReservas.push({
           id: doc.id,
           reservaIdOriginal: data.reservaIdOriginal || 'N/A',
-          clienteId: data.clienteId, // <-- ID único del cliente
+          clienteId: data.clienteId,
           nombre: data.clienteNombre || 'Sin Nombre',
-          telefono: cliente.phone || 'Sin Teléfono', // <-- Teléfono desde la colección de clientes
+          telefono: cliente.phone || 'Sin Teléfono',
           llegada: llegada,
           salida: salida,
           estado: data.estado || 'N/A',
           alojamiento: data.alojamiento || 'N/A',
+          canal: data.canal || 'N/A', // <-- LÍNEA CORREGIDA
           valorCLP: data.valorCLP || 0,
           totalNoches: data.totalNoches || 0,
           valorManual: data.valorManual || false,

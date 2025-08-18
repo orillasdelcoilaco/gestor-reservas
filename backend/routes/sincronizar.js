@@ -1,142 +1,102 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sincronizar y Cargar - Gestor de Reservas</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-    </style>
-</head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <!-- Barra de Navegación -->
-        <nav class="bg-white shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16">
-                    <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
-                    <div id="auth-info" class="flex items-center space-x-4"></div>
-                </div>
-            </div>
-        </nav>
+const express = require('express');
+const router = express.Router();
+const driveService = require('../services/driveService');
+const config = require('../config');
+const csv = require('csv-parser');
+const XLSX = require('xlsx');
+const stream = require('stream');
 
-        <!-- Contenido Principal -->
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Columna de Sincronización Automática -->
-                <div class="lg:col-span-2">
-                    <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-2">Sincronización Automática</h2>
-                        <p class="text-gray-600 mb-6">Busca los reportes más recientes en tu carpeta de Google Drive y los prepara para la consolidación.</p>
-                        <button id="sync-drive-btn" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
-                            Sincronizar desde Google Drive
-                        </button>
-                        <div id="sync-status" class="mt-4 p-4 rounded-md hidden"></div>
-                    </div>
-                </div>
+function parseCsvStream(fileStream) {
+  return new Promise((resolve, reject) => {
+    const results = [];
+    fileStream.pipe(csv()).on('data', (data) => results.push(data)).on('end', () => resolve(results)).on('error', (error) => reject(error));
+  });
+}
+function streamToBuffer(streamValue) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        streamValue.on('data', (chunk) => chunks.push(chunk));
+        streamValue.on('end', () => resolve(Buffer.concat(chunks)));
+        streamValue.on('error', (err) => reject(err));
+    });
+}
+async function parseExcelStream(fileStream) {
+    const buffer = await streamToBuffer(fileStream);
+    const workbook = XLSX.read(buffer);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    return XLSX.utils.sheet_to_json(worksheet);
+}
+async function saveDataToFirestore(db, collectionName, data) {
+    const collectionRef = db.collection(collectionName);
+    console.log(`Borrando datos antiguos de la colección: ${collectionName}...`);
+    let snapshot;
+    do {
+        snapshot = await collectionRef.limit(500).get();
+        if (snapshot.size > 0) {
+            const batchDelete = db.batch();
+            snapshot.docs.forEach(doc => batchDelete.delete(doc.ref));
+            await batchDelete.commit();
+        }
+    } while (snapshot.size > 0);
+    console.log(`Guardando ${data.length} nuevos registros en ${collectionName}...`);
+    for (let i = 0; i < data.length; i += 500) {
+        const batchUpload = db.batch();
+        const chunk = data.slice(i, i + 500);
+        chunk.forEach(row => {
+            const docRef = collectionRef.doc();
+            batchUpload.set(docRef, row);
+        });
+        await batchUpload.commit();
+    }
+}
 
-                <!-- Columna de Carga Manual Airbnb -->
-                <div>
-                    <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                        <h2 class="text-2xl font-semibold text-gray-900 mb-2">Cargar Reserva Airbnb</h2>
-                        <p class="text-gray-600 mb-6">Ingresa los datos de una reserva de Airbnb manualmente.</p>
-                        <form id="airbnb-form" class="space-y-4">
-                            <input type="text" id="airbnb-nombre" placeholder="Nombre del Huésped" required class="block w-full px-3 py-2 border border-gray-300 rounded-md">
-                            <input type="text" id="airbnb-reserva" placeholder="Código de Reserva" required class="block w-full px-3 py-2 border border-gray-300 rounded-md">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label for="airbnb-llegada" class="text-sm">Llegada</label>
-                                    <input type="date" id="airbnb-llegada" required class="block w-full px-3 py-2 border border-gray-300 rounded-md">
-                                </div>
-                                <div>
-                                    <label for="airbnb-salida" class="text-sm">Salida</label>
-                                    <input type="date" id="airbnb-salida" required class="block w-full px-3 py-2 border border-gray-300 rounded-md">
-                                </div>
-                            </div>
-                            <button type="submit" class="w-full sm:w-auto inline-flex justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
-                                Guardar Reserva Airbnb
-                            </button>
-                        </form>
-                        <div id="airbnb-status" class="mt-4 p-4 rounded-md hidden"></div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+async function performDriveSync(db) {
+    try {
+        console.log('Iniciando proceso de sincronización en segundo plano...');
+        const drive = driveService.getDriveClient();
+        const folderId = config.DRIVE_FOLDER_ID;
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+        const [sodcFile, bookingFile] = await Promise.all([
+            driveService.findLatestFile(drive, folderId, config.SODC_FILE_PATTERN),
+            driveService.findLatestFile(drive, folderId, config.BOOKING_FILE_PATTERN)
+        ]);
 
-        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.appspot.com",
-            messagingSenderId: "17783383809",
-            appId: "1:17783383809:web:329694a3dc2df074f7d800"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
-        const authInfo = document.getElementById('auth-info');
-        const syncDriveBtn = document.getElementById('sync-drive-btn');
-        const syncStatus = document.getElementById('sync-status');
-        
-        const airbnbForm = document.getElementById('airbnb-form');
-        const airbnbStatus = document.getElementById('airbnb-status');
-
-        function showStatus(element, message, isError = false) {
-            element.innerHTML = message;
-            element.className = `mt-4 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`;
-            element.classList.remove('hidden');
+        if (sodcFile) {
+            console.log(`Descargando y procesando archivo SODC: ${sodcFile.name}`);
+            const fileStream = await driveService.downloadFile(drive, sodcFile.id);
+            const sodcData = await parseCsvStream(fileStream);
+            await saveDataToFirestore(db, 'reportes_sodc_raw', sodcData);
+            console.log(`Archivo ${sodcFile.name} procesado. Se guardaron ${sodcData.length} registros.`);
+        } else {
+            console.log('No se encontró archivo nuevo de SODC.');
         }
 
-        syncDriveBtn.addEventListener('click', async () => {
-            syncDriveBtn.disabled = true;
-            syncDriveBtn.textContent = 'Sincronizando...';
-            showStatus(syncStatus, 'Iniciando conexión con Google Drive. Esto puede tardar un momento...');
+        if (bookingFile) {
+            console.log(`Descargando y procesando archivo Booking: ${bookingFile.name}`);
+            const fileStream = await driveService.downloadFile(drive, bookingFile.id);
+            const bookingData = await parseExcelStream(fileStream);
+            await saveDataToFirestore(db, 'reportes_booking_raw', bookingData);
+            console.log(`Archivo ${bookingFile.name} procesado. Se guardaron ${bookingData.length} registros.`);
+        } else {
+            console.log('No se encontró archivo nuevo de Booking.');
+        }
+        console.log('--- Sincronización en segundo plano completada. ---');
+    } catch (error) {
+        console.error('Error fatal durante la sincronización en segundo plano:', error);
+    }
+}
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/sincronizar-drive`, {
-                    method: 'POST',
-                });
-                
-                const result = await response.json();
+module.exports = (db) => {
+  router.post('/sincronizar-drive', (req, res) => {
+    console.log('Solicitud recibida para sincronizar desde Google Drive...');
 
-                if (!response.ok) {
-                    throw new Error(result.error || 'Ocurrió un error desconocido en el servidor.');
-                }
-                
-                // --- CAMBIO CLAVE AQUÍ ---
-                // Ahora solo mostramos el mensaje simple que nos da el servidor.
-                let summaryHtml = `<strong>${result.message}</strong>`;
-                showStatus(syncStatus, summaryHtml, false);
+    res.status(202).json({ 
+      message: 'El proceso de sincronización ha comenzado en segundo plano. Revisa los logs del servidor para ver el progreso.' 
+    });
 
-            } catch (error) {
-                console.error('Error al sincronizar:', error);
-                showStatus(syncStatus, `<strong>Error:</strong> ${error.message}`, true);
-            } finally {
-                syncDriveBtn.disabled = false;
-                syncDriveBtn.textContent = 'Sincronizar desde Google Drive';
-            }
-        });
+    performDriveSync(db);
+  });
 
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-                `;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
-    </script>
-</body>
-</html>
+  return router;
+};

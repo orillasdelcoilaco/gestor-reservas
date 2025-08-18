@@ -24,7 +24,8 @@ module.exports = (db) => {
           estado: data.estado || 'N/A',
           alojamiento: data.alojamiento || 'N/A',
           valorCLP: data.valorCLP || 0,
-          totalNoches: data.totalNoches || 0
+          totalNoches: data.totalNoches || 0,
+          valorManual: data.valorManual || false // <-- Enviamos la bandera al frontend
         });
       });
       res.status(200).json(todasLasReservas);
@@ -42,8 +43,19 @@ module.exports = (db) => {
       if (valorCLP === undefined || typeof valorCLP !== 'number') {
         return res.status(400).json({ error: 'El campo valorCLP es requerido y debe ser un número.' });
       }
+      
       const reservaRef = db.collection('reservas').doc(id);
-      await reservaRef.update({ valorCLP: valorCLP });
+      const doc = await reservaRef.get();
+      if (!doc.exists) {
+        return res.status(404).json({ error: 'La reserva no existe.' });
+      }
+      const valorActual = doc.data().valorCLP;
+
+      await reservaRef.update({ 
+        valorCLP: valorCLP,
+        valorOriginalCLP: valorActual, // Guardamos el valor original
+        valorManual: true // Activamos el "candado"
+      });
       res.status(200).json({ message: 'Reserva actualizada correctamente.' });
     } catch (error) {
       console.error("Error al actualizar la reserva:", error);
@@ -56,14 +68,12 @@ module.exports = (db) => {
     try {
         const { reservaIdOriginal } = req.params;
         const { nuevoTotalCLP } = req.body;
-
         if (nuevoTotalCLP === undefined || typeof nuevoTotalCLP !== 'number') {
             return res.status(400).json({ error: 'El campo nuevoTotalCLP es requerido y debe ser un número.' });
         }
 
         const query = db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal);
         const snapshot = await query.get();
-
         if (snapshot.empty) {
             return res.status(404).json({ error: 'No se encontraron reservas para el ID de grupo proporcionado.' });
         }
@@ -77,27 +87,24 @@ module.exports = (db) => {
         });
 
         const batch = db.batch();
-
-        if (totalActualCLP === 0) {
-            // Si el total actual es 0, distribuir el nuevo total de forma equitativa
-            const valorDistribuido = Math.round(nuevoTotalCLP / reservasDelGrupo.length);
-            reservasDelGrupo.forEach(reserva => {
-                const docRef = db.collection('reservas').doc(reserva.id);
-                batch.update(docRef, { valorCLP: valorDistribuido });
-            });
-        } else {
-            // Distribuir proporcionalmente
-            reservasDelGrupo.forEach(reserva => {
+        reservasDelGrupo.forEach(reserva => {
+            const docRef = db.collection('reservas').doc(reserva.id);
+            let nuevoValorIndividual;
+            if (totalActualCLP === 0) {
+                nuevoValorIndividual = Math.round(nuevoTotalCLP / reservasDelGrupo.length);
+            } else {
                 const proporcion = reserva.valorCLP / totalActualCLP;
-                const nuevoValorIndividual = Math.round(nuevoTotalCLP * proporcion);
-                const docRef = db.collection('reservas').doc(reserva.id);
-                batch.update(docRef, { valorCLP: nuevoValorIndividual });
+                nuevoValorIndividual = Math.round(nuevoTotalCLP * proporcion);
+            }
+            batch.update(docRef, { 
+                valorCLP: nuevoValorIndividual,
+                valorOriginalCLP: reserva.valorCLP, // Guardamos el valor original de cada una
+                valorManual: true // Activamos el "candado"
             });
-        }
+        });
 
         await batch.commit();
         res.status(200).json({ message: `Grupo de reserva ${reservaIdOriginal} actualizado correctamente.` });
-
     } catch (error) {
         console.error("Error al actualizar el grupo de reservas:", error);
         res.status(500).json({ error: 'Error interno del servidor al actualizar el grupo de reservas.' });

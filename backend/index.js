@@ -5,8 +5,15 @@ const admin = require('firebase-admin');
 // --- Importar archivos de rutas ---
 const reservasRoutes = require('./routes/reservas');
 const sincronizarRoutes = require('./routes/sincronizar');
-const consolidarRoutes = require('./routes/consolidar'); // <-- AÑADIDO
-const dolarRoutes = require('./routes/dolar'); // <-- AÑADIR ESTA LÍNEA
+const consolidarRoutes = require('./routes/consolidar');
+const dolarRoutes = require('./routes/dolar');
+
+// --- Configuración de CORS ---
+// Le decimos al servidor que solo acepte solicitudes desde tu dominio.
+const corsOptions = {
+  origin: 'https://www.orillasdelcoilaco.cl',
+  optionsSuccessStatus: 200 
+};
 
 // --- Inicialización de Firebase Admin SDK ---
 if (process.env.RENDER) {
@@ -28,12 +35,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Middlewares ---
-// --- Middlewares ---
-const corsOptions = {
-  origin: 'https://www.orillasdelcoilaco.cl',
-  optionsSuccessStatus: 200 // Para navegadores antiguos
-};
-app.use(cors(corsOptions));
+app.use(cors(corsOptions)); // <-- Usamos la configuración de CORS aquí
 app.use(express.json());
 
 // --- Rutas ---
@@ -43,8 +45,8 @@ app.get('/', (req, res) => {
 
 app.use('/api', reservasRoutes(db));
 app.use('/api', sincronizarRoutes(db));
-app.use('/api', consolidarRoutes(db)); // <-- AÑADIDO
-app.use('/api', dolarRoutes(db)); // <-- AÑADIR ESTA LÍNEA
+app.use('/api', consolidarRoutes(db));
+app.use('/api', dolarRoutes(db));
 
 // --- Iniciar el Servidor ---
 app.listen(PORT, () => {

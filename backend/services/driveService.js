@@ -6,9 +6,11 @@ const { google } = require('googleapis');
  */
 function getDriveClient() {
   const auth = new google.auth.GoogleAuth({
-    // La clave se obtiene del entorno (local o Render)
     keyFile: process.env.RENDER ? '/etc/secrets/serviceAccountKey.json' : './serviceAccountKey.json',
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'], // Solo necesitamos permisos de lectura
+    scopes: [
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/contacts' // <-- AÑADIR ESTE PERMISO
+    ],
   });
   return google.drive({ version: 'v3', auth });
 }

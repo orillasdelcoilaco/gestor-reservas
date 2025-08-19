@@ -1,7 +1,9 @@
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
+// --- 1. IMPORTAMOS EL NUEVO SERVICIO DE CONTACTOS ---
+const { getPeopleApiClient, findContactByPhone, createGoogleContact, updateGoogleContactNotes } = require('./contactsService');
 
-// --- Funciones de ayuda (sin cambios) ---
+// --- Las funciones de ayuda (parseDate, etc.) se mantienen igual ---
 function parseDate(dateValue) {
     if (!dateValue) return null;
     if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
@@ -39,7 +41,6 @@ function cleanCabanaName(cabanaName) {
     return cleanedName;
 }
 
-// --- LÓGICA DE CONSOLIDACIÓN MEJORADA ---
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
     const rawDocsSnapshot = await db.collection(rawCollectionName).get();
@@ -47,11 +48,13 @@ async function processChannel(db, channel) {
         return `No hay nuevos reportes para procesar de ${channel}.`;
     }
 
-    // 1. Cargar datos existentes en memoria para búsquedas rápidas
-    const existingReservations = new Map();
+    // --- 2. INICIAMOS EL CLIENTE DE LA API DE CONTACTOS ---
+    const people = getPeopleApiClient();
+
+    const allExistingReservations = new Map();
     const allReservasSnapshot = await db.collection('reservas').get();
     allReservasSnapshot.forEach(doc => {
-        existingReservations.set(doc.id, doc.data());
+        allExistingReservations.set(doc.id, doc.data());
     });
 
     const existingClientsByPhone = new Map();
@@ -62,7 +65,6 @@ async function processChannel(db, channel) {
             existingClientsByPhone.set(clientData.phone, doc.id);
         }
     });
-    console.log(`Cargados ${existingReservations.size} reservas y ${existingClientsByPhone.size} clientes para verificación.`);
 
     const batch = db.batch();
 
@@ -76,6 +78,7 @@ async function processChannel(db, channel) {
         const reservaData = {
             reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString() || `SIN_ID_${Date.now()}`,
             nombreCompleto: nombreCompletoRaw,
+            canal: channel, // <-- Añadimos el canal aquí para usarlo en el nombre del contacto
             email: rawData['Email'] || rawData['Correo'] || null,
             telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']),
             fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),
@@ -90,25 +93,31 @@ async function processChannel(db, channel) {
 
         if (!reservaData.fechaLlegada || !reservaData.fechaSalida) continue;
         
+        // --- 3. LÓGICA PARA CREAR/ACTUALIZAR CONTACTOS DE GOOGLE ---
+        if (reservaData.telefono) {
+            const existingContact = await findContactByPhone(people, reservaData.telefono);
+            if (existingContact) {
+                await updateGoogleContactNotes(people, existingContact, reservaData);
+            } else {
+                await createGoogleContact(people, reservaData);
+            }
+        }
+        
         for (const cabana of reservaData.alojamientos) {
             if (!cabana) continue;
+            reservaData.alojamiento = cabana; // Añadimos la cabaña específica para las notas
 
             const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
             const reservaRef = db.collection('reservas').doc(idCompuesto);
             let clienteId;
 
-            const existingReservation = existingReservations.get(idCompuesto);
+            const existingReservation = allExistingReservations.get(idCompuesto);
 
             if (existingReservation && existingReservation.clienteId) {
-                // PRIORIDAD 1: La reserva ya existe, reutilizamos su ID de cliente.
                 clienteId = existingReservation.clienteId;
-                console.log(`Reserva ${idCompuesto} ya existe. Reutilizando clienteId: ${clienteId}`);
             } else if (reservaData.telefono && existingClientsByPhone.has(reservaData.telefono)) {
-                // PRIORIDAD 2: La reserva es nueva, pero encontramos un cliente con el mismo teléfono.
                 clienteId = existingClientsByPhone.get(reservaData.telefono);
-                console.log(`Reserva nueva, cliente encontrado por teléfono ${reservaData.telefono}. Usando clienteId: ${clienteId}`);
             } else {
-                // PRIORIDAD 3: La reserva y el cliente son nuevos. Creamos un nuevo cliente.
                 const newClientRef = db.collection('clientes').doc();
                 clienteId = newClientRef.id;
                 
@@ -118,9 +127,7 @@ async function processChannel(db, channel) {
                     email: reservaData.email,
                     phone: reservaData.telefono
                 });
-                // Lo añadimos al mapa para encontrarlo en futuras iteraciones de este mismo proceso
                 if(reservaData.telefono) existingClientsByPhone.set(reservaData.telefono, clienteId);
-                console.log(`Cliente nuevo. Creando con ID: ${clienteId} y teléfono ${reservaData.telefono}`);
             }
 
             let valorCLP = reservaData.valorOriginal;
@@ -134,9 +141,8 @@ async function processChannel(db, channel) {
 
             const dataToSave = {
                 reservaIdOriginal: reservaData.reservaIdOriginal,
-                clienteId: clienteId, // <-- ID de cliente único
+                clienteId: clienteId,
                 clienteNombre: reservaData.nombreCompleto,
-                // ... (resto de los campos)
                 canal: channel,
                 estado: reservaData.estado,
                 fechaReserva: reservaData.fechaReserva ? admin.firestore.Timestamp.fromDate(reservaData.fechaReserva) : null,

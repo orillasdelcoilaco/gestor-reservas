@@ -26,7 +26,6 @@
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Generador de Mensajes para WhatsApp</h2>
 
-                <!-- PASO 1: SELECCIÓN DE RESERVA -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-b pb-6 mb-6">
                     <div>
                         <label for="fecha-filtro" class="block text-sm font-medium text-gray-700">1. Selecciona una fecha para buscar</label>
@@ -40,10 +39,8 @@
                     </div>
                 </div>
 
-                <!-- PASO 2: VISTA PREVIA Y GENERACIÓN (inicialmente oculto) -->
                 <div id="generador-section" class="hidden">
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Columna de Detalles y Abono -->
                         <div class="md:col-span-1">
                             <h3 class="text-lg font-medium text-gray-900">Detalles de la Reserva</h3>
                             <div id="detalles-reserva" class="mt-2 text-sm text-gray-600 space-y-1"></div>
@@ -52,22 +49,19 @@
                                 <input type="number" id="abono-input" placeholder="Ej: 50000" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                             </div>
                         </div>
-                        <!-- Columna de Mensajes -->
                         <div class="md:col-span-2 space-y-6">
-                            <!-- Mensaje de Cobro -->
                             <div>
                                 <h3 class="text-lg font-medium text-gray-900">Mensaje de Cobro</h3>
-                                <textarea id="mensaje-cobro" rows="12" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50" readonly></textarea>
+                                <textarea id="mensaje-cobro" rows="12" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"></textarea>
                                 <div class="mt-2 flex space-x-2">
                                     <button id="btn-generar-cobro" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Generar</button>
                                     <button id="btn-copiar-cobro" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
                                     <a id="btn-whatsapp-cobro" href="#" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600">Abrir WhatsApp</a>
                                 </div>
                             </div>
-                            <!-- Mensaje de Bienvenida -->
                             <div>
                                 <h3 class="text-lg font-medium text-gray-900">Mensaje de Bienvenida</h3>
-                                <textarea id="mensaje-bienvenida" rows="12" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50" readonly></textarea>
+                                <textarea id="mensaje-bienvenida" rows="12" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"></textarea>
                                 <div class="mt-2 flex space-x-2">
                                     <button id="btn-generar-bienvenida" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Generar</button>
                                     <button id="btn-copiar-bienvenida" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
@@ -98,7 +92,6 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
 
-        // --- Elementos UI ---
         const authInfo = document.getElementById('auth-info');
         const fechaFiltro = document.getElementById('fecha-filtro');
         const reservaSelect = document.getElementById('reserva-select');
@@ -116,11 +109,8 @@
         const btnCopiarBienvenida = document.getElementById('btn-copiar-bienvenida');
         const btnWhatsappBienvenida = document.getElementById('btn-whatsapp-bienvenida');
 
-        let reservaSeleccionada = null; // Guardará los detalles completos de la reserva elegida
+        let reservaSeleccionada = null;
 
-        // --- Lógica de la Aplicación ---
-
-        // 1. Cargar reservas cuando se cambia la fecha
         fechaFiltro.addEventListener('change', async () => {
             const fecha = fechaFiltro.value;
             if (!fecha) return;
@@ -155,7 +145,6 @@
             }
         });
 
-        // 2. Cargar detalles completos cuando se elige una reserva
         reservaSelect.addEventListener('change', async () => {
             const reservaId = reservaSelect.value;
             if (!reservaId) {
@@ -164,14 +153,12 @@
             }
 
             try {
-                // Necesitamos un nuevo endpoint para obtener todos los detalles de un grupo de reserva
                 const response = await fetch(`${API_BASE_URL}/api/mensajes/detalle-reserva/${reservaId}`);
                 if (!response.ok) throw new Error('No se pudieron obtener los detalles');
 
                 reservaSeleccionada = await response.json();
                 mostrarDetalles();
                 generadorSection.classList.remove('hidden');
-                // Limpiar mensajes anteriores
                 mensajeCobroText.value = '';
                 mensajeBienvenidaText.value = '';
                 abonoInput.value = '';
@@ -182,7 +169,6 @@
             }
         });
 
-        // 3. Mostrar detalles en la UI
         function mostrarDetalles() {
             if (!reservaSeleccionada) return;
             const { info, cabanas } = reservaSeleccionada;
@@ -200,11 +186,8 @@
                 <p class="font-bold mt-2">Total: $${info.totalCLP.toLocaleString('es-CL')}</p>
             `;
         }
-
-        // --- Generadores de Mensajes ---
         
-        // Formatear fecha para los mensajes
-        function formatMessageDate(dateString) { // dateString en formato DD/MM/YYYY
+        function formatMessageDate(dateString) {
             const [day, month, year] = dateString.split('/');
             const date = new Date(year, month - 1, day);
             const monthName = date.toLocaleString('es-ES', { month: 'short' }).replace('.', '');
@@ -219,7 +202,7 @@
             let detalleCabanas = cabanas.map(c => `Cabaña ${c.alojamiento.split(' ').pop()}: *$${c.valorCLP.toLocaleString('es-CL')}*`).join('\n');
             
             let totalSection = `*Total Reserva: $${info.totalCLP.toLocaleString('es-CL')}*`;
-            if(info.valorManual) {
+            if(info.valorManual && info.totalOriginalCLP > info.totalCLP) {
                 totalSection = `Valor Original: *$${info.totalOriginalCLP.toLocaleString('es-CL')}*\nDescuento Aplicado: *-$${(info.totalOriginalCLP - info.totalCLP).toLocaleString('es-CL')}*\n-----------------\n*Total Reserva: $${info.totalCLP.toLocaleString('es-CL')}*`;
             }
 
@@ -239,9 +222,24 @@ Abono Recibido: *-$${abono.toLocaleString('es-CL')}*
 
 *****************
 *Transferir a:*
-[Tus datos bancarios]
-*****************`;
+INMOB. E INV. SACATINES SPA
+77.623.058-8
+Prepago Los Heroes
+Cuenta Vista
+177623058
+administrador@orillasdelcoilaco.cl
+
+*****************
+Favor enviar copia de la transferencia a este chat.
+Recuerda que el pago es en el check-in, gracias
+******************
+
+Esta es nuestra página para futuras reservas:
+https://orillasdelcoilaco.cl/wp/
+
+¡Muchas gracias!`;
             mensajeCobroText.value = mensaje;
+            updateWhatsappLink(btnWhatsappCobro, mensaje);
         });
         
         btnGenerarBienvenida.addEventListener('click', () => {
@@ -352,14 +350,14 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
 📜 Revisa todas nuestras normas y condiciones aquí:
 👉 https://orillasdelcoilaco.cl/wp/terminos-y-condiciones/`;
             mensajeBienvenidaText.value = mensaje;
+            updateWhatsappLink(btnWhatsappBienvenida, mensaje);
         });
 
-        // --- Botones de Acción ---
         function copyToClipboard(text) {
+            if (!text) return;
             navigator.clipboard.writeText(text).then(() => {
                 alert('¡Mensaje copiado!');
-            }, (err) => {
-                console.error('Error al copiar: ', err);
+            }, () => {
                 alert('Error al copiar el mensaje.');
             });
         }
@@ -368,21 +366,19 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
         btnCopiarBienvenida.addEventListener('click', () => copyToClipboard(mensajeBienvenidaText.value));
 
         function updateWhatsappLink(button, text) {
-            if(!reservaSeleccionada || !reservaSeleccionada.info.telefono) return;
-            const phone = reservaSeleccionada.info.telefono.replace(/\D/g, ''); // Limpiar teléfono
+            if(!reservaSeleccionada || !reservaSeleccionada.info.telefono || !text) {
+                button.href = '#';
+                return;
+            };
+            const phone = reservaSeleccionada.info.telefono.replace(/\D/g, '');
             const encodedText = encodeURIComponent(text);
             button.href = `https://wa.me/${phone}?text=${encodedText}`;
         }
 
-        mensajeCobroText.addEventListener('input', () => updateWhatsappLink(btnWhatsappCobro, mensajeCobroText.value));
-        mensajeBienvenidaText.addEventListener('input', () => updateWhatsappLink(btnWhatsappBienvenida, mensajeBienvenidaText.value));
         abonoInput.addEventListener('input', () => {
-            // Regenerar mensaje de cobro si ya existe
             if(mensajeCobroText.value) btnGenerarCobro.click();
         });
 
-
-        // --- Autenticación ---
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 authInfo.innerHTML = `

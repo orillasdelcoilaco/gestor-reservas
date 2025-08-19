@@ -18,10 +18,9 @@ module.exports = (db) => {
       const targetTimestamp = admin.firestore.Timestamp.fromDate(targetDate);
 
       // --- CAMBIO CLAVE AQUÍ ---
-      // Añadimos un filtro para excluir las reservas canceladas.
+      // 1. Hacemos una consulta más simple que Firestore sí puede manejar.
       const q = db.collection('reservas')
-        .where('fechaLlegada', '<=', targetTimestamp)
-        .where('estado', '!=', 'Cancelada');
+        .where('fechaLlegada', '<=', targetTimestamp);
 
       const snapshot = await q.get();
 
@@ -33,7 +32,9 @@ module.exports = (db) => {
       snapshot.forEach(doc => {
         const data = doc.data();
         const fechaSalida = data.fechaSalida.toDate();
-        if (fechaSalida > targetDate) {
+
+        // 2. Hacemos el filtrado final aquí, en nuestro servidor.
+        if (fechaSalida > targetDate && data.estado !== 'Cancelada') {
            reservasActivas.push({
             id: doc.id,
             reservaIdOriginal: data.reservaIdOriginal,
@@ -72,7 +73,7 @@ module.exports = (db) => {
         cabanas.push({
           alojamiento: data.alojamiento,
           valorCLP: data.valorCLP,
-          valorOriginalCLP: data.valorOriginalCLP // Incluimos el valor original
+          valorOriginalCLP: data.valorOriginalCLP
         });
         clienteId = data.clienteId;
       });

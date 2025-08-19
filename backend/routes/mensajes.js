@@ -5,7 +5,7 @@ const admin = require('firebase-admin');
 module.exports = (db) => {
   /**
    * GET /reservas-por-fecha
-   * Busca y devuelve un listado de reservas activas para una fecha específica.
+   * Busca y devuelve un listado de reservas activas (NO canceladas) para una fecha específica.
    */
   router.get('/reservas-por-fecha', async (req, res) => {
     const { fecha } = req.query;
@@ -17,7 +17,12 @@ module.exports = (db) => {
       const targetDate = new Date(fecha + 'T00:00:00Z');
       const targetTimestamp = admin.firestore.Timestamp.fromDate(targetDate);
 
-      const q = db.collection('reservas').where('fechaLlegada', '<=', targetTimestamp);
+      // --- CAMBIO CLAVE AQUÍ ---
+      // Añadimos un filtro para excluir las reservas canceladas.
+      const q = db.collection('reservas')
+        .where('fechaLlegada', '<=', targetTimestamp)
+        .where('estado', '!=', 'Cancelada');
+
       const snapshot = await q.get();
 
       if (snapshot.empty) {
@@ -67,11 +72,11 @@ module.exports = (db) => {
         cabanas.push({
           alojamiento: data.alojamiento,
           valorCLP: data.valorCLP,
+          valorOriginalCLP: data.valorOriginalCLP // Incluimos el valor original
         });
-        clienteId = data.clienteId; // Todas las reservas del grupo tienen el mismo clienteId
+        clienteId = data.clienteId;
       });
 
-      // Tomamos los datos generales de la primera reserva del grupo
       const primeraReserva = snapshot.docs[0].data();
       const clienteDoc = await db.collection('clientes').doc(clienteId).get();
       const clienteData = clienteDoc.exists ? clienteDoc.data() : {};

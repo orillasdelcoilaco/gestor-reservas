@@ -10,9 +10,8 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-gray-1.00">
+<body class="bg-gray-100">
     <div class="min-h-screen">
-        <!-- Barra de Navegación -->
         <nav class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
@@ -22,17 +21,16 @@
             </div>
         </nav>
 
-        <!-- Contenido Principal -->
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo</h2>
                 <p class="text-gray-600 mb-6">Sigue estos pasos en orden para actualizar y gestionar tus reservas.</p>
                 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <!-- Paso 1: Sincronizar -->
                     <a href="sincronizar.html" class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow">
                         <span class="text-3xl">①</span>
-                        <p class="mt-2">Sincronizar y Cargar Datos</p>
+                        <p class="mt-2">Sincronizar Datos</p>
                     </a>
                     <!-- Paso 2: Procesar -->
                     <a href="procesar.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow">
@@ -42,7 +40,12 @@
                     <!-- Paso 3: Ver Reservas -->
                     <a href="reservas.html" class="bg-white border border-gray-300 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">
                         <span class="text-3xl">③</span>
-                        <p class="mt-2">Ver Reservas Consolidadas</p>
+                        <p class="mt-2">Ver y Editar Reservas</p>
+                    </a>
+                    <!-- Paso 4: Generar Mensajes -->
+                    <a href="mensajes.html" class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow">
+                        <span class="text-3xl">④</span>
+                        <p class="mt-2">Generar Mensajes</p>
                     </a>
                 </div>
             </div>

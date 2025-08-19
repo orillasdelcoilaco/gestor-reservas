@@ -7,9 +7,9 @@ const reservasRoutes = require('./routes/reservas');
 const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar');
 const dolarRoutes = require('./routes/dolar');
+const mensajesRoutes = require('./routes/mensajes'); // <-- 1. AÑADIR ESTA LÍNEA
 
 // --- Configuración de CORS ---
-// Le decimos al servidor que solo acepte solicitudes desde tu dominio.
 const corsOptions = {
   origin: 'https://www.orillasdelcoilaco.cl',
   optionsSuccessStatus: 200 
@@ -35,7 +35,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // --- Middlewares ---
-app.use(cors(corsOptions)); // <-- Usamos la configuración de CORS aquí
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // --- Rutas ---
@@ -47,6 +47,7 @@ app.use('/api', reservasRoutes(db));
 app.use('/api', sincronizarRoutes(db));
 app.use('/api', consolidarRoutes(db));
 app.use('/api', dolarRoutes(db));
+app.use('/api/mensajes', mensajesRoutes(db)); // <-- 2. AÑADIR ESTA LÍNEA
 
 // --- Iniciar el Servidor ---
 app.listen(PORT, () => {

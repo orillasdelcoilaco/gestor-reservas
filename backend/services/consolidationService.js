@@ -91,9 +91,10 @@ async function processChannel(db, channel) {
             alojamientos: alojamientosRaw.toString().split(',').map(c => cleanCabanaName(c.trim()))
         };
 
-        if (!reservaData.fechaLlegada || !reservaData.fechaSalida) continue;
+        if (!reservaData.fechaLlegada || !reservaData.fechaSalida || reservaData.alojamientos.length === 0 || !reservaData.alojamientos[0]) continue;
         
         // --- 3. LÓGICA PARA CREAR/ACTUALIZAR CONTACTOS DE GOOGLE ---
+        // Se ejecuta una sola vez por reserva, antes de iterar por las cabañas.
         if (reservaData.telefono) {
             const existingContact = await findContactByPhone(people, reservaData.telefono);
             if (existingContact) {
@@ -105,7 +106,6 @@ async function processChannel(db, channel) {
         
         for (const cabana of reservaData.alojamientos) {
             if (!cabana) continue;
-            reservaData.alojamiento = cabana; // Añadimos la cabaña específica para las notas
 
             const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
             const reservaRef = db.collection('reservas').doc(idCompuesto);

@@ -29,11 +29,9 @@ async function findContactByPhone(people, phoneNumber) {
     });
 
     if (response.data.results && response.data.results.length > 0) {
-      // Devolvemos el primer resultado que coincida exactamente
       for (const result of response.data.results) {
         if (result.person.phoneNumbers) {
           for (const phone of result.person.phoneNumbers) {
-            // Comparamos los números sin caracteres especiales
             const cleanedApiPhone = phone.value.replace(/\D/g, '');
             const cleanedSearchPhone = phoneNumber.replace(/\D/g, '');
             if (cleanedApiPhone.includes(cleanedSearchPhone)) {
@@ -58,12 +56,13 @@ async function findContactByPhone(people, phoneNumber) {
  * @returns {Promise<void>}
  */
 async function createGoogleContact(people, reservaData) {
-  const { nombreCompleto, canal, reservaIdOriginal, telefono, fechaLlegada, alojamiento } = reservaData;
+  const { nombreCompleto, canal, reservaIdOriginal, telefono, fechaLlegada, alojamientos } = reservaData;
   
+  const listaCabanas = alojamientos.join(', ');
   const contact = {
     names: [{ givenName: `${nombreCompleto} ${canal} ${reservaIdOriginal}` }],
     phoneNumbers: [{ value: telefono }],
-    biographies: [{ value: `Reserva N° ${reservaIdOriginal} - Llegada: ${fechaLlegada.toLocaleDateString('es-CL')} - Cabaña: ${alojamiento}` }]
+    biographies: [{ value: `Reserva N° ${reservaIdOriginal} - Llegada: ${fechaLlegada.toLocaleDateString('es-CL')} - Cabañas: ${listaCabanas}` }]
   };
 
   try {
@@ -82,11 +81,11 @@ async function createGoogleContact(people, reservaData) {
  * @returns {Promise<void>}
  */
 async function updateGoogleContactNotes(people, existingContact, reservaData) {
-  const { reservaIdOriginal, fechaLlegada, alojamiento } = reservaData;
+  const { reservaIdOriginal, fechaLlegada, alojamientos } = reservaData;
   
-  const newNote = `Reserva N° ${reservaIdOriginal} - Llegada: ${fechaLlegada.toLocaleDateString('es-CL')} - Cabaña: ${alojamiento}`;
+  const listaCabanas = alojamientos.join(', ');
+  const newNote = `Reserva N° ${reservaIdOriginal} - Llegada: ${fechaLlegada.toLocaleDateString('es-CL')} - Cabañas: ${listaCabanas}`;
   
-  // Obtenemos las notas existentes y añadimos la nueva
   const existingNotes = existingContact.biographies ? existingContact.biographies[0].value : '';
   const updatedNotes = existingNotes ? `${existingNotes}\n${newNote}` : newNote;
 

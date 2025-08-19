@@ -1,9 +1,10 @@
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
-// --- 1. IMPORTAMOS EL NUEVO SERVICIO DE CONTACTOS ---
 const { getPeopleApiClient, findContactByPhone, createGoogleContact, updateGoogleContactNotes } = require('./contactsService');
 
-// --- Las funciones de ayuda (parseDate, etc.) se mantienen igual ---
+// --- FUNCIÓN DE AYUDA PARA LA PAUSA ---
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 function parseDate(dateValue) {
     if (!dateValue) return null;
     if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
@@ -48,15 +49,12 @@ async function processChannel(db, channel) {
         return `No hay nuevos reportes para procesar de ${channel}.`;
     }
 
-    // --- 2. INICIAMOS EL CLIENTE DE LA API DE CONTACTOS ---
     const people = getPeopleApiClient();
-
     const allExistingReservations = new Map();
     const allReservasSnapshot = await db.collection('reservas').get();
     allReservasSnapshot.forEach(doc => {
         allExistingReservations.set(doc.id, doc.data());
     });
-
     const existingClientsByPhone = new Map();
     const allClientsSnapshot = await db.collection('clientes').get();
     allClientsSnapshot.forEach(doc => {
@@ -78,7 +76,7 @@ async function processChannel(db, channel) {
         const reservaData = {
             reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString() || `SIN_ID_${Date.now()}`,
             nombreCompleto: nombreCompletoRaw,
-            canal: channel, // <-- Añadimos el canal aquí para usarlo en el nombre del contacto
+            canal: channel,
             email: rawData['Email'] || rawData['Correo'] || null,
             telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']),
             fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),
@@ -93,8 +91,6 @@ async function processChannel(db, channel) {
 
         if (!reservaData.fechaLlegada || !reservaData.fechaSalida || reservaData.alojamientos.length === 0 || !reservaData.alojamientos[0]) continue;
         
-        // --- 3. LÓGICA PARA CREAR/ACTUALIZAR CONTACTOS DE GOOGLE ---
-        // Se ejecuta una sola vez por reserva, antes de iterar por las cabañas.
         if (reservaData.telefono) {
             const existingContact = await findContactByPhone(people, reservaData.telefono);
             if (existingContact) {
@@ -102,6 +98,8 @@ async function processChannel(db, channel) {
             } else {
                 await createGoogleContact(people, reservaData);
             }
+            // --- CAMBIO CLAVE: AÑADIMOS LA PAUSA AQUÍ ---
+            await sleep(500); // Espera medio segundo para no superar la cuota de la API
         }
         
         for (const cabana of reservaData.alojamientos) {

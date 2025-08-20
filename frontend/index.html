@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 flex items-center justify-center h-screen">
-
     <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
         <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
         <form id="login-form" class="space-y-4">
@@ -27,56 +26,53 @@
     </div>
 
     <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 
-    // --- Configuración de Firebase ---
-    const firebaseConfig = {
-        apiKey: "AlzaSyC_9_hrjyOLnBIARgulTiY80Eg1riKjdCE",
-        authDomain: "reservas-sodc.firebaseapp.com",
-        projectId: "reservas-sodc",
-        storageBucket: "reservas-sodc.appspot.com",
-        messagingSenderId: "17783383809",
-        appId: "1:17783383809:web:329694a3dc2df074f7d800"
-    };
+        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+        const firebaseConfig = {
+            apiKey: "AlzaSyC_9_hrjyOLnBIARgulTiY80Eg1riKjdCE",
+            authDomain: "reservas-sodc.firebaseapp.com",
+            projectId: "reservas-sodc",
+            storageBucket: "reservas-sodc.appspot.com",
+            messagingSenderId: "17783383809",
+            appId: "1:17783383809:web:329694a3dc2df074f7d800"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    
-    const loginForm = document.getElementById('login-form');
-    const loginError = document.getElementById('login-error');
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
 
-    // --- LÓGICA MODIFICADA ---
-    // Maneja el evento de envío del formulario de login
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        loginError.classList.add('hidden');
-        const email = loginForm['login-email'].value;
-        const password = loginForm['login-password'].value;
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginError.classList.add('hidden');
+            const email = loginForm['login-email'].value;
+            const password = loginForm['login-password'].value;
 
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            // Al tener éxito, redirigimos DIRECTAMENTE al dashboard.
-            // Esto es más robusto que esperar al onAuthStateChanged.
-            window.location.href = 'dashboard.html';
-        } catch (error) {
-            console.error("Falló el inicio de sesión:", error.code, error.message);
-            loginError.textContent = 'Credenciales incorrectas. Inténtalo de nuevo.';
-            loginError.classList.remove('hidden');
-        }
-    });
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const idToken = await userCredential.user.getIdToken();
 
-    // Esta parte sigue siendo útil para redirigir a un usuario
-    // que ya tiene una sesión activa y visita la página de login.
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            // Si el usuario ya está logueado, lo enviamos al dashboard
-            // para evitar que vea la página de login de nuevo.
-            if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
-                 window.location.href = 'dashboard.html';
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ idToken: idToken }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('El servidor no pudo crear la sesión.');
+                }
+                
+                window.location.href = 'dashboard.html';
+
+            } catch (error) {
+                console.error("Falló el inicio de sesión:", error);
+                loginError.textContent = 'Credenciales incorrectas o error del servidor.';
+                loginError.classList.remove('hidden');
             }
-        }
-    });
-</script>
+        });
+    </script>
 </body>
 </html>

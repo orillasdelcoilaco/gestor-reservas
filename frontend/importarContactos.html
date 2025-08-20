@@ -41,97 +41,28 @@
         </main>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    <script>
+    const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+    const authInfo = document.getElementById('auth-info');
 
-        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-        const firebaseConfig = {
-            apiKey: "AlzaSyC_9_hrjyOLnBIARgulTiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.appspot.com",
-            messagingSenderId: "17783383809",
-            appId: "1:17783383809:web:329694a3dc2df074f7d800"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
-        const authInfo = document.getElementById('auth-info');
-        const importForm = document.getElementById('import-form');
-        const fileInput = document.getElementById('csv-file-input');
-        const importBtn = document.getElementById('import-btn');
-        const importStatus = document.getElementById('import-status');
-
-        function showStatus(message, type = 'info') {
-            let bgColor, textColor;
-            switch (type) {
-                case 'error':
-                    bgColor = 'bg-red-100';
-                    textColor = 'text-red-800';
-                    break;
-                case 'success':
-                    bgColor = 'bg-green-100';
-                    textColor = 'text-green-800';
-                    break;
-                default:
-                    bgColor = 'bg-blue-100';
-                    textColor = 'text-blue-800';
-            }
-            importStatus.innerHTML = message;
-            importStatus.className = `mt-6 p-4 rounded-md text-sm ${bgColor} ${textColor}`;
-            importStatus.classList.remove('hidden');
+    async function checkAuthStatus() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/auth/status`, { credentials: 'include' });
+            if (!response.ok) throw new Error('Sesión no válida');
+            
+            const userData = await response.json();
+            
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${userData.email}</span>
+                <a href="${API_BASE_URL}/api/auth/logout" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</a>
+            `;
+        } catch (error) {
+            console.error('Error de autenticación:', error);
+            window.location.href = 'index.html';
         }
-
-        importForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!fileInput.files.length) {
-                showStatus('Por favor, selecciona un archivo CSV.', 'error');
-                return;
-            }
-
-            importBtn.disabled = true;
-            importBtn.textContent = 'Procesando...';
-            showStatus('Enviando archivo al servidor. Esto puede tardar unos segundos...', 'info');
-
-            const formData = new FormData();
-            formData.append('clientsFile', fileInput.files[0]);
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/clientes/importar-csv`, {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                const result = await response.json();
-                if (!response.ok) {
-                    throw new Error(result.error || 'Ocurrió un error desconocido en el servidor.');
-                }
-                
-                showStatus(`<strong>¡Proceso completado!</strong><br>${result.message}`, 'success');
-                importForm.reset();
-
-            } catch (error) {
-                console.error('Error al importar el archivo:', error);
-                showStatus(`<strong>Error:</strong> ${error.message}`, 'error');
-            } finally {
-                importBtn.disabled = false;
-                importBtn.textContent = 'Importar Archivo';
-            }
-        });
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-                `;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
-    </script>
+    }
+    // Ejecuta el chequeo de seguridad y luego el código específico de la página
+    document.addEventListener('DOMContentLoaded', checkAuthStatus);
+</script>
 </body>
 </html>

@@ -49,91 +49,28 @@
         </main>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    <script>
+    const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+    const authInfo = document.getElementById('auth-info');
 
-        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.appspot.com",
-            messagingSenderId: "17783383809",
-            appId: "1:17783383809:web:329694a3dc2df074f7d800"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
-        const authInfo = document.getElementById('auth-info');
-        const uploadForm = document.getElementById('upload-form');
-        const fileInput = document.getElementById('dolar-file-input');
-        const yearInput = document.getElementById('year-input'); // <-- OBTENEMOS EL INPUT DEL AÑO
-        const uploadBtn = document.getElementById('upload-btn');
-        const uploadStatus = document.getElementById('upload-status');
-
-        function showStatus(message, isError = false) {
-            uploadStatus.innerHTML = message;
-            uploadStatus.className = `mt-6 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
-            uploadStatus.classList.remove('hidden');
+    async function checkAuthStatus() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/auth/status`, { credentials: 'include' });
+            if (!response.ok) throw new Error('Sesión no válida');
+            
+            const userData = await response.json();
+            
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${userData.email}</span>
+                <a href="${API_BASE_URL}/api/auth/logout" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</a>
+            `;
+        } catch (error) {
+            console.error('Error de autenticación:', error);
+            window.location.href = 'index.html';
         }
-
-        uploadForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const year = yearInput.value;
-            if (!fileInput.files.length) {
-                showStatus('Por favor, selecciona un archivo.', true);
-                return;
-            }
-            if (!year) {
-                showStatus('Por favor, ingresa el año.', true);
-                return;
-            }
-
-            uploadBtn.disabled = true;
-            uploadBtn.textContent = 'Cargando...';
-            showStatus('Enviando archivo al servidor...', false);
-
-            const formData = new FormData();
-            formData.append('dolarFile', fileInput.files[0]);
-            formData.append('year', year); // <-- AÑADIMOS EL AÑO AL FORMULARIO
-
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/dolar/upload-csv`, {
-                    method: 'POST',
-                    body: formData,
-                });
-
-                const result = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(result.error || 'Ocurrió un error desconocido.');
-                }
-
-                showStatus(`<strong>Éxito para el año ${year}:</strong> ${result.message}<br>Se procesaron ${result.summary.processed} registros.`, false);
-                uploadForm.reset();
-
-            } catch (error) {
-                console.error('Error al subir el archivo:', error);
-                showStatus(`<strong>Error:</strong> ${error.message}`, true);
-            } finally {
-                uploadBtn.disabled = false;
-                uploadBtn.textContent = 'Cargar Archivo';
-            }
-        });
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-                `;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
-    </script>
+    }
+    // Ejecuta el chequeo de seguridad y luego el código específico de la página
+    document.addEventListener('DOMContentLoaded', checkAuthStatus);
+</script>
 </body>
 </html>

@@ -24,17 +24,19 @@
         </form>
         <p id="login-error" class="text-red-500 text-center mt-4 hidden"></p>
     </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
         import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
         
+        // --- USAREMOS SIEMPRE ESTA CONFIGURACIÓN CORRECTA ---
         const firebaseConfig = {
-            apiKey: "AlzaSyC_9_hrjyOLnBIARgulTiY80Eg1riKjdCE",
+            apiKey: "AIzaSyC_9_hrjyOLnBIARgulTiY80Eg1riKjdCE",
             authDomain: "reservas-sodc.firebaseapp.com",
-            projectid: "reservas-sodc",
+            projectId: "reservas-sodc",
             storageBucket: "reservas-sodc.appspot.com",
-            messagingSenderld: "17783383809",
-            appld: "1:17783383809:web:329694a3dc2df074f7d800"
+            messagingSenderId: "17783383809",
+            appId: "1:17783383809:web:329694a3dc2df074f7d800"
         };
 
         const app = initializeApp(firebaseConfig);

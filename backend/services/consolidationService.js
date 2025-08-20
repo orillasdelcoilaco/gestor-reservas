@@ -1,30 +1,147 @@
-==> Ejecutando 'nodo index.js'
-==> Salió con el estado 1
-==> Formas comunes de solucionar problemas de implementación: https://render.com/docs/troubleshooting-deploys
-==> Ejecutando 'nodo index.js'
-nodo:interno/módulos/cjs/cargador:1404
-  tirar err;
-  ^
-Error: No se puede encontrar el módulo '.. /utils/helpers'
-Requerir pila:
-- /opt/render/project/src/backend/services/contactsService.js
-- /opt/render/project/src/backend/routes/contactos.js
-- /opt/render/project/src/backend/index.js
-  en Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)
-  en defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)
-  en resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)
-  en Function._load (node:internal/modules/cjs/loader:1211:37)
-  en TracingChannel.traceSync (nodo:diagnostics_channel:322:14)
-  en wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
-  en Module.require (node:internal/modules/cjs/loader:1487:12)
-  en requerir (node:internal/modules/helpers:135:16)
-  en Object.<anonymous> (/opt/render/project/src/backend/services/contactsService.js:2:30)
-  en Module._compile (node:internal/modules/cjs/loader:1730:14) {
-  código: «MODULE_NOT_FOUND»,
-  requireStack: [
-    '/opt/render/project/src/backend/services/contactsService.js',
-    '/opt/render/project/src/backend/routes/contactos.js',
-    '/opt/render/project/src/backend/index.js'
-  ]
+const admin = require('firebase-admin');
+const { getValorDolar } = require('./dolarService');
+
+//--- Funciones de ayuda (definidas localmente)
+function parseDate(dateValue) {
+    if (!dateValue) return null;
+    if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
+    if (typeof dateValue === 'number') {
+        return new Date(Date.UTC(1899, 11, 30, 0, 0, 0, 0) + dateValue * 86400000);
+    }
+    if (typeof dateValue === 'string') {
+        const date = new Date(dateValue.replace(/(\d{2})\/(\d{2})\/(\d{4})/, '$3-$2-$1'));
+        if (!isNaN(date)) return date;
+    }
+    return null;
 }
-Node.js v22.16.0
+
+function parseCurrency(value, currency = 'USD') {
+    if (typeof value === 'number') return value;
+    if (typeof value !== 'string') return 0;
+    if (currency === 'CLP') {
+        const digitsOnly = value.replace(/\D/g, '');
+        return parseInt(digitsOnly, 10) || 0;
+    }
+    const numberString = value.replace(/[^\d.,]/g, '');
+    const cleanedForFloat = numberString.replace(/,/g, '');
+    return parseFloat(cleanedForFloat) || 0;
+}
+
+function cleanPhoneNumber(phone) {
+    if (!phone) return null;
+    let cleaned = phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
+    if (cleaned.length === 9 && cleaned.startsWith('9')) {
+        return `56${cleaned}`;
+    }
+    return cleaned;
+}
+
+function cleanCabanaName(cabanaName) {
+    if (!cabanaName) return '';
+    let cleanedName = cabanaName.replace(/(\d+)(\s*)$/, '$1').trim();
+    return cleanedName;
+}
+
+//--- LÓGICA DE CONSOLIDACIÓN ESTABLE
+async function processChannel(db, channel) {
+    const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
+    const rawDocsSnapshot = await db.collection(rawCollectionName).get();
+    if (rawDocsSnapshot.empty) {
+        return `No hay nuevos reportes para procesar de ${channel}.`;
+    }
+    const allExistingReservations = new Map();
+    const allReservasSnapshot = await db.collection('reservas').get();
+    allReservasSnapshot.forEach(doc => {
+        allExistingReservations.set(doc.id, doc.data());
+    });
+    const existingClientsByPhone = new Map();
+    const allClientsSnapshot = await db.collection('clientes').get();
+    allClientsSnapshot.forEach(doc => {
+        const clientData = doc.data();
+        if (clientData.phone) {
+            existingClientsByPhone.set(clientData.phone, doc.id);
+        }
+    });
+    const batch = db.batch();
+    for (const doc of rawDocsSnapshot.docs) {
+        const rawData = doc.data();
+        const isBooking = channel === 'Booking';
+        const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']) || "";
+        const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre";
+        const reservaData = {
+            reservaldOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString(),
+            nombreCompleto: nombreCompletoRaw,
+            email: rawData['Email'] || rawData['Correo'] || null,
+            telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']),
+            fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),
+            fechaSalida: parseDate(isBooking ? rawData['Salida'] : rawData['Día de salida']),
+            estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
+            alojamientos: alojamientosRaw.toString().split(',').map(c => cleanCabanaName(c.trim()))
+        };
+        if (!reservaData.fechaLlegada || !reservaData.fechaSalida) continue;
+        for (const cabana of reservaData.alojamientos) {
+            if (!cabana) continue;
+            const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaldOriginal}_${cabana.replace(/\s+/g, '')}`;
+            const reservaRef = db.collection('reservas').doc(idCompuesto);
+            let clienteld;
+            const existingReservation = allExistingReservations.get(idCompuesto);
+            if (existingReservation && existingReservation.clienteld) {
+                clienteld = existingReservation.clienteld;
+            } else if (reservaData.telefono && existingClientsByPhone.has(reservaData.telefono)) {
+                clienteld = existingClientsByPhone.get(reservaData.telefono);
+            } else {
+                const newClientRef = db.collection('clientes').doc();
+                clienteld = newClientRef.id;
+                batch.set(newClientRef, {
+                    firstname: reservaData.nombreCompleto.split(' ')[0],
+                    lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
+                    email: reservaData.email,
+                    phone: reservaData.telefono
+                });
+                if (reservaData.telefono) existingClientsByPhone.set(reservaData.telefono, clienteld);
+            }
+            let valorCLP = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
+            if (isBooking) {
+                const valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);
+                const precioPorCabanaUSD = reservaData.alojamientos.length > 0 ? (valorCLP / reservaData.alojamientos.length) : 0;
+                valorCLP = Math.round(precioPorCabanaUSD * valorDolarDia * 1.19);
+            }
+            const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
+            const dataToSave = {
+                reservaldOriginal: reservaData.reservaldOriginal,
+                clienteld: clienteld,
+                clienteNombre: reservaData.nombreCompleto,
+                canal: channel,
+                estado: reservaData.estado,
+                fechaReserva: parseDate(isBooking ? rawData['Fecha de reserva'] : rawData['Fecha']),
+                fechaLlegada: admin.firestore.Timestamp.fromDate(reservaData.fechaLlegada),
+                fechaSalida: admin.firestore.Timestamp.fromDate(reservaData.fechaSalida),
+                totalNoches: totalNoches > 0 ? totalNoches : 1,
+                invitados: parseInt(isBooking ? rawData['Adultos/Invitados'] : rawData['Personas'] || 0),
+                alojamiento: cabana,
+                monedaOriginal: isBooking ? 'USD' : 'CLP',
+                valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP'),
+                valorCLP: valorCLP,
+            };
+            if (existingReservation) {
+                if (existingReservation.valorManual) {
+                    dataToSave.valorCLP = existingReservation.valorCLP;
+                    dataToSave.valorOriginalCLP = existingReservation.valorOriginalCLP;
+                    dataToSave.valorManual = true;
+                }
+                if (existingReservation.nombreManual) {
+                    dataToSave.clienteNombre = existingReservation.clienteNombre;
+                    dataToSave.nombreManual = true;
+                }
+            }
+            batch.set(reservaRef, dataToSave, { merge: true });
+        }
+        batch.delete(doc.ref);
+    }
+    await batch.commit();
+    return `Se procesaron y consolidaron ${rawDocsSnapshot.size} registros de ${channel}.`;
+}
+
+module.exports = {
+    processChannel,
+};

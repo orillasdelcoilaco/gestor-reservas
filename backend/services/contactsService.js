@@ -1,5 +1,7 @@
 const { google } = require('googleapis');
 const { cleanPhoneNumber } = require('../utils/helpers');
+const csv = require('csv-parser');
+const stream = require('stream');
 
 function getPeopleApiClient() {
   const auth = new google.auth.GoogleAuth({
@@ -85,6 +87,101 @@ async function generateContactsCsv(db) {
   };
 }
 
+/**
+ * Procesa un buffer de archivo CSV, extrae clientes válidos y los guarda en Firebase.
+ * @param {admin.firestore.Firestore} db - La instancia de Firestore.
+ * @param {Buffer} buffer - El buffer del archivo CSV.
+ * @returns {Promise<Object>} Un resumen del proceso de importación.
+ */
+async function importClientsFromCsv(db, buffer) {
+  console.log('Iniciando procesamiento de CSV...');
+
+  // 1. Obtener teléfonos existentes de Firebase para evitar duplicados
+  const existingPhones = new Set();
+  const clientsSnapshot = await db.collection('clientes').get();
+  clientsSnapshot.forEach(doc => {
+    if (doc.data().phone) {
+      existingPhones.add(doc.data().phone);
+    }
+  });
+  console.log(`Se encontraron ${existingPhones.size} clientes existentes en Firebase.`);
+
+  // 2. Leer el archivo CSV desde el buffer
+  const results = await new Promise((resolve, reject) => {
+    const data = [];
+    const readableStream = new stream.Readable();
+    readableStream._read = () => {}; // No-op
+    readableStream.push(buffer);
+    readableStream.push(null);
+
+    readableStream
+      .pipe(csv())
+      .on('data', (row) => data.push(row))
+      .on('end', () => resolve(data))
+      .on('error', (error) => reject(error));
+  });
+
+  const rowsRead = results.length;
+  console.log(`Se leyeron ${rowsRead} filas del archivo CSV.`);
+
+  // 3. Filtrar, procesar y preparar los nuevos clientes
+  const batch = db.batch();
+  let newClientsAdded = 0;
+  let validClients = 0;
+  const keywords = ['booking', 'reserva', 'airbnb'];
+
+  for (const row of results) {
+    const name = row['Name'];
+    const phoneValue = row['Phone 1 - Value'];
+
+    if (!name || !phoneValue) {
+      continue; // Ignorar filas sin nombre o teléfono
+    }
+
+    const nameLower = name.toLowerCase();
+    const hasKeyword = keywords.some(keyword => nameLower.includes(keyword));
+
+    if (hasKeyword) {
+      validClients++;
+      const cleanedPhone = cleanPhoneNumber(phoneValue);
+
+      if (cleanedPhone && !existingPhones.has(cleanedPhone)) {
+        const newClientRef = db.collection('clientes').doc();
+
+        // Extraer el nombre real del cliente
+        let clientName = name;
+        for (const keyword of keywords) {
+          const index = clientName.toLowerCase().indexOf(keyword);
+          if (index !== -1) {
+            clientName = clientName.substring(0, index).trim();
+            break;
+          }
+        }
+        
+        const nameParts = clientName.split(' ').filter(p => p);
+        const firstname = nameParts[0] || '';
+        const lastname = nameParts.slice(1).join(' ');
+        
+        const email = row['E-mail 1 - Value'] || null;
+
+        batch.set(newClientRef, { firstname, lastname, phone: cleanedPhone, email });
+        existingPhones.add(cleanedPhone); // Añadir al set para no duplicar en el mismo proceso
+        newClientsAdded++;
+      }
+    }
+  }
+
+  // 4. Guardar los nuevos clientes en Firebase
+  if (newClientsAdded > 0) {
+    await batch.commit();
+    console.log(`Commit a Firestore: Se guardaron ${newClientsAdded} nuevos clientes.`);
+  }
+
+  return { rowsRead, validClients, newClientsAdded };
+}
+
 module.exports = {
   generateContactsCsv,
+  importGoogleContactsToFirebase, // Esta puede que la borremos luego si no la usamos
+  importClientsFromCsv, // Asegúrate de que esta línea esté aquí
 };

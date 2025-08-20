@@ -2,21 +2,22 @@ const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
 
-// --- Importar archivos de rutas ---
+//--- Importar archivos de rutas ---
 const reservasRoutes = require('./routes/reservas');
 const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar');
 const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
-const contactosRoutes = require('./routes/contactos'); // <-- 1. AÑADIR ESTA LÍNEA
+const contactosRoutes = require('./routes/contactos');
+const clientesRoutes = require('./routes/clientes'); // <-- 1. AÑADIR ESTA LÍNEA
 
-// --- Configuración de CORS ---
+//--- Configuración de CORS ---
 const corsOptions = {
   origin: 'https://www.orillasdelcoilaco.cl',
-  optionsSuccessStatus: 200 
+  optionsSuccessStatus: 200
 };
 
-// --- Inicialización de Firebase Admin SDK ---
+//--- Inicialización de Firebase Admin SDK ---
 if (process.env.RENDER) {
   const serviceAccount = require('/etc/secrets/serviceAccountKey.json');
   admin.initializeApp({
@@ -30,16 +31,16 @@ if (process.env.RENDER) {
   });
   console.log("Firebase Admin SDK inicializado en modo Desarrollo (Local).");
 }
-
 const db = admin.firestore();
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// --- Middlewares ---
+//--- Middlewares ---
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// --- Rutas ---
+//--- Rutas ---
 app.get('/', (req, res) => {
   res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
@@ -49,9 +50,10 @@ app.use('/api', sincronizarRoutes(db));
 app.use('/api', consolidarRoutes(db));
 app.use('/api', dolarRoutes(db));
 app.use('/api/mensajes', mensajesRoutes(db));
-app.use('/api/contactos', contactosRoutes(db)); // <-- 2. AÑADIR ESTA LÍNEA
+app.use('/api/contactos', contactosRoutes(db));
+app.use('/api', clientesRoutes(db)); // <-- 2. AÑADIR ESTA LÍNEA
 
-// --- Iniciar el Servidor ---
+//--- Iniciar el Servidor ---
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });

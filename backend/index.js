@@ -1,69 +1,57 @@
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
-const cookieParser = require('cookie-parser');
 
-//--- Importar Middlewares y Rutas ---
-const { checkSessionCookie } = require('./utils/authMiddleware');
-const authRoutes = require('./routes/auth');
+//--- Importar archivos de rutas ---
 const reservasRoutes = require('./routes/reservas');
 const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar');
 const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
-const contactosRoutes = require('./routes/contactos');
-const clientesRoutes = require('./routes/clientes');
+const contactosRoutes = require('./routes/contactos'); // <-- 1. AÑADIR ESTA LÍNEA
 
 //--- Configuración de CORS ---
 const corsOptions = {
-  origin: 'https://www.orillasdelcoilaco.cl',
-  optionsSuccessStatus: 200,
-  credentials: true 
+    origin: 'https://www.orillasdelcoilaco.cl',
+    optionsSuccessStatus: 200
 };
 
 //--- Inicialización de Firebase Admin SDK ---
 if (process.env.RENDER) {
-  const serviceAccount = require('/etc/secrets/serviceAccountKey.json');
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-  console.log("Firebase Admin SDK inicializado en modo Producción (Render).");
+    const serviceAccount = require('/etc/secrets/serviceAccountKey.json');
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+    console.log("Firebase Admin SDK inicializado en modo Producción (Render).");
 } else {
-  const serviceAccount = require('./serviceAccountKey.json');
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-  console.log("Firebase Admin SDK inicializado en modo Desarrollo (Local).");
+    const serviceAccount = require('./serviceAccountKey.json');
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+    });
+    console.log("Firebase Admin SDK inicializado en modo Desarrollo (Local).");
 }
 const db = admin.firestore();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-//--- Middlewares Globales ---
+//--- Middlewares
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(cookieParser());
 
 //--- Rutas ---
-
-// Rutas Públicas (no requieren sesión)
 app.get('/', (req, res) => {
-  res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
+    res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
-app.use('/api', authRoutes(db));
 
-// Rutas Protegidas (requieren una cookie de sesión válida)
-// Añadimos el middleware checkSessionCookie como un "guardia" antes de cada grupo de rutas.
-app.use('/api', checkSessionCookie, reservasRoutes(db));
-app.use('/api', checkSessionCookie, sincronizarRoutes(db));
-app.use('/api', checkSessionCookie, consolidarRoutes(db));
-app.use('/api', checkSessionCookie, dolarRoutes(db));
-app.use('/api/mensajes', checkSessionCookie, mensajesRoutes(db));
-app.use('/api/contactos', checkSessionCookie, contactosRoutes(db));
-app.use('/api', checkSessionCookie, clientesRoutes(db));
+app.use('/api', reservasRoutes(db));
+app.use('/api', sincronizarRoutes(db));
+app.use('/api', consolidarRoutes(db));
+app.use('/api', dolarRoutes(db));
+app.use('/api/mensajes', mensajesRoutes(db));
+app.use('/api/contactos', contactosRoutes(db)); // <-- 2. AÑADIR ESTA LÍNEA
 
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+    console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });

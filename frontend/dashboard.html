@@ -20,12 +20,7 @@
                 </div>
             </div>
         </nav>
-
-        <div id="loader" class="text-center p-8">
-            <p class="text-gray-500">Verificando sesión...</p>
-        </div>
-
-        <main id="main-content" class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 hidden">
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo</h2>
                 <p class="text-gray-600 mb-6">Sigue estos pasos en orden para actualizar y gestionar tus reservas.</p>
@@ -48,60 +43,33 @@
                     </a>
                 </div>
             </div>
-
-            <div class="bg-white p-8 rounded-lg shadow mt-8">
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <a href="importarContactos.html" class="bg-sky-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-sky-700 transition shadow">
-                        Importar Contactos (CSV)
-                    </a>
-                </div>
-            </div>
         </main>
     </div>
-
-    <script>
-        // No se necesita importar nada de Firebase aquí
-        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+        const firebaseConfig = {
+            apiKey: "AlzaSyC_9_hrjyOLnBIARgulTiY80Eg1riKjdCE",
+            authDomain: "reservas-sodc.firebaseapp.com",
+            projectid: "reservas-sodc",
+            storageBucket: "reservas-sodc.appspot.com",
+            messagingSenderld: "17783383809",
+            appld: "1:17783383809:web:329694a3dc2df074f7d800"
+        };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const authInfo = document.getElementById('auth-info');
-        const loader = document.getElementById('loader');
-        const mainContent = document.getElementById('main-content');
-
-        async function checkAuthStatus() {
-            try {
-                // Hacemos una petición a nuestro backend para ver el estado de la sesión
-                const response = await fetch(`${API_BASE_URL}/api/auth/status`, {
-                    // Habilitamos el envío de cookies
-                    credentials: 'include' 
-                });
-
-                if (!response.ok) {
-                    // Si el servidor responde con un error (ej: 401), el usuario no está logueado
-                    throw new Error('Sesión no válida');
-                }
-
-                const userData = await response.json();
-
-                // Si la sesión es válida, mostramos el contenido
-                loader.style.display = 'none';
-                mainContent.classList.remove('hidden');
-
-                // Mostramos el email y el botón de logout
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
                 authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${userData.email}</span>
-                    <a href="${API_BASE_URL}/api/auth/logout" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</a>
+                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
+                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
                 `;
-
-            } catch (error) {
-                // Si hay cualquier error en la verificación, redirigimos al login
-                console.error('Error de autenticación:', error);
+                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+            } else {
                 window.location.href = 'index.html';
             }
-        }
-
-        // Ejecutamos la verificación cuando la página se carga
-        document.addEventListener('DOMContentLoaded', checkAuthStatus);
+        });
     </script>
 </body>
 </html>

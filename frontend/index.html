@@ -27,49 +27,56 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 
-        // --- Configuración de Firebase ---
-        // ¡IMPORTANTE! Reemplaza esto con la configuración de tu proyecto de Firebase
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.appspot.com",
-            messagingSenderId: "17783383809",
-            appId: "1:17783383809:web:329694a3dc2df074f7d800"
-        };
+    // --- Configuración de Firebase ---
+    const firebaseConfig = {
+        apiKey: "AlzaSyC_9_hrjyOLnBIARgulTiY80Eg1riKjdCE",
+        authDomain: "reservas-sodc.firebaseapp.com",
+        projectId: "reservas-sodc",
+        storageBucket: "reservas-sodc.appspot.com",
+        messagingSenderId: "17783383809",
+        appId: "1:17783383809:web:329694a3dc2df074f7d800"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
 
-        const loginForm = document.getElementById('login-form');
-        const loginError = document.getElementById('login-error');
+    // --- LÓGICA MODIFICADA ---
+    // Maneja el evento de envío del formulario de login
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginError.classList.add('hidden');
+        const email = loginForm['login-email'].value;
+        const password = loginForm['login-password'].value;
 
-        // Si el usuario ya está logueado, lo redirige al dashboard
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.location.href = 'dashboard.html';
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            // Al tener éxito, redirigimos DIRECTAMENTE al dashboard.
+            // Esto es más robusto que esperar al onAuthStateChanged.
+            window.location.href = 'dashboard.html';
+        } catch (error) {
+            console.error("Falló el inicio de sesión:", error.code, error.message);
+            loginError.textContent = 'Credenciales incorrectas. Inténtalo de nuevo.';
+            loginError.classList.remove('hidden');
+        }
+    });
+
+    // Esta parte sigue siendo útil para redirigir a un usuario
+    // que ya tiene una sesión activa y visita la página de login.
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // Si el usuario ya está logueado, lo enviamos al dashboard
+            // para evitar que vea la página de login de nuevo.
+            if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) {
+                 window.location.href = 'dashboard.html';
             }
-        });
-
-        // Maneja el evento de login
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = loginForm['login-email'].value;
-            const password = loginForm['login-password'].value;
-
-            try {
-                loginError.classList.add('hidden');
-                await signInWithEmailAndPassword(auth, email, password);
-                // La redirección la maneja onAuthStateChanged
-            } catch (error) {
-                console.error("Falló el inicio de sesión:", error.message);
-                loginError.textContent = 'Credenciales incorrectas. Inténtalo de nuevo.';
-                loginError.classList.remove('hidden');
-            }
-        });
-    </script>
+        }
+    });
+</script>
 </body>
 </html>

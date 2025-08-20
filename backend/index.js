@@ -7,7 +7,8 @@ const reservasRoutes = require('./routes/reservas');
 const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar');
 const dolarRoutes = require('./routes/dolar');
-const mensajesRoutes = require('./routes/mensajes'); // <-- 1. AÑADIR ESTA LÍNEA
+const mensajesRoutes = require('./routes/mensajes');
+const contactosRoutes = require('./routes/contactos'); // <-- 1. AÑADIR ESTA LÍNEA
 
 // --- Configuración de CORS ---
 const corsOptions = {
@@ -47,7 +48,8 @@ app.use('/api', reservasRoutes(db));
 app.use('/api', sincronizarRoutes(db));
 app.use('/api', consolidarRoutes(db));
 app.use('/api', dolarRoutes(db));
-app.use('/api/mensajes', mensajesRoutes(db)); // <-- 2. AÑADIR ESTA LÍNEA
+app.use('/api/mensajes', mensajesRoutes(db));
+app.use('/api/contactos', contactosRoutes(db)); // <-- 2. AÑADIR ESTA LÍNEA
 
 // --- Iniciar el Servidor ---
 app.listen(PORT, () => {

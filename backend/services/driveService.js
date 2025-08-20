@@ -7,7 +7,10 @@ const { google } = require('googleapis');
 function getDriveClient() {
   const auth = new google.auth.GoogleAuth({
     keyFile: process.env.RENDER ? '/etc/secrets/serviceAccountKey.json' : './serviceAccountKey.json',
-    scopes: ['https://www.googleapis.com/auth/drive.readonly'], // Solo debe quedar este permiso
+    scopes: [
+      'https://www.googleapis.com/auth/drive.readonly',
+      'https://www.googleapis.com/auth/contacts' // <-- AÑADIR ESTE PERMISO
+    ],
   });
   return google.drive({ version: 'v3', auth });
 }

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sincronizar Contactos - Gestor de Reservas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="min-h-screen">
+        <nav class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
+                    <div id="auth-info" class="flex items-center space-x-4"></div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="bg-white p-6 md:p-8 rounded-lg shadow">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-2">Sincronizar Contactos con Google Drive</h2>
+                <p class="text-gray-600 mb-6">
+                    Este proceso comparará los clientes de tu sistema con tus Contactos de Google. Luego, creará (o actualizará) un archivo llamado 
+                    <strong class="font-semibold">contactos_para_importar.csv</strong> en tu carpeta de Google Drive con todos los clientes que aún no has agregado.
+                </p>
+                <div class="mt-4">
+                    <button id="sync-contacts-btn" class="w-full sm:w-auto inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700">
+                        Generar CSV en Google Drive
+                    </button>
+                </div>
+                
+                <div id="sync-status" class="mt-6 p-4 rounded-md hidden"></div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+
+        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
+            authDomain: "reservas-sodc.firebaseapp.com",
+            projectId: "reservas-sodc",
+            storageBucket: "reservas-sodc.appspot.com",
+            messagingSenderId: "17783383809",
+            appId: "1:17783383809:web:329694a3dc2df074f7d800"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        const authInfo = document.getElementById('auth-info');
+        const syncBtn = document.getElementById('sync-contacts-btn');
+        const syncStatus = document.getElementById('sync-status');
+
+        function showStatus(message, isError = false) {
+            syncStatus.innerHTML = message;
+            syncStatus.className = `mt-6 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
+            syncStatus.classList.remove('hidden');
+        }
+
+        syncBtn.addEventListener('click', async () => {
+            syncBtn.disabled = true;
+            syncBtn.textContent = 'Procesando...';
+            showStatus('Iniciando proceso. Esto puede tardar varios minutos, por favor no cierres la ventana.', false);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/contactos/generar-csv`, {
+                    method: 'POST',
+                });
+                
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Ocurrió un error desconocido en el servidor.');
+                }
+                
+                let summaryHtml = `<strong>${result.message}</strong>
+                    <ul class="list-disc list-inside mt-2">
+                        <li>Clientes en tu sistema: ${result.summary.totalFirebaseClients}</li>
+                        <li>Contactos en Google: ${result.summary.totalGoogleContacts}</li>
+                        <li class="font-bold">Nuevos contactos encontrados: ${result.summary.newContactsFound}</li>
+                    </ul>
+                    <p class="mt-2">El archivo <strong>contactos_para_importar.csv</strong> ha sido creado/actualizado en tu Google Drive.</p>`;
+                showStatus(summaryHtml, false);
+
+            } catch (error) {
+                console.error('Error al generar CSV:', error);
+                showStatus(`<strong>Error:</strong> ${error.message}`, true);
+            } finally {
+                syncBtn.disabled = false;
+                syncBtn.textContent = 'Generar CSV en Google Drive';
+            }
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                authInfo.innerHTML = `
+                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
+                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+                `;
+                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -7,6 +7,7 @@ function getPeopleApiClient() {
   const auth = new google.auth.GoogleAuth({
     keyFile: process.env.RENDER ? '/etc/secrets/serviceAccountKey.json' : './serviceAccountKey.json',
     scopes: ['https://www.googleapis.com/auth/contacts.readonly'],
+    subject: 'orillasdelcoilaco@gmail.com'
   });
   return google.people({ version: 'v1', auth });
 }
@@ -14,25 +15,18 @@ function getPeopleApiClient() {
 async function getAllGoogleContactPhones(people) {
   const phoneNumbers = new Set();
   let pageToken = null;
-  console.log('Obteniendo contactos existentes de Google...');
+  console.log('Obteniendo contactos de la cuenta orillasdelcoilaco@gmail.com...');
   try {
     do {
       const response = await people.people.connections.list({
         resourceName: 'people/me',
         pageSize: 1000,
-        // Pedimos más campos para el diagnóstico
-        personFields: 'phoneNumbers,names,emailAddresses',
+        personFields: 'phoneNumbers',
         pageToken: pageToken,
       });
-
       const connections = response.data.connections || [];
       connections.forEach(person => {
-        // --- INICIO DEL CÓDIGO DE DIAGNÓSTICO ---
-        if (person.phoneNumbers && person.phoneNumbers.length > 0) {
-            const displayName = person.names && person.names.length > 0 ? person.names[0].displayName : "Sin Nombre";
-            console.log(`Contacto encontrado: ${displayName}, Teléfonos: ${person.phoneNumbers.map(p => p.value).join(', ')}`);
-        // --- FIN DEL CÓDIGO DE DIAGNÓSTICO ---
-
+        if (person.phoneNumbers) {
           person.phoneNumbers.forEach(phone => {
             const cleanedPhone = cleanPhoneNumber(phone.value);
             if (cleanedPhone) phoneNumbers.add(cleanedPhone);
@@ -41,7 +35,6 @@ async function getAllGoogleContactPhones(people) {
       });
       pageToken = response.data.nextPageToken;
     } while (pageToken);
-
     console.log(`Se encontraron ${phoneNumbers.size} números de teléfono únicos y limpios en Google Contacts.`);
     return phoneNumbers;
   } catch (error) {
@@ -64,22 +57,18 @@ function convertToCsv(clients) {
 async function generateContactsCsv(db) {
   const people = getPeopleApiClient();
   const googlePhones = await getAllGoogleContactPhones(people);
-
   const firebaseClients = [];
   const clientsSnapshot = await db.collection('clientes').get();
   clientsSnapshot.forEach(doc => {
     firebaseClients.push(doc.data());
   });
   console.log(`Se encontraron ${firebaseClients.length} clientes en Firebase.`);
-
   const newClients = firebaseClients.filter(client => {
     const cleanedPhone = cleanPhoneNumber(client.phone);
     if (!cleanedPhone) return false;
     return !googlePhones.has(cleanedPhone);
   });
-
   console.log(`Se encontraron ${newClients.length} clientes nuevos para agregar.`);
-
   const csvContent = convertToCsv(newClients);
   return {
     csvContent: csvContent,
@@ -87,16 +76,8 @@ async function generateContactsCsv(db) {
   };
 }
 
-/**
- * Procesa un buffer de archivo CSV, extrae clientes válidos y los guarda en Firebase.
- * @param {admin.firestore.Firestore} db - La instancia de Firestore.
- * @param {Buffer} buffer - El buffer del archivo CSV.
- * @returns {Promise<Object>} Un resumen del proceso de importación.
- */
 async function importClientsFromCsv(db, buffer) {
   console.log('Iniciando procesamiento de CSV...');
-
-  // 1. Obtener teléfonos existentes de Firebase para evitar duplicados
   const existingPhones = new Set();
   const clientsSnapshot = await db.collection('clientes').get();
   clientsSnapshot.forEach(doc => {
@@ -106,14 +87,12 @@ async function importClientsFromCsv(db, buffer) {
   });
   console.log(`Se encontraron ${existingPhones.size} clientes existentes en Firebase.`);
 
-  // 2. Leer el archivo CSV desde el buffer
   const results = await new Promise((resolve, reject) => {
     const data = [];
     const readableStream = new stream.Readable();
-    readableStream._read = () => {}; // No-op
+    readableStream._read = () => {};
     readableStream.push(buffer);
     readableStream.push(null);
-
     readableStream
       .pipe(csv())
       .on('data', (row) => data.push(row))
@@ -124,7 +103,6 @@ async function importClientsFromCsv(db, buffer) {
   const rowsRead = results.length;
   console.log(`Se leyeron ${rowsRead} filas del archivo CSV.`);
 
-  // 3. Filtrar, procesar y preparar los nuevos clientes
   const batch = db.batch();
   let newClientsAdded = 0;
   let validClients = 0;
@@ -133,10 +111,7 @@ async function importClientsFromCsv(db, buffer) {
   for (const row of results) {
     const name = row['Name'];
     const phoneValue = row['Phone 1 - Value'];
-
-    if (!name || !phoneValue) {
-      continue; // Ignorar filas sin nombre o teléfono
-    }
+    if (!name || !phoneValue) continue;
 
     const nameLower = name.toLowerCase();
     const hasKeyword = keywords.some(keyword => nameLower.includes(keyword));
@@ -144,11 +119,8 @@ async function importClientsFromCsv(db, buffer) {
     if (hasKeyword) {
       validClients++;
       const cleanedPhone = cleanPhoneNumber(phoneValue);
-
       if (cleanedPhone && !existingPhones.has(cleanedPhone)) {
         const newClientRef = db.collection('clientes').doc();
-
-        // Extraer el nombre real del cliente
         let clientName = name;
         for (const keyword of keywords) {
           const index = clientName.toLowerCase().indexOf(keyword);
@@ -157,21 +129,17 @@ async function importClientsFromCsv(db, buffer) {
             break;
           }
         }
-        
         const nameParts = clientName.split(' ').filter(p => p);
         const firstname = nameParts[0] || '';
         const lastname = nameParts.slice(1).join(' ');
-        
         const email = row['E-mail 1 - Value'] || null;
-
         batch.set(newClientRef, { firstname, lastname, phone: cleanedPhone, email });
-        existingPhones.add(cleanedPhone); // Añadir al set para no duplicar en el mismo proceso
+        existingPhones.add(cleanedPhone);
         newClientsAdded++;
       }
     }
   }
 
-  // 4. Guardar los nuevos clientes en Firebase
   if (newClientsAdded > 0) {
     await batch.commit();
     console.log(`Commit a Firestore: Se guardaron ${newClientsAdded} nuevos clientes.`);
@@ -180,8 +148,8 @@ async function importClientsFromCsv(db, buffer) {
   return { rowsRead, validClients, newClientsAdded };
 }
 
+// --- SECCIÓN CORREGIDA ---
 module.exports = {
   generateContactsCsv,
-  importGoogleContactsToFirebase, // Esta puede que la borremos luego si no la usamos
-  importClientsFromCsv, // Asegúrate de que esta línea esté aquí
+  importClientsFromCsv,
 };

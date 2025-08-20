@@ -1,77 +1,30 @@
-const { google } = require('googleapis');
-
-function getPeopleApiClient() {
-    const auth = new google.auth.GoogleAuth({
-        keyFile: process.env.RENDER ? '/etc/secrets/serviceAccountKey.json' : './serviceAccountKey.json',
-        scopes: ['https://www.googleapis.com/auth/contacts.readonly'],
-    });
-    return google.people({ version: 'v1', auth });
+==> Ejecutando 'nodo index.js'
+==> Salió con el estado 1
+==> Formas comunes de solucionar problemas de implementación: https://render.com/docs/troubleshooting-deploys
+==> Ejecutando 'nodo index.js'
+nodo:interno/módulos/cjs/cargador:1404
+  tirar err;
+  ^
+Error: No se puede encontrar el módulo '.. /utils/helpers'
+Requerir pila:
+- /opt/render/project/src/backend/services/contactsService.js
+- /opt/render/project/src/backend/routes/contactos.js
+- /opt/render/project/src/backend/index.js
+  en Function._resolveFilename (node:internal/modules/cjs/loader:1401:15)
+  en defaultResolveImpl (node:internal/modules/cjs/loader:1057:19)
+  en resolveForCJSWithHooks (node:internal/modules/cjs/loader:1062:22)
+  en Function._load (node:internal/modules/cjs/loader:1211:37)
+  en TracingChannel.traceSync (nodo:diagnostics_channel:322:14)
+  en wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+  en Module.require (node:internal/modules/cjs/loader:1487:12)
+  en requerir (node:internal/modules/helpers:135:16)
+  en Object.<anonymous> (/opt/render/project/src/backend/services/contactsService.js:2:30)
+  en Module._compile (node:internal/modules/cjs/loader:1730:14) {
+  código: «MODULE_NOT_FOUND»,
+  requireStack: [
+    '/opt/render/project/src/backend/services/contactsService.js',
+    '/opt/render/project/src/backend/routes/contactos.js',
+    '/opt/render/project/src/backend/index.js'
+  ]
 }
-
-async function getAllGoogleContactPhones(people) {
-    const phoneNumbers = new Set();
-    let pageToken = null;
-    console.log('Obteniendo contactos existentes de Google...');
-    try {
-        do {
-            const response = await people.people.connections.list({
-                resourceName: 'people/me',
-                pageSize: 1000,
-                personFields: 'phoneNumbers',
-                pageToken: pageToken,
-            });
-            const connections = response.data.connections || [];
-            connections.forEach(person => {
-                if (person.phoneNumbers) {
-                    person.phoneNumbers.forEach(phone => {
-                        const cleanedPhone = phone.value.replace(/\D/g, '');
-                        if (cleanedPhone) phoneNumbers.add(cleanedPhone);
-                    });
-                }
-            });
-            pageToken = response.data.nextPageToken;
-        } while (pageToken);
-        console.log(`Se encontraron ${phoneNumbers.size} números de teléfono en Google Contacts.`);
-        return phoneNumbers;
-    } catch (error) {
-        console.error('Error al obtener los contactos de Google:', error.message);
-        throw new Error('No se pudieron obtener los contactos de Google.');
-    }
-}
-
-function convertToCsv(clients) {
-    if (clients.length === 0) return '';
-    const headers = 'Given Name,Family Name,Phone 1 - Type,Phone 1 - Value';
-    const rows = clients.map(client => {
-        const phone = client.phone || '';
-        const givenName = `${client.firstname || ''} ${client.lastname || ''}`.trim();
-        return `"${givenName}","","Mobile","${phone}"`;
-    });
-    return [headers, ...rows].join('\n');
-}
-
-async function generateContactsCsv(db) {
-    const people = getPeopleApiClient();
-    const googlePhones = await getAllGoogleContactPhones(people);
-    const firebaseClients = [];
-    const clientsSnapshot = await db.collection('clientes').get();
-    clientsSnapshot.forEach(doc => {
-        firebaseClients.push(doc.data());
-    });
-    console.log(`Se encontraron ${firebaseClients.length} clientes en Firebase.`);
-    const newClients = firebaseClients.filter(client => {
-        if (!client.phone) return false;
-        const cleanedPhone = client.phone.replace(/\D/g, '');
-        return !googlePhones.has(cleanedPhone);
-    });
-    console.log(`Se encontraron ${newClients.length} clientes nuevos para agregar.`);
-    const csvContent = convertToCsv(newClients);
-    return {
-        csvContent: csvContent,
-        newContactsCount: newClients.length
-    };
-}
-
-module.exports = {
-    generateContactsCsv,
-};
+Node.js v22.16.0

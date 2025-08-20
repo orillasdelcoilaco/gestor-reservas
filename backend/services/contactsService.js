@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-const { cleanPhoneNumber } = require('../utils/helpers'); // <-- 1. IMPORTAMOS LA FUNCIÓN CENTRALIZADA
+const { cleanPhoneNumber } = require('../utils/helpers');
 
 function getPeopleApiClient() {
   const auth = new google.auth.GoogleAuth({
@@ -18,15 +18,20 @@ async function getAllGoogleContactPhones(people) {
       const response = await people.people.connections.list({
         resourceName: 'people/me',
         pageSize: 1000,
-        personFields: 'phoneNumbers',
+        // Pedimos más campos para el diagnóstico
+        personFields: 'phoneNumbers,names,emailAddresses',
         pageToken: pageToken,
       });
 
       const connections = response.data.connections || [];
       connections.forEach(person => {
-        if (person.phoneNumbers) {
+        // --- INICIO DEL CÓDIGO DE DIAGNÓSTICO ---
+        if (person.phoneNumbers && person.phoneNumbers.length > 0) {
+            const displayName = person.names && person.names.length > 0 ? person.names[0].displayName : "Sin Nombre";
+            console.log(`Contacto encontrado: ${displayName}, Teléfonos: ${person.phoneNumbers.map(p => p.value).join(', ')}`);
+        // --- FIN DEL CÓDIGO DE DIAGNÓSTICO ---
+
           person.phoneNumbers.forEach(phone => {
-            // <-- 2. USAMOS LA NUEVA FUNCIÓN PARA LIMPIAR ANTES DE AÑADIR
             const cleanedPhone = cleanPhoneNumber(phone.value);
             if (cleanedPhone) phoneNumbers.add(cleanedPhone);
           });
@@ -47,7 +52,6 @@ function convertToCsv(clients) {
   if (clients.length === 0) return '';
   const headers = 'Given Name,Family Name,Phone 1 - Type,Phone 1 - Value';
   const rows = clients.map(client => {
-    // Aseguramos que el teléfono existe antes de intentar formatearlo para el CSV
     const phone = client.phone || '';
     const givenName = `${client.firstname || ''} ${client.lastname || ''}`.trim();
     return `"${givenName}","","Mobile","${phone}"`;
@@ -67,9 +71,8 @@ async function generateContactsCsv(db) {
   console.log(`Se encontraron ${firebaseClients.length} clientes en Firebase.`);
 
   const newClients = firebaseClients.filter(client => {
-    // <-- 3. USAMOS LA MISMA FUNCIÓN AQUÍ PARA UNA COMPARACIÓN JUSTA
     const cleanedPhone = cleanPhoneNumber(client.phone);
-    if (!cleanedPhone) return false; // Si no tiene un teléfono válido, no lo incluimos
+    if (!cleanedPhone) return false;
     return !googlePhones.has(cleanedPhone);
   });
 

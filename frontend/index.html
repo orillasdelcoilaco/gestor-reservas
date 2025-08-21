@@ -26,44 +26,52 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-        
-        // --- USAREMOS SIEMPRE ESTA CONFIGURACIÓN CORRECTA ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARgulTiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.appspot.com",
-            messagingSenderId: "17783383809",
-            appId: "1:17783383809:web:329694a3dc2df074f7d800"
-        };
+    // 1. Importar la función para inicializar Firebase
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    
+    // 2. IMPORTANTE: Importar las funciones específicas para Autenticación
+    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        
-        const loginForm = document.getElementById('login-form');
-        const loginError = document.getElementById('login-error');
-        
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                window.location.href = 'dashboard.html';
-            }
-        });
-        
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = loginForm['login-email'].value;
-            const password = loginForm['login-password'].value;
-            try {
-                loginError.classList.add('hidden');
-                await signInWithEmailAndPassword(auth, email, password);
-            } catch (error) {
-                console.error("Falló el inicio de sesión:", error.message);
-                loginError.textContent = 'Credenciales incorrectas. Inténtalo de nuevo.';
-                loginError.classList.remove('hidden');
-            }
-        });
-    </script>
+    // 3. Tu configuración de Firebase (copiada directamente de la consola, la más reciente)
+    const firebaseConfig = {
+        apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
+        authDomain: "reservas-sodc.firebaseapp.com",
+        projectId: "reservas-sodc",
+        storageBucket: "reservas-sodc.firebasestorage.app",
+        messagingSenderId: "177883383809",
+        appId: "1:177883383809:web:329694a3dc2df074f7d800"
+    };
+
+    // 4. Inicializar Firebase
+    const app = initializeApp(firebaseConfig);
+
+    // 5. Inicializar el servicio de Autenticación
+    const auth = getAuth(app);
+
+    // El resto de tu código para manejar el login...
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            window.location.href = 'dashboard.html';
+        }
+    });
+    
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = loginForm['login-email'].value;
+        const password = loginForm['login-password'].value;
+        try {
+            loginError.classList.add('hidden');
+            await signInWithEmailAndPassword(auth, email, password);
+            // La redirección la maneja onAuthStateChanged
+        } catch (error) {
+            console.error("Falló el inicio de sesión:", error.message);
+            loginError.textContent = 'Credenciales incorrectas. Inténtalo de nuevo.';
+            loginError.classList.remove('hidden');
+        }
+    });
+</script>
 </body>
 </html>

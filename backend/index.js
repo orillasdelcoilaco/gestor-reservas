@@ -3,12 +3,13 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 
 //--- Importar archivos de rutas ---
+const authRoutes = require('./routes/authRoutes'); // <-- 1. IMPORTAMOS LAS NUEVAS RUTAS DE AUTH
 const reservasRoutes = require('./routes/reservas');
 const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar');
 const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
-const clientesRoutes = require('./routes/clientes'); // <-- 1. IMPORTAMOS LAS NUEVAS RUTAS
+const clientesRoutes = require('./routes/clientes');
 
 //--- Configuración de CORS ---
 const corsOptions = {
@@ -44,12 +45,13 @@ app.get('/', (req, res) => {
   res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
 
+app.use('/api', authRoutes(db)); // <-- 2. USAMOS LAS NUEVAS RUTAS DE AUTH
 app.use('/api', reservasRoutes(db));
 app.use('/api', sincronizarRoutes(db));
 app.use('/api', consolidarRoutes(db));
 app.use('/api', dolarRoutes(db));
 app.use('/api/mensajes', mensajesRoutes(db));
-app.use('/api', clientesRoutes(db)); // <-- 2. USAMOS LAS NUEVAS RUTAS
+app.use('/api', clientesRoutes(db));
 
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {

@@ -8,7 +8,7 @@ const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar');
 const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
-// const contactosRoutes = require('./routes/contactos'); // <-- LÍNEA ELIMINADA
+const clientesRoutes = require('./routes/clientes'); // <-- 1. IMPORTAMOS LAS NUEVAS RUTAS
 
 //--- Configuración de CORS ---
 const corsOptions = {
@@ -49,7 +49,7 @@ app.use('/api', sincronizarRoutes(db));
 app.use('/api', consolidarRoutes(db));
 app.use('/api', dolarRoutes(db));
 app.use('/api/mensajes', mensajesRoutes(db));
-// app.use('/api/contactos', contactosRoutes(db)); // <-- LÍNEA ELIMINADA
+app.use('/api', clientesRoutes(db)); // <-- 2. USAMOS LAS NUEVAS RUTAS
 
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {

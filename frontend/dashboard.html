@@ -43,11 +43,21 @@
                     </a>
                 </div>
             </div>
+
+            <div class="bg-white p-8 rounded-lg shadow mt-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    
+                    <a href="importar-contactos.html" class="bg-sky-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-sky-700 transition shadow">
+                        Importar Contactos (CSV)
+                    </a>
+                    </div>
+            </div>
         </main>
     </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
         
         const firebaseConfig = {
             apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
@@ -65,9 +75,8 @@
         const appContent = document.getElementById('app-content');
         const authInfo = document.getElementById('auth-info');
 
-        onAuthStateChanged(auth, (user) => {
+        auth.onAuthStateChanged((user) => {
             if (user) {
-                // Si hay usuario, mostramos el contenido de la app y ocultamos el loader
                 loader.style.display = 'none';
                 appContent.classList.remove('hidden');
                 
@@ -79,7 +88,6 @@
                     signOut(auth);
                 });
             } else {
-                // Si estamos seguros de que NO hay usuario, redirigimos
                 window.location.href = 'index.html';
             }
         });

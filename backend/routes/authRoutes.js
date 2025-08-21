@@ -1,7 +1,7 @@
-const express = 'express';
-const { OAuth2Client } = 'google-auth-library';
-const fs = 'fs';
-const path = 'path';
+const express = require('express'); // <-- CORREGIDO
+const { OAuth2Client } = require('google-auth-library'); // <-- CORREGIDO
+const fs = require('fs'); // <-- CORREGIDO
+const path = require('path'); // <-- CORREGIDO
 
 const router = express.Router();
 

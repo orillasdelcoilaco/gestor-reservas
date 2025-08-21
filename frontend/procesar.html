@@ -37,38 +37,33 @@
             </div>
         </main>
     </div>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    
+    <script>
+        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.firebasestorage.app",
-            messagingSenderId: "177883383809",
-            appId: "1:177883383809:web:329694a3dc2df074f7d800"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
+        const authInfo = document.getElementById('auth-info');
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
-        const authInfo = document.getElementById('auth-info');
 
-        auth.onAuthStateChanged((user) => {
-            if (user) {
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/status`, { credentials: 'include' });
+                if (!response.ok) {
+                    throw new Error('Sesión no válida');
+                }
+                const userData = await response.json();
+                
+                // Si la sesión es válida, mostramos el contenido
                 loader.style.display = 'none';
                 appContent.classList.remove('hidden');
 
+                // Mostramos el email y el botón de logout
                 authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+                    <span class="text-sm text-gray-600 hidden sm:block">${userData.email}</span>
+                    <a href="${API_BASE_URL}/api/auth/logout" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</a>
                 `;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-                const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+                // --- Lógica Específica de esta Página ---
                 const consolidateBtn = document.getElementById('consolidate-btn');
                 const consolidateStatus = document.getElementById('consolidate-status');
 
@@ -85,6 +80,7 @@
                     try {
                         const response = await fetch(`${API_BASE_URL}/api/consolidar`, {
                             method: 'POST',
+                            credentials: 'include' // Importante para enviar la cookie de sesión
                         });
                         const result = await response.json();
                         if (!response.ok) {
@@ -102,10 +98,14 @@
                         consolidateBtn.textContent = 'Iniciar Proceso de Consolidación';
                     }
                 });
-            } else {
+                // --- Fin de la Lógica Específica ---
+
+            } catch (error) {
+                console.error('Error de autenticación:', error);
                 window.location.href = 'index.html';
             }
-        });
+        }
+        document.addEventListener('DOMContentLoaded', checkAuthStatus);
     </script>
 </body>
 </html>

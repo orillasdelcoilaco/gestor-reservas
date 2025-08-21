@@ -26,13 +26,9 @@
     </div>
 
     <script type="module">
-    // 1. Importar la función para inicializar Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    
-    // 2. IMPORTANTE: Importar las funciones específicas para Autenticación
-    import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-    // 3. Tu configuración de Firebase (copiada directamente de la consola, la más reciente)
     const firebaseConfig = {
         apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
         authDomain: "reservas-sodc.firebaseapp.com",
@@ -42,17 +38,15 @@
         appId: "1:177883383809:web:329694a3dc2df074f7d800"
     };
 
-    // 4. Inicializar Firebase
     const app = initializeApp(firebaseConfig);
-
-    // 5. Inicializar el servicio de Autenticación
     const auth = getAuth(app);
-
-    // El resto de tu código para manejar el login...
+    
     const loginForm = document.getElementById('login-form');
     const loginError = document.getElementById('login-error');
     
-    onAuthStateChanged(auth, (user) => {
+    // Si un usuario YA LOGUEADO llega a esta página, lo redirigimos.
+    // Usamos esta técnica para esperar a que Firebase se inicialice.
+    auth.onAuthStateChanged(user => {
         if (user) {
             window.location.href = 'dashboard.html';
         }
@@ -60,12 +54,14 @@
     
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        loginError.classList.add('hidden');
         const email = loginForm['login-email'].value;
         const password = loginForm['login-password'].value;
         try {
-            loginError.classList.add('hidden');
+            // Hacemos el login
             await signInWithEmailAndPassword(auth, email, password);
-            // La redirección la maneja onAuthStateChanged
+            // Y DESPUÉS del éxito, redirigimos directamente.
+            window.location.href = 'dashboard.html';
         } catch (error) {
             console.error("Falló el inicio de sesión:", error.message);
             loginError.textContent = 'Credenciales incorrectas. Inténtalo de nuevo.';

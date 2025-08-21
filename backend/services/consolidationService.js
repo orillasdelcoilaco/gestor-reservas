@@ -1,5 +1,6 @@
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
+const { createGoogleContact } = require('./googleContactsService'); // <-- 1. IMPORTAMOS LA NUEVA FUNCIÓN
 
 //--- Funciones de ayuda (definidas localmente)
 function parseDate(dateValue) {
@@ -42,7 +43,7 @@ function cleanCabanaName(cabanaName) {
     return cleanedName;
 }
 
-//--- LÓGICA DE CONSOLIDACIÓN ESTABLE
+//--- LÓGICA DE CONSOLIDACIÓN ESTABLE ---
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
     const rawDocsSnapshot = await db.collection(rawCollectionName).get();
@@ -99,6 +100,18 @@ async function processChannel(db, channel) {
                     phone: reservaData.telefono
                 });
                 if (reservaData.telefono) existingClientsByPhone.set(reservaData.telefono, clienteld);
+
+                // --- INICIO DEL NUEVO CÓDIGO ---
+                // Preparamos y llamamos a la función para crear el contacto en Google
+                const contactData = {
+                    name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaldOriginal}`,
+                    phone: reservaData.telefono,
+                    email: reservaData.email
+                };
+                // No usamos 'await' para no ralentizar el proceso principal.
+                // La creación del contacto ocurrirá en segundo plano.
+                createGoogleContact(db, contactData);
+                // --- FIN DEL NUEVO CÓDIGO ---
             }
             let valorCLP = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
             if (isBooking) {

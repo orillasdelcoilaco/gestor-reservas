@@ -8,27 +8,27 @@ const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar');
 const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
-const contactosRoutes = require('./routes/contactos'); // <-- 1. AÑADIR ESTA LÍNEA
+// const contactosRoutes = require('./routes/contactos'); // <-- LÍNEA ELIMINADA
 
 //--- Configuración de CORS ---
 const corsOptions = {
-    origin: 'https://www.orillasdelcoilaco.cl',
-    optionsSuccessStatus: 200
+  origin: 'https://www.orillasdelcoilaco.cl',
+  optionsSuccessStatus: 200
 };
 
 //--- Inicialización de Firebase Admin SDK ---
 if (process.env.RENDER) {
-    const serviceAccount = require('/etc/secrets/serviceAccountKey.json');
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
-    console.log("Firebase Admin SDK inicializado en modo Producción (Render).");
+  const serviceAccount = require('/etc/secrets/serviceAccountKey.json');
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  console.log("Firebase Admin SDK inicializado en modo Producción (Render).");
 } else {
-    const serviceAccount = require('./serviceAccountKey.json');
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
-    console.log("Firebase Admin SDK inicializado en modo Desarrollo (Local).");
+  const serviceAccount = require('./serviceAccountKey.json');
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+  console.log("Firebase Admin SDK inicializado en modo Desarrollo (Local).");
 }
 const db = admin.firestore();
 
@@ -41,7 +41,7 @@ app.use(express.json());
 
 //--- Rutas ---
 app.get('/', (req, res) => {
-    res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
+  res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
 
 app.use('/api', reservasRoutes(db));
@@ -49,9 +49,9 @@ app.use('/api', sincronizarRoutes(db));
 app.use('/api', consolidarRoutes(db));
 app.use('/api', dolarRoutes(db));
 app.use('/api/mensajes', mensajesRoutes(db));
-app.use('/api/contactos', contactosRoutes(db)); // <-- 2. AÑADIR ESTA LÍNEA
+// app.use('/api/contactos', contactosRoutes(db)); // <-- LÍNEA ELIMINADA
 
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+  console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });

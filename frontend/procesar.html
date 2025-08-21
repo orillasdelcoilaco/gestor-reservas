@@ -39,7 +39,7 @@
     </div>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
@@ -68,7 +68,6 @@
                 `;
                 document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-                // --- Lógica original de la página ---
                 const API_BASE_URL = 'https://gestor-reservas.onrender.com';
                 const consolidateBtn = document.getElementById('consolidate-btn');
                 const consolidateStatus = document.getElementById('consolidate-status');
@@ -82,14 +81,14 @@
                 consolidateBtn.addEventListener('click', async () => {
                     consolidateBtn.disabled = true;
                     consolidateBtn.textContent = 'Procesando...';
-                    showStatus(consolidateStatus, 'Iniciando consolidación. Esto puede tardar varios segundos, por favor no cierres la ventana.');
+                    showStatus(consolidateStatus, 'Iniciando consolidación. Esto puede tardar varios segundos...', 'info');
                     try {
                         const response = await fetch(`${API_BASE_URL}/api/consolidar`, {
                             method: 'POST',
                         });
                         const result = await response.json();
                         if (!response.ok) {
-                            throw new Error(result.error || 'Ocurrió un error desconocido en el servidor.');
+                            throw new Error(result.error || 'Ocurrió un error desconocido.');
                         }
                         let summaryHtml = `<strong>${result.message}</strong><ul class="list-disc list-inside mt-2"><li>SODC: ${result.summary.sodc}</li><li>Booking: ${result.summary.booking}</li></ul>`;
                         showStatus(consolidateStatus, summaryHtml, false);
@@ -103,8 +102,6 @@
                         consolidateBtn.textContent = 'Iniciar Proceso de Consolidación';
                     }
                 });
-                // --- Fin de la lógica original ---
-
             } else {
                 window.location.href = 'index.html';
             }

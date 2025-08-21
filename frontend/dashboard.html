@@ -43,57 +43,62 @@
                     </a>
                 </div>
             </div>
-
             <div class="bg-white p-8 rounded-lg shadow mt-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas y Configuración</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <a href="importar-contactos.html" class="bg-sky-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-sky-700 transition shadow">
                         Importar Contactos (CSV)
                     </a>
-                    
                     <a href="autorizar.html" class="bg-gray-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-700 transition shadow">
                         Autorizar Google Contacts
                     </a>
-                    </div>
+                </div>
             </div>
         </main>
     </div>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.firebasestorage.app",
-            messagingSenderId: "177883383809",
-            appId: "1:177883383809:web:329694a3dc2df074f7d800"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
 
+    <script>
+        // Este script ya no necesita importar nada de Firebase
+        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+
+        const authInfo = document.getElementById('auth-info');
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
-        const authInfo = document.getElementById('auth-info');
 
-        auth.onAuthStateChanged((user) => {
-            if (user) {
+        async function checkAuthStatus() {
+            try {
+                // Hacemos una petición a nuestro backend para ver el estado de la sesión
+                const response = await fetch(`${API_BASE_URL}/api/auth/status`, {
+                    // Habilitamos el envío de cookies
+                    credentials: 'include' 
+                });
+
+                if (!response.ok) {
+                    // Si el servidor responde con un error (ej: 401), el usuario no está logueado
+                    throw new Error('Sesión no válida');
+                }
+
+                const userData = await response.json();
+
+                // Si la sesión es válida, mostramos el contenido
                 loader.style.display = 'none';
                 appContent.classList.remove('hidden');
-                
+
+                // Mostramos el email y el botón de logout
                 authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+                    <span class="text-sm text-gray-600 hidden sm:block">${userData.email}</span>
+                    <a href="${API_BASE_URL}/api/auth/logout" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</a>
                 `;
-                document.getElementById('logout-btn').addEventListener('click', () => {
-                    signOut(auth);
-                });
-            } else {
+
+            } catch (error) {
+                // Si hay cualquier error en la verificación, redirigimos al login
+                console.error('Error de autenticación:', error);
                 window.location.href = 'index.html';
             }
-        });
+        }
+
+        // Ejecutamos la verificación cuando la página se carga
+        document.addEventListener('DOMContentLoaded', checkAuthStatus);
     </script>
 </body>
 </html>

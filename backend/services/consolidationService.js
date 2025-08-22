@@ -1,8 +1,10 @@
+// backend/services/consolidationService.js - CÓDIGO ACTUALIZADO
+
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
-const { createGoogleContact } = require('./googleContactsService'); // <-- 1. IMPORTAMOS LA NUEVA FUNCIÓN
+const { createGoogleContact } = require('./googleContactsService');
 
-//--- Funciones de ayuda (definidas localmente)
+// --- Funciones de ayuda (sin cambios) ---
 function parseDate(dateValue) {
     if (!dateValue) return null;
     if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
@@ -15,7 +17,6 @@ function parseDate(dateValue) {
     }
     return null;
 }
-
 function parseCurrency(value, currency = 'USD') {
     if (typeof value === 'number') return value;
     if (typeof value !== 'string') return 0;
@@ -27,7 +28,6 @@ function parseCurrency(value, currency = 'USD') {
     const cleanedForFloat = numberString.replace(/,/g, '');
     return parseFloat(cleanedForFloat) || 0;
 }
-
 function cleanPhoneNumber(phone) {
     if (!phone) return null;
     let cleaned = phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
@@ -36,25 +36,40 @@ function cleanPhoneNumber(phone) {
     }
     return cleaned;
 }
-
 function cleanCabanaName(cabanaName) {
     if (!cabanaName) return '';
     let cleanedName = cabanaName.replace(/(\d+)(\s*)$/, '$1').trim();
     return cleanedName;
 }
 
-//--- LÓGICA DE CONSOLIDACIÓN ESTABLE ---
+// --- LÓGICA DE CONSOLIDACIÓN MEJORADA ---
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
     const rawDocsSnapshot = await db.collection(rawCollectionName).get();
+    
+    // Si no hay nada que procesar, devuelve un resumen claro.
     if (rawDocsSnapshot.empty) {
-        return `No hay nuevos reportes para procesar de ${channel}.`;
+        return {
+            reportesEncontrados: 0,
+            clientesNuevos: 0,
+            reservasCreadas: 0,
+            reservasActualizadas: 0,
+            mensaje: `No hay nuevos reportes de ${channel} para procesar.`
+        };
     }
+
+    // Contadores para el nuevo resumen
+    let clientesNuevos = 0;
+    let reservasCreadas = 0;
+    let reservasActualizadas = 0;
+
+    // Cargar datos existentes para evitar duplicados (sin cambios)
     const allExistingReservations = new Map();
     const allReservasSnapshot = await db.collection('reservas').get();
     allReservasSnapshot.forEach(doc => {
         allExistingReservations.set(doc.id, doc.data());
     });
+
     const existingClientsByPhone = new Map();
     const allClientsSnapshot = await db.collection('clientes').get();
     allClientsSnapshot.forEach(doc => {
@@ -63,14 +78,19 @@ async function processChannel(db, channel) {
             existingClientsByPhone.set(clientData.phone, doc.id);
         }
     });
+
     const batch = db.batch();
+
     for (const doc of rawDocsSnapshot.docs) {
         const rawData = doc.data();
         const isBooking = channel === 'Booking';
+
+        // Lógica de extracción de datos (sin cambios)
         const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']) || "";
         const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre";
+        
         const reservaData = {
-            reservaldOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString(),
+            reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString(),
             nombreCompleto: nombreCompletoRaw,
             email: rawData['Email'] || rawData['Correo'] || null,
             telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']),
@@ -79,40 +99,51 @@ async function processChannel(db, channel) {
             estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
             alojamientos: alojamientosRaw.toString().split(',').map(c => cleanCabanaName(c.trim()))
         };
+
         if (!reservaData.fechaLlegada || !reservaData.fechaSalida) continue;
+        
         for (const cabana of reservaData.alojamientos) {
             if (!cabana) continue;
-            const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaldOriginal}_${cabana.replace(/\s+/g, '')}`;
+            
+            const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
             const reservaRef = db.collection('reservas').doc(idCompuesto);
-            let clienteld;
+            
+            let clienteId;
             const existingReservation = allExistingReservations.get(idCompuesto);
-            if (existingReservation && existingReservation.clienteld) {
-                clienteld = existingReservation.clienteld;
-            } else if (reservaData.telefono && existingClientsByPhone.has(reservaData.telefono)) {
-                clienteld = existingClientsByPhone.get(reservaData.telefono);
+            
+            // --- Lógica de conteo ---
+            if (existingReservation) {
+                reservasActualizadas++;
             } else {
+                reservasCreadas++;
+            }
+
+            if (existingReservation && existingReservation.clienteId) {
+                clienteId = existingReservation.clienteId;
+            } else if (reservaData.telefono && existingClientsByPhone.has(reservaData.telefono)) {
+                clienteId = existingClientsByPhone.get(reservaData.telefono);
+            } else {
+                clientesNuevos++; // Sumamos un cliente nuevo
                 const newClientRef = db.collection('clientes').doc();
-                clienteld = newClientRef.id;
+                clienteId = newClientRef.id;
                 batch.set(newClientRef, {
                     firstname: reservaData.nombreCompleto.split(' ')[0],
                     lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
                     email: reservaData.email,
                     phone: reservaData.telefono
                 });
-                if (reservaData.telefono) existingClientsByPhone.set(reservaData.telefono, clienteld);
-
-                // --- INICIO DEL NUEVO CÓDIGO ---
-                // Preparamos y llamamos a la función para crear el contacto en Google
+                if (reservaData.telefono) existingClientsByPhone.set(reservaData.telefono, clienteId);
+                
+                // Crear contacto en Google (sin cambios)
                 const contactData = {
-                    name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaldOriginal}`,
+                    name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaIdOriginal}`,
                     phone: reservaData.telefono,
                     email: reservaData.email
                 };
-                // No usamos 'await' para no ralentizar el proceso principal.
-                // La creación del contacto ocurrirá en segundo plano.
                 createGoogleContact(db, contactData);
-                // --- FIN DEL NUEVO CÓDIGO ---
             }
+
+            // Lógica de cálculo de valor y guardado (sin cambios)
             let valorCLP = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
             if (isBooking) {
                 const valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);
@@ -120,9 +151,10 @@ async function processChannel(db, channel) {
                 valorCLP = Math.round(precioPorCabanaUSD * valorDolarDia * 1.19);
             }
             const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
+
             const dataToSave = {
-                reservaldOriginal: reservaData.reservaldOriginal,
-                clienteld: clienteld,
+                reservaIdOriginal: reservaData.reservaIdOriginal,
+                clienteId: clienteId,
                 clienteNombre: reservaData.nombreCompleto,
                 canal: channel,
                 estado: reservaData.estado,
@@ -136,25 +168,26 @@ async function processChannel(db, channel) {
                 valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP'),
                 valorCLP: valorCLP,
             };
+            
             if (existingReservation) {
-                if (existingReservation.valorManual) {
-                    dataToSave.valorCLP = existingReservation.valorCLP;
-                    dataToSave.valorOriginalCLP = existingReservation.valorOriginalCLP;
-                    dataToSave.valorManual = true;
-                }
-                if (existingReservation.nombreManual) {
-                    dataToSave.clienteNombre = existingReservation.clienteNombre;
-                    dataToSave.nombreManual = true;
-                }
+                if (existingReservation.valorManual) dataToSave.valorCLP = existingReservation.valorCLP;
+                if (existingReservation.nombreManual) dataToSave.clienteNombre = existingReservation.clienteNombre;
             }
             batch.set(reservaRef, dataToSave, { merge: true });
         }
-        batch.delete(doc.ref);
+        batch.delete(doc.ref); // Borramos el reporte raw
     }
+
     await batch.commit();
-    return `Se procesaron y consolidaron ${rawDocsSnapshot.size} registros de ${channel}.`;
+    
+    // Devolvemos el nuevo objeto de resumen
+    return {
+        reportesEncontrados: rawDocsSnapshot.size,
+        clientesNuevos: clientesNuevos,
+        reservasCreadas: reservasCreadas,
+        reservasActualizadas: reservasActualizadas,
+        mensaje: `Se procesaron ${rawDocsSnapshot.size} reportes.`
+    };
 }
 
-module.exports = {
-    processChannel,
-};
+module.exports = { processChannel };

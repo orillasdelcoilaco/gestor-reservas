@@ -56,14 +56,13 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
-            // Lógica específica de la página
             const consolidateBtn = document.getElementById('consolidate-btn');
             const consolidateStatus = document.getElementById('consolidate-status');
 
             function showStatus(element, message, isError = false) {
                 element.innerHTML = message;
                 let statusClass = isError ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800';
-                if (message.includes('finalizado')) {
+                 if (message.includes('¡Proceso de consolidación finalizado!')) {
                     statusClass = 'bg-green-100 text-green-800';
                 }
                 element.className = `mt-6 p-4 rounded-md text-sm ${statusClass}`;
@@ -79,7 +78,33 @@
                         method: 'POST'
                     });
                     
-                    let summaryHtml = `<strong>${result.message}</strong><ul class="list-disc list-inside mt-2"><li>SODC: ${result.summary.sodc}</li><li>Booking: ${result.summary.booking}</li></ul>`;
+                    // --- NUEVA LÓGICA PARA MOSTRAR EL RESUMEN DETALLADO ---
+                    const sodc = result.summary.sodc;
+                    const booking = result.summary.booking;
+
+                    let summaryHtml = `
+                        <strong>¡Proceso de consolidación finalizado!</strong>
+                        <div class="grid grid-cols-2 gap-4 mt-2">
+                            <div>
+                                <h4 class="font-semibold">SODC</h4>
+                                <ul class="list-disc list-inside text-sm">
+                                    <li>Reportes procesados: <strong>${sodc.reportesEncontrados}</strong></li>
+                                    <li>Reservas creadas: <strong>${sodc.reservasCreadas}</strong></li>
+                                    <li>Reservas actualizadas: <strong>${sodc.reservasActualizadas}</strong></li>
+                                    <li>Clientes nuevos: <strong>${sodc.clientesNuevos}</strong></li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold">Booking</h4>
+                                <ul class="list-disc list-inside text-sm">
+                                    <li>Reportes procesados: <strong>${booking.reportesEncontrados}</strong></li>
+                                    <li>Reservas creadas: <strong>${booking.reservasCreadas}</strong></li>
+                                    <li>Reservas actualizadas: <strong>${booking.reservasActualizadas}</strong></li>
+                                    <li>Clientes nuevos: <strong>${booking.clientesNuevos}</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    `;
                     showStatus(consolidateStatus, summaryHtml);
 
                 } catch (error) {

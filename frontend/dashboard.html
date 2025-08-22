@@ -75,7 +75,6 @@
                 `;
 
                 document.getElementById('logout-btn').addEventListener('click', () => {
-                    // Limpiamos el token y redirigimos al login
                     localStorage.removeItem('firebaseIdToken');
                     sessionStorage.removeItem('userEmail');
                     window.location.href = 'index.html';
@@ -87,3 +86,5 @@
             }
         });
     </script>
+</body>
+</html>

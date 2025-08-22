@@ -12,8 +12,8 @@ const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
 const clientesRoutes = require('./routes/clientes');
 
-// --- SECCIÓN CORREGIDA ---
-// Hacemos que CORS acepte múltiples orígenes válidos.
+// --- CONFIGURACIÓN CORS DEFINITIVA ---
+// Hacemos que CORS acepte peticiones tanto desde 'www.orillas...' como 'orillas...'
 const corsOptions = {
   origin: [
     'https://www.orillasdelcoilaco.cl',

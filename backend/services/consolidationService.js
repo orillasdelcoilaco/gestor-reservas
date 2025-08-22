@@ -1,4 +1,4 @@
-// backend/services/consolidationService.js - CÓDIGO ACTUALIZADO
+// backend/services/consolidationService.js - CÓDIGO CORRECTO
 
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
@@ -47,7 +47,6 @@ async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
     const rawDocsSnapshot = await db.collection(rawCollectionName).get();
     
-    // Si no hay nada que procesar, devuelve un resumen claro.
     if (rawDocsSnapshot.empty) {
         return {
             reportesEncontrados: 0,
@@ -58,12 +57,10 @@ async function processChannel(db, channel) {
         };
     }
 
-    // Contadores para el nuevo resumen
     let clientesNuevos = 0;
     let reservasCreadas = 0;
     let reservasActualizadas = 0;
 
-    // Cargar datos existentes para evitar duplicados (sin cambios)
     const allExistingReservations = new Map();
     const allReservasSnapshot = await db.collection('reservas').get();
     allReservasSnapshot.forEach(doc => {
@@ -85,7 +82,6 @@ async function processChannel(db, channel) {
         const rawData = doc.data();
         const isBooking = channel === 'Booking';
 
-        // Lógica de extracción de datos (sin cambios)
         const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']) || "";
         const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre";
         
@@ -111,7 +107,6 @@ async function processChannel(db, channel) {
             let clienteId;
             const existingReservation = allExistingReservations.get(idCompuesto);
             
-            // --- Lógica de conteo ---
             if (existingReservation) {
                 reservasActualizadas++;
             } else {
@@ -123,7 +118,7 @@ async function processChannel(db, channel) {
             } else if (reservaData.telefono && existingClientsByPhone.has(reservaData.telefono)) {
                 clienteId = existingClientsByPhone.get(reservaData.telefono);
             } else {
-                clientesNuevos++; // Sumamos un cliente nuevo
+                clientesNuevos++;
                 const newClientRef = db.collection('clientes').doc();
                 clienteId = newClientRef.id;
                 batch.set(newClientRef, {
@@ -134,7 +129,6 @@ async function processChannel(db, channel) {
                 });
                 if (reservaData.telefono) existingClientsByPhone.set(reservaData.telefono, clienteId);
                 
-                // Crear contacto en Google (sin cambios)
                 const contactData = {
                     name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaIdOriginal}`,
                     phone: reservaData.telefono,
@@ -143,7 +137,6 @@ async function processChannel(db, channel) {
                 createGoogleContact(db, contactData);
             }
 
-            // Lógica de cálculo de valor y guardado (sin cambios)
             let valorCLP = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
             if (isBooking) {
                 const valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);
@@ -175,12 +168,11 @@ async function processChannel(db, channel) {
             }
             batch.set(reservaRef, dataToSave, { merge: true });
         }
-        batch.delete(doc.ref); // Borramos el reporte raw
+        batch.delete(doc.ref);
     }
 
     await batch.commit();
     
-    // Devolvemos el nuevo objeto de resumen
     return {
         reportesEncontrados: rawDocsSnapshot.size,
         clientesNuevos: clientesNuevos,

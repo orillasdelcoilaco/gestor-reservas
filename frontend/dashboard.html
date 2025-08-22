@@ -55,36 +55,36 @@
         </main>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('firebaseIdToken');
-            const userEmail = sessionStorage.getItem('userEmail');
-            
-            const loader = document.getElementById('loader');
-            const appContent = document.getElementById('app-content');
-            const authInfo = document.getElementById('auth-info');
+    <script type="module">
+  // Importamos las funciones que creamos en api.js
+  import { checkSession, logout } from './api.js';
 
-            if (token && userEmail) {
-                // Si encontramos el token, el usuario está "logueado"
-                loader.style.display = 'none';
-                appContent.classList.remove('hidden');
+  document.addEventListener('DOMContentLoaded', () => {
+    const loader = document.getElementById('loader');
+    const appContent = document.getElementById('app-content');
+    const authInfo = document.getElementById('auth-info');
 
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${userEmail}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-                `;
+    // 1. Verificamos la sesión usando nuestra nueva función centralizada.
+    const session = checkSession();
 
-                document.getElementById('logout-btn').addEventListener('click', () => {
-                    localStorage.removeItem('firebaseIdToken');
-                    sessionStorage.removeItem('userEmail');
-                    window.location.href = 'index.html';
-                });
+    // Si checkSession() devuelve datos, significa que la sesión es válida.
+    if (session) {
+      loader.style.display = 'none';
+      appContent.classList.remove('hidden');
 
-            } else {
-                // Si no hay token, redirigimos al login
-                window.location.href = 'index.html';
-            }
-        });
-    </script>
+      // 2. Mostramos el email del usuario y el botón para cerrar sesión.
+      authInfo.innerHTML = `
+        <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+        <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+      `;
+
+      // 3. Asignamos el evento al botón de logout usando nuestra nueva función.
+      document.getElementById('logout-btn').addEventListener('click', () => {
+        logout();
+      });
+    }
+    // Nota: Si la sesión no es válida, la función checkSession() ya se encarga de redirigir al login.
+  });
+</script>
 </body>
 </html>

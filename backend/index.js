@@ -12,11 +12,15 @@ const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
 const clientesRoutes = require('./routes/clientes');
 
-// --- LÍNEA CORREGIDA ---
+// --- SECCIÓN CORREGIDA ---
+// Hacemos que CORS acepte múltiples orígenes válidos.
 const corsOptions = {
-  origin: 'https://www.orillasdelcoilaco.cl',
+  origin: [
+    'https://www.orillasdelcoilaco.cl',
+    'https://orillasdelcoilaco.cl'
+  ],
   optionsSuccessStatus: 200,
-  credentials: true // Esta línea es la clave. Permite que el navegador envíe la cookie.
+  credentials: true
 };
 // --- FIN DE LA CORRECCIÓN ---
 

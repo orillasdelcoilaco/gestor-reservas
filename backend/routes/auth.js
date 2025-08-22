@@ -1,25 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
+const { checkSessionCookie } = require('../utils/authMiddleware');
 
 module.exports = (db) => {
-  /**
-   * POST /api/auth/login
-   * Recibe un token de ID de Firebase, lo verifica y establece una cookie de sesión.
-   */
   router.post('/auth/login', async (req, res) => {
     const idToken = req.body.idToken;
     if (!idToken) {
       return res.status(401).send('Token no proporcionado.');
     }
-
-    // La sesión durará 14 días.
-    const expiresIn = 60 * 60 * 24 * 14 * 1000;
-
+    const expiresIn = 60 * 60 * 24 * 14 * 1000; // 14 días
     try {
       const sessionCookie = await admin.auth().createSessionCookie(idToken, { expiresIn });
-
-      const options = { maxAge: expiresIn, httpOnly: true, secure: true };
+      
+      // --- LÍNEA CORREGIDA Y DEFINITIVA ---
+      // Añadimos el atributo 'domain' para autorizar el dominio principal.
+      const options = { 
+        maxAge: expiresIn, 
+        httpOnly: true, 
+        secure: true, 
+        path: '/', 
+        sameSite: 'none',
+        domain: 'orillasdelcoilaco.cl' // <-- ESTA ES LA CLAVE
+      };
+      
       res.cookie('session', sessionCookie, options);
       res.status(200).json({ status: 'success' });
     } catch (error) {
@@ -28,14 +32,17 @@ module.exports = (db) => {
     }
   });
 
-  /**
-   * GET /api/auth/logout
-   * Limpia la cookie de sesión y redirige al login.
-   */
   router.get('/auth/logout', (req, res) => {
-    res.clearCookie('session');
-    // Usamos la ruta completa del frontend para la redirección.
+    // Para borrar la cookie, también debemos especificar el dominio.
+    res.clearCookie('session', { path: '/', domain: 'orillasdelcoilaco.cl' });
     res.redirect('/gestor-reservas/index.html');
+  });
+
+  router.get('/auth/status', checkSessionCookie, (req, res) => {
+    res.status(200).json({
+      status: 'active',
+      email: req.user.email,
+    });
   });
 
   return router;

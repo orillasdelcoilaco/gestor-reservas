@@ -12,8 +12,6 @@ const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
 const clientesRoutes = require('./routes/clientes');
 
-// --- CONFIGURACIÓN CORS DEFINITIVA ---
-// Hacemos que CORS acepte peticiones tanto desde 'www.orillas...' como 'orillas...'
 const corsOptions = {
   origin: [
     'https://www.orillasdelcoilaco.cl',
@@ -22,7 +20,6 @@ const corsOptions = {
   optionsSuccessStatus: 200,
   credentials: true
 };
-// --- FIN DE LA CORRECCIÓN ---
 
 if (process.env.RENDER) {
   const serviceAccount = require('/etc/secrets/serviceAccountKey.json');
@@ -41,6 +38,11 @@ const db = admin.firestore();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// --- INICIO DE LA CORRECCIÓN ---
+// Esta línea le dice a Express que confíe en el proxy de Render.
+app.set('trust proxy', 1);
+// --- FIN DE LA CORRECCIÓN ---
 
 app.use(cors(corsOptions));
 app.use(express.json());

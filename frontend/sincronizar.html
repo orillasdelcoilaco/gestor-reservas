@@ -64,7 +64,7 @@
         </main>
     </div>
 
-    <script type="module">
+<script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -82,22 +82,24 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
-            // Lógica específica de la página
+            // --- Lógica de la página ---
             const syncDriveBtn = document.getElementById('sync-drive-btn');
             const syncStatus = document.getElementById('sync-status');
-            
+            const airbnbForm = document.getElementById('airbnb-form');
+            const airbnbStatus = document.getElementById('airbnb-status');
+
             function showStatus(element, message, isError = false) {
                 element.innerHTML = message;
                 element.className = `mt-4 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`;
                 element.classList.remove('hidden');
             }
 
+            // Lógica para el botón de Sincronizar Drive
             syncDriveBtn.addEventListener('click', async () => {
                 syncDriveBtn.disabled = true;
                 syncDriveBtn.textContent = 'Sincronizando...';
                 showStatus(syncStatus, 'Iniciando conexión con Google Drive. Esto puede tardar un momento...');
                 try {
-                    // Usamos fetchAPI en lugar de fetch
                     const result = await fetchAPI('/api/sincronizar-drive', {
                         method: 'POST'
                     });
@@ -108,6 +110,48 @@
                 } finally {
                     syncDriveBtn.disabled = false;
                     syncDriveBtn.textContent = 'Sincronizar desde Google Drive';
+                }
+            });
+            
+            // Lógica para el formulario de Airbnb
+            airbnbForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const btn = e.target.querySelector('button');
+                btn.disabled = true;
+                btn.textContent = 'Guardando...';
+
+                const reserva = {
+                    nombre: document.getElementById('airbnb-nombre').value,
+                    reservaId: document.getElementById('airbnb-reserva').value,
+                    llegada: document.getElementById('airbnb-llegada').value,
+                    salida: document.getElementById('airbnb-salida').value,
+                    canal: 'Airbnb' // Canal manual
+                };
+
+                showStatus(airbnbStatus, 'Enviando reserva de Airbnb...');
+
+                try {
+                    // NOTA: Este endpoint POST /api/reservas es de la Fase 4.
+                    // Recibiremos un error 404 hasta que lo implementemos en el backend.
+                    // Por ahora, solo simularemos la llamada.
+                    
+                    // const result = await fetchAPI('/api/reservas', {
+                    //     method: 'POST',
+                    //     body: JSON.stringify(reserva)
+                    // });
+                    
+                    // Simulación mientras no exista el endpoint:
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // Simula espera de red
+                    const result = { message: `Reserva para ${reserva.nombre} guardada (simulación).` };
+
+                    showStatus(airbnbStatus, `<strong>Éxito:</strong> ${result.message}`, false);
+                    airbnbForm.reset();
+                } catch (error) {
+                    console.error('Error al guardar reserva de Airbnb:', error);
+                    showStatus(airbnbStatus, `<strong>Error:</strong> ${error.message}. Recuerda que el endpoint del backend aún no está implementado.`, true);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Guardar Reserva Airbnb';
                 }
             });
         }

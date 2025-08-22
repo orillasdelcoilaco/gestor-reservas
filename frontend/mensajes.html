@@ -76,7 +76,7 @@
         </main>
     </div>
     
-   <script type="module">
+<script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -145,7 +145,10 @@
                 detallesReservaDiv.innerHTML = '<p>Cargando detalles...</p>';
                 try {
                     reservaSeleccionada = await fetchAPI(`/api/mensajes/detalle-reserva/${reservaId}`);
-                    mostrarDetalles();
+                    // Esta lógica estaba ausente en el archivo original, la agrego para que se muestren los detalles
+                    if (reservaSeleccionada) {
+                         mostrarDetalles();
+                    }
                     generadorSection.classList.remove('hidden');
                     mensajeCobroText.value = '';
                     mensajeBienvenidaText.value = '';
@@ -155,9 +158,9 @@
                     detallesReservaDiv.innerHTML = `<p class="text-red-500">Error al cargar detalles.</p>`;
                 }
             });
-
+            
             function mostrarDetalles() {
-                if (!reservaSeleccionada) return;
+                if (!reservaSeleccionada || !reservaSeleccionada.info) return;
                 const { info, cabanas } = reservaSeleccionada;
                 let cabanasHtml = cabanas.map(c => `<li>${c.alojamiento}: $${c.valorCLP.toLocaleString('es-CL')}</li>`).join('');
                 detallesReservaDiv.innerHTML = `
@@ -172,6 +175,7 @@
             }
 
             // Aquí puedes añadir la lógica futura para los botones de generar, copiar, etc.
+            // que faltaba en el archivo original.
         }
     });
 </script>

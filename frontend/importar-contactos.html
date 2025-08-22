@@ -63,7 +63,6 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
-            // --- Lógica Específica de la Página ---
             const importForm = document.getElementById('import-form');
             const fileInput = document.getElementById('csv-file-input');
             const importBtn = document.getElementById('import-btn');
@@ -97,12 +96,9 @@
                 }
 
                 try {
-                    // Usamos fetchAPI, pero como es FormData, no ponemos 'Content-Type'
-                    // fetchAPI lo omitirá y el navegador lo pondrá correctamente.
                     const result = await fetchAPI('/api/clientes/importar-csv', {
                         method: 'POST',
                         body: formData
-                        // No es necesario headers, el navegador lo hará por nosotros.
                     });
                     showStatus(`<strong>¡Proceso completado!</strong><br>${result.message}`, 'success');
                     importForm.reset();

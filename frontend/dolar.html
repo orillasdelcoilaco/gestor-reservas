@@ -63,7 +63,6 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
             
-            // --- Lógica Específica de la Página ---
             const uploadForm = document.getElementById('upload-form');
             const fileInput = document.getElementById('dolar-file-input');
             const yearInput = document.getElementById('year-input');
@@ -98,7 +97,6 @@
                     const result = await fetchAPI('/api/dolar/upload-csv', {
                         method: 'POST',
                         body: formData
-                        // No es necesario headers.
                     });
                     showStatus(`<strong>Éxito para el año ${year}:</strong> ${result.message}<br>Se procesaron ${result.summary.processed} registros.`, false);
                     uploadForm.reset();

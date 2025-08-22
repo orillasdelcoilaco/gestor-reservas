@@ -3,7 +3,6 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 const cookieParser = require('cookie-parser');
 
-//--- Importar Middlewares y Rutas ---
 const { checkSessionCookie } = require('./utils/authMiddleware');
 const authRoutes = require('./routes/auth');
 const reservasRoutes = require('./routes/reservas');
@@ -13,14 +12,14 @@ const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
 const clientesRoutes = require('./routes/clientes');
 
-//--- Configuración de CORS ---
+// --- LÍNEA CORREGIDA ---
 const corsOptions = {
   origin: 'https://www.orillasdelcoilaco.cl',
   optionsSuccessStatus: 200,
-  credentials: true 
+  credentials: true // Esta línea es la clave. Permite que el navegador envíe la cookie.
 };
+// --- FIN DE LA CORRECCIÓN ---
 
-//--- Inicialización de Firebase Admin SDK ---
 if (process.env.RENDER) {
   const serviceAccount = require('/etc/secrets/serviceAccountKey.json');
   admin.initializeApp({
@@ -39,20 +38,15 @@ const db = admin.firestore();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-//--- Middlewares Globales ---
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-//--- Rutas ---
-
-// Rutas Públicas (no requieren sesión)
 app.get('/', (req, res) => {
   res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
-app.use('/api', authRoutes(db));
 
-// Rutas Protegidas (requieren una cookie de sesión válida)
+app.use('/api', authRoutes(db));
 app.use('/api', checkSessionCookie, reservasRoutes(db));
 app.use('/api', checkSessionCookie, sincronizarRoutes(db));
 app.use('/api', checkSessionCookie, consolidarRoutes(db));
@@ -60,8 +54,6 @@ app.use('/api', checkSessionCookie, dolarRoutes(db));
 app.use('/api/mensajes', checkSessionCookie, mensajesRoutes(db));
 app.use('/api', checkSessionCookie, clientesRoutes(db));
 
-
-//--- Iniciar el Servidor ---
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);
 });

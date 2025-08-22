@@ -1,16 +1,18 @@
+// backend/routes/sincronizar.js - CÓDIGO ACTUALIZADO
+
 const express = require('express');
 const router = express.Router();
 const driveService = require('../services/driveService');
 const config = require('../config');
 const csv = require('csv-parser');
 const XLSX = require('xlsx');
-const stream = require('stream');
 
+// --- Las funciones de ayuda no cambian ---
 function parseCsvStream(fileStream) {
-  return new Promise((resolve, reject) => {
-    const results = [];
-    fileStream.pipe(csv()).on('data', (data) => results.push(data)).on('end', () => resolve(results)).on('error', (error) => reject(error));
-  });
+    return new Promise((resolve, reject) => {
+        const results = [];
+        fileStream.pipe(csv()).on('data', (data) => results.push(data)).on('end', () => resolve(results)).on('error', (error) => reject(error));
+    });
 }
 function streamToBuffer(streamValue) {
     return new Promise((resolve, reject) => {
@@ -50,17 +52,25 @@ async function saveDataToFirestore(db, collectionName, data) {
         await batchUpload.commit();
     }
 }
+// --- Fin de las funciones de ayuda ---
+
 
 async function performDriveSync(db) {
+    // AÑADIDO: Log para confirmar que esta función inicia
+    console.log('[DIAGNÓSTICO] La función performDriveSync ha comenzado.');
     try {
         console.log('Iniciando proceso de sincronización en segundo plano...');
         const drive = driveService.getDriveClient();
+        console.log('[DIAGNÓSTICO] Cliente de Google Drive inicializado correctamente.'); // AÑADIDO
+        
         const folderId = config.DRIVE_FOLDER_ID;
 
         const [sodcFile, bookingFile] = await Promise.all([
             driveService.findLatestFile(drive, folderId, config.SODC_FILE_PATTERN),
             driveService.findLatestFile(drive, folderId, config.BOOKING_FILE_PATTERN)
         ]);
+        
+        console.log('[DIAGNÓSTICO] Búsqueda de archivos completada.'); // AÑADIDO
 
         if (sodcFile) {
             console.log(`Descargando y procesando archivo SODC: ${sodcFile.name}`);
@@ -88,15 +98,20 @@ async function performDriveSync(db) {
 }
 
 module.exports = (db) => {
-  router.post('/sincronizar-drive', (req, res) => {
-    console.log('Solicitud recibida para sincronizar desde Google Drive...');
+    router.post('/sincronizar-drive', (req, res) => {
+        console.log('Solicitud recibida para sincronizar desde Google Drive...');
 
-    res.status(202).json({ 
-      message: 'El proceso de sincronización ha comenzado en segundo plano. Revisa los logs del servidor para ver el progreso.' 
+        res.status(202).json({
+            message: 'El proceso de sincronización ha comenzado en segundo plano. Revisa los logs del servidor para ver el progreso.'
+        });
+
+        // AÑADIDO: Envolvemos la llamada en un setTimeout para asegurar que la respuesta se envíe antes de cualquier posible error.
+        setTimeout(() => {
+            performDriveSync(db).catch(err => {
+                console.error('[DIAGNÓSTICO] Error no capturado en performDriveSync:', err);
+            });
+        }, 100); // 100ms de retraso
     });
 
-    performDriveSync(db);
-  });
-
-  return router;
+    return router;
 };

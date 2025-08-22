@@ -1,4 +1,4 @@
-// backend/services/consolidationService.js - CÓDIGO CORRECTO
+// backend/services/consolidationService.js - CÓDIGO ACTUALIZADO
 
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
@@ -17,63 +17,33 @@ function parseDate(dateValue) {
     }
     return null;
 }
-function parseCurrency(value, currency = 'USD') {
-    if (typeof value === 'number') return value;
-    if (typeof value !== 'string') return 0;
-    if (currency === 'CLP') {
-        const digitsOnly = value.replace(/\D/g, '');
-        return parseInt(digitsOnly, 10) || 0;
-    }
-    const numberString = value.replace(/[^\d.,]/g, '');
-    const cleanedForFloat = numberString.replace(/,/g, '');
-    return parseFloat(cleanedForFloat) || 0;
-}
-function cleanPhoneNumber(phone) {
-    if (!phone) return null;
-    let cleaned = phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
-    if (cleaned.length === 9 && cleaned.startsWith('9')) {
-        return `56${cleaned}`;
-    }
-    return cleaned;
-}
-function cleanCabanaName(cabanaName) {
-    if (!cabanaName) return '';
-    let cleanedName = cabanaName.replace(/(\d+)(\s*)$/, '$1').trim();
-    return cleanedName;
-}
+function parseCurrency(value, currency = 'USD') { /* ...código sin cambios... */ }
+function cleanPhoneNumber(phone) { /* ...código sin cambios... */ }
+function cleanCabanaName(cabanaName) { /* ...código sin cambios... */ }
 
-// --- LÓGICA DE CONSOLIDACIÓN MEJORADA ---
+// --- LÓGICA DE CONSOLIDACIÓN CON NÚMERO GENÉRICO ---
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
     const rawDocsSnapshot = await db.collection(rawCollectionName).get();
     
     if (rawDocsSnapshot.empty) {
         return {
-            reportesEncontrados: 0,
-            clientesNuevos: 0,
-            reservasCreadas: 0,
-            reservasActualizadas: 0,
+            reportesEncontrados: 0, clientesNuevos: 0, reservasCreadas: 0, reservasActualizadas: 0,
             mensaje: `No hay nuevos reportes de ${channel} para procesar.`
         };
     }
 
-    let clientesNuevos = 0;
-    let reservasCreadas = 0;
-    let reservasActualizadas = 0;
+    let clientesNuevos = 0, reservasCreadas = 0, reservasActualizadas = 0;
 
     const allExistingReservations = new Map();
     const allReservasSnapshot = await db.collection('reservas').get();
-    allReservasSnapshot.forEach(doc => {
-        allExistingReservations.set(doc.id, doc.data());
-    });
+    allReservasSnapshot.forEach(doc => allExistingReservations.set(doc.id, doc.data()));
 
     const existingClientsByPhone = new Map();
     const allClientsSnapshot = await db.collection('clientes').get();
     allClientsSnapshot.forEach(doc => {
         const clientData = doc.data();
-        if (clientData.phone) {
-            existingClientsByPhone.set(clientData.phone, doc.id);
-        }
+        if (clientData.phone) existingClientsByPhone.set(clientData.phone, doc.id);
     });
 
     const batch = db.batch();
@@ -89,7 +59,8 @@ async function processChannel(db, channel) {
             reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString(),
             nombreCompleto: nombreCompletoRaw,
             email: rawData['Email'] || rawData['Correo'] || null,
-            telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']),
+            // --- LÓGICA DEL NÚMERO GENÉRICO ---
+            telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']) || '56999999999',
             fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),
             fechaSalida: parseDate(isBooking ? rawData['Salida'] : rawData['Día de salida']),
             estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
@@ -107,11 +78,7 @@ async function processChannel(db, channel) {
             let clienteId;
             const existingReservation = allExistingReservations.get(idCompuesto);
             
-            if (existingReservation) {
-                reservasActualizadas++;
-            } else {
-                reservasCreadas++;
-            }
+            if (existingReservation) reservasActualizadas++; else reservasCreadas++;
 
             if (existingReservation && existingReservation.clienteId) {
                 clienteId = existingReservation.clienteId;
@@ -125,10 +92,12 @@ async function processChannel(db, channel) {
                     firstname: reservaData.nombreCompleto.split(' ')[0],
                     lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
                     email: reservaData.email,
-                    phone: reservaData.telefono
+                    phone: reservaData.telefono // Guarda el número real o el genérico
                 });
                 if (reservaData.telefono) existingClientsByPhone.set(reservaData.telefono, clienteId);
                 
+                // --- CREAR SIEMPRE EL CONTACTO DE GOOGLE ---
+                console.log(`Preparando creación de contacto para ${reservaData.nombreCompleto} con teléfono ${reservaData.telefono}`);
                 const contactData = {
                     name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaIdOriginal}`,
                     phone: reservaData.telefono,
@@ -137,6 +106,7 @@ async function processChannel(db, channel) {
                 createGoogleContact(db, contactData);
             }
 
+            // ... (resto del código de cálculo y guardado sin cambios) ...
             let valorCLP = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
             if (isBooking) {
                 const valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);

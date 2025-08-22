@@ -9,42 +9,53 @@ const monthMap = {
 };
 
 /**
- * ACTUALIZACIÓN DIARIA
+ * ACTUALIZACIÓN DIARIA (VERSIÓN MEJORADA)
  * Verifica si el valor del dólar para el día de hoy existe en Firestore.
- * Si no existe, lo obtiene de una API y lo guarda.
+ * Si no existe, lo obtiene de una API más robusta y lo guarda.
  * @param {admin.firestore.Firestore} db - La instancia de Firestore.
  */
 async function updateTodaysDolarValue(db) {
-  const today = new Date();
-  const dateStr = today.toISOString().split('T')[0];
-  const dolarRef = db.collection('valorDolar').doc(dateStr);
+    const today = new Date();
+    // Ajustar a la zona horaria de Chile (GMT-4 o GMT-3 en verano) para asegurar que la fecha sea la correcta
+    const offset = today.getTimezoneOffset() + (180); // Asumiendo GMT-3 la mayor parte del tiempo
+    const chileanDate = new Date(today.getTime() - offset * 60 * 1000);
+    const dateStr = chileanDate.toISOString().split('T')[0];
+    
+    const dolarRef = db.collection('valorDolar').doc(dateStr);
 
-  const doc = await dolarRef.get();
-  if (doc.exists) {
-    console.log(`El valor del dólar para hoy (${dateStr}) ya existe en la base de datos.`);
-    return;
-  }
-
-  console.log(`Valor para hoy (${dateStr}) no encontrado. Actualizando desde la API...`);
-  try {
-    const apiUrl = `https://api.frankfurter.app/latest?from=USD&to=CLP`;
-    const response = await fetch(apiUrl);
-    if (response.ok) {
-      const data = await response.json();
-      const valor = data.rates.CLP;
-      if (valor) {
-        await dolarRef.set({
-          valor: valor,
-          fecha: admin.firestore.Timestamp.fromDate(new Date(dateStr + 'T00:00:00Z')),
-        });
-        console.log(`Valor de hoy (${valor}) guardado exitosamente en Firestore.`);
-      }
-    } else {
-      console.error(`No se pudo obtener el valor de hoy desde la API. Status: ${response.status}`);
+    const doc = await dolarRef.get();
+    if (doc.exists) {
+        console.log(`El valor del dólar para hoy (${dateStr}) ya existe en la base de datos.`);
+        return;
     }
-  } catch (error) {
-    console.error('Error al actualizar el valor del dólar de hoy:', error.message);
-  }
+
+    console.log(`Valor para hoy (${dateStr}) no encontrado. Actualizando desde la nueva API...`);
+    try {
+        // --- CAMBIO DE API ---
+        // Usamos una API basada en un CDN que es más estable y no da 404 para fechas recientes.
+        const apiUrl = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/usd.json`;
+        
+        const response = await fetch(apiUrl);
+        if (response.ok) {
+            const data = await response.json();
+            // La estructura de la respuesta es diferente: data.usd.clp
+            const valor = data.usd.clp; 
+            
+            if (valor) {
+                await dolarRef.set({
+                    valor: valor,
+                    fecha: admin.firestore.Timestamp.fromDate(new Date(dateStr + 'T00:00:00Z')),
+                });
+                console.log(`Valor de hoy (${valor}) guardado exitosamente en Firestore.`);
+            } else {
+                 console.error(`No se pudo encontrar el valor CLP en la respuesta de la API.`);
+            }
+        } else {
+            console.error(`No se pudo obtener el valor de hoy desde la API. Status: ${response.status}`);
+        }
+    } catch (error) {
+        console.error('Error al actualizar el valor del dólar de hoy:', error.message);
+    }
 }
 
 /**
@@ -175,7 +186,7 @@ async function getValorDolar(db, targetDate) {
 }
 
 module.exports = {
-  getValorDolar,
-  processDolarCsv,
-  updateTodaysDolarValue, // Exportamos la nueva función
+    getValorDolar,
+    processDolarCsv,
+    updateTodaysDolarValue,
 };

@@ -63,79 +63,75 @@
             </div>
         </main>
     </div>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, signOut, onAuthStateChanged  } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.firebasestorage.app",
-            messagingSenderId: "177883383809",
-            appId: "1:177883383809:web:329694a3dc2df074f7d800"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
 
+    <script>
+        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+        const authInfo = document.getElementById('auth-info');
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
-        const authInfo = document.getElementById('auth-info');
 
-        auth.onAuthStateChanged((user) => {
-            if (user) {
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/status`, { credentials: 'include' });
+                if (!response.ok) throw new Error('Sesión no válida');
+                
+                const userData = await response.json();
+                
                 loader.style.display = 'none';
                 appContent.classList.remove('hidden');
-                
+
                 authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+                    <span class="text-sm text-gray-600 hidden sm:block">${userData.email}</span>
+                    <a href="${API_BASE_URL}/api/auth/logout" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</a>
                 `;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
-                // --- Lógica original de la página ---
-                const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-                const syncDriveBtn = document.getElementById('sync-drive-btn');
-                const syncStatus = document.getElementById('sync-status');
-                const airbnbForm = document.getElementById('airbnb-form');
-                const airbnbStatus = document.getElementById('airbnb-status');
-
-                function showStatus(element, message, isError = false) {
-                    element.innerHTML = message;
-                    element.className = `mt-4 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`;
-                    element.classList.remove('hidden');
-                }
-
-                syncDriveBtn.addEventListener('click', async () => {
-                    syncDriveBtn.disabled = true;
-                    syncDriveBtn.textContent = 'Sincronizando...';
-                    showStatus(syncStatus, 'Iniciando conexión con Google Drive. Esto puede tardar un momento...');
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/api/sincronizar-drive`, {
-                            method: 'POST',
-                        });
-                        const result = await response.json();
-                        if (!response.ok) {
-                            throw new Error(result.error || 'Ocurrió un error desconocido en el servidor.');
-                        }
-                        let summaryHtml = `<strong>${result.message}</strong>`;
-                        showStatus(syncStatus, summaryHtml, false);
-                    } catch (error) {
-                        console.error('Error al sincronizar:', error);
-                        showStatus(syncStatus, `<strong>Error:</strong> ${error.message}`, true);
-                    } finally {
-                        syncDriveBtn.disabled = false;
-                        syncDriveBtn.textContent = 'Sincronizar desde Google Drive';
-                    }
-                });
-                // (Aquí iría la lógica para el formulario de Airbnb si la tuviera)
-                // --- Fin de la lógica original ---
-
-            } else {
+                initializePage();
+                
+            } catch (error) {
+                console.error('Error de autenticación:', error);
                 window.location.href = 'index.html';
             }
-        });
+        }
+
+        function initializePage() {
+            const syncDriveBtn = document.getElementById('sync-drive-btn');
+            const syncStatus = document.getElementById('sync-status');
+            const airbnbForm = document.getElementById('airbnb-form');
+            const airbnbStatus = document.getElementById('airbnb-status');
+
+            function showStatus(element, message, isError = false) {
+                element.innerHTML = message;
+                element.className = `mt-4 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`;
+                element.classList.remove('hidden');
+            }
+
+            syncDriveBtn.addEventListener('click', async () => {
+                syncDriveBtn.disabled = true;
+                syncDriveBtn.textContent = 'Sincronizando...';
+                showStatus(syncStatus, 'Iniciando conexión con Google Drive. Esto puede tardar un momento...');
+                try {
+                    const response = await fetch(`${API_BASE_URL}/api/sincronizar-drive`, {
+                        method: 'POST',
+                        credentials: 'include'
+                    });
+                    const result = await response.json();
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Ocurrió un error desconocido en el servidor.');
+                    }
+                    showStatus(syncStatus, `<strong>${result.message}</strong>`, false);
+                } catch (error) {
+                    console.error('Error al sincronizar:', error);
+                    showStatus(syncStatus, `<strong>Error:</strong> ${error.message}`, true);
+                } finally {
+                    syncDriveBtn.disabled = false;
+                    syncDriveBtn.textContent = 'Sincronizar desde Google Drive';
+                }
+            });
+            
+            // Aquí puedes añadir la lógica para el formulario de Airbnb si es necesario
+        }
+
+        document.addEventListener('DOMContentLoaded', checkAuthStatus);
     </script>
 </body>
 </html>

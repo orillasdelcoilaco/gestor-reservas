@@ -26,58 +26,61 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.firebasestorage.app",
-            messagingSenderId: "177883383809",
-            appId: "1:177883383809:web:329694a3dc2df074f7d800"
-        };
+    const firebaseConfig = {
+        apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
+        authDomain: "reservas-sodc.firebaseapp.com",
+        projectId: "reservas-sodc",
+        storageBucket: "reservas-sodc.firebasestorage.app",
+        messagingSenderId: "177883383809",
+        appId: "1:177883383809:web:329694a3dc2df074f7d800"
+    };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        
-        const loginForm = document.getElementById('login-form');
-        const loginError = document.getElementById('login-error');
-        const loginBtn = document.getElementById('login-btn');
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
 
-        // Limpiamos cualquier token antiguo al llegar a la página de login
-        localStorage.removeItem('firebaseIdToken');
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const loginBtn = document.getElementById('login-btn');
 
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            loginError.classList.add('hidden');
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'Verificando...';
+    // Limpiamos cualquier token o email antiguo al llegar a la página de login
+    localStorage.removeItem('firebaseIdToken');
+    sessionStorage.removeItem('userEmail'); // Limpiamos también el email
 
-            const email = loginForm['login-email'].value;
-            const password = loginForm['login-password'].value;
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginError.classList.add('hidden');
+        loginBtn.disabled = true;
+        loginBtn.textContent = 'Verificando...';
 
-            try {
-                // 1. Autenticar con Firebase
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                
-                // 2. Obtener el token de ID del usuario
-                const idToken = await userCredential.user.getIdToken();
+        const email = loginForm['login-email'].value;
+        const password = loginForm['login-password'].value;
 
-                // 3. Guardar el token en la memoria del navegador (localStorage)
-                localStorage.setItem('firebaseIdToken', idToken);
+        try {
+            // 1. Autenticar con Firebase
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            
+            // 2. Obtener el token de ID del usuario
+            const idToken = await userCredential.user.getIdToken();
 
-                // 4. Redirigir al dashboard
-                window.location.href = 'dashboard.html';
+            // 3. Guardar el token y el email en la memoria del navegador
+            localStorage.setItem('firebaseIdToken', idToken);
+            // --- LÍNEA CLAVE AÑADIDA ---
+            sessionStorage.setItem('userEmail', userCredential.user.email);
 
-            } catch (error) {
-                console.error("Falló el inicio de sesión:", error);
-                loginError.textContent = 'Credenciales incorrectas.';
-                loginError.classList.remove('hidden');
-                loginBtn.disabled = false;
-                loginBtn.textContent = 'Acceder';
-            }
-        });
-    </script>
+            // 4. Redirigir al dashboard
+            window.location.href = 'dashboard.html';
+
+        } catch (error) {
+            console.error("Falló el inicio de sesión:", error);
+            loginError.textContent = 'Credenciales incorrectas.';
+            loginError.classList.remove('hidden');
+            loginBtn.disabled = false;
+            loginBtn.textContent = 'Acceder';
+        }
+    });
+</script>
 </body>
 </html>

@@ -45,94 +45,77 @@
         </main>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.firebasestorage.app",
-            messagingSenderId: "177883383809",
-            appId: "1:177883383809:web:329694a3dc2df074f7d800"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        
-        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-        const authInfo = document.getElementById('auth-info');
+<script type="module">
+    import { checkSession, logout, fetchAPI } from './api.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
-        const importForm = document.getElementById('import-form');
-        const fileInput = document.getElementById('csv-file-input');
-        const importBtn = document.getElementById('import-btn');
-        const importStatus = document.getElementById('import-status');
+        const authInfo = document.getElementById('auth-info');
 
-        function showStatus(message, type = 'info') {
-            let bgColor, textColor;
-            switch (type) {
-                case 'error':
-                    bgColor = 'bg-red-100'; textColor = 'text-red-800'; break;
-                case 'success':
-                    bgColor = 'bg-green-100'; textColor = 'text-green-800'; break;
-                default:
-                    bgColor = 'bg-blue-100'; textColor = 'text-blue-800';
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContent.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
+
+            // --- Lógica Específica de la Página ---
+            const importForm = document.getElementById('import-form');
+            const fileInput = document.getElementById('csv-file-input');
+            const importBtn = document.getElementById('import-btn');
+            const importStatus = document.getElementById('import-status');
+
+            function showStatus(message, type = 'info') {
+                let bgColor, textColor;
+                switch (type) {
+                    case 'error': bgColor = 'bg-red-100'; textColor = 'text-red-800'; break;
+                    case 'success': bgColor = 'bg-green-100'; textColor = 'text-green-800'; break;
+                    default: bgColor = 'bg-blue-100'; textColor = 'text-blue-800';
+                }
+                importStatus.innerHTML = message;
+                importStatus.className = `mt-6 p-4 rounded-md text-sm ${bgColor} ${textColor}`;
+                importStatus.classList.remove('hidden');
             }
-            importStatus.innerHTML = message;
-            importStatus.className = `mt-6 p-4 rounded-md text-sm ${bgColor} ${textColor}`;
-            importStatus.classList.remove('hidden');
+
+            importForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!fileInput.files.length) {
+                    showStatus('Por favor, selecciona al menos un archivo CSV.', 'error');
+                    return;
+                }
+                importBtn.disabled = true;
+                importBtn.textContent = 'Procesando...';
+                showStatus(`Enviando ${fileInput.files.length} archivo(s) al servidor. Esto puede tardar...`, 'info');
+
+                const formData = new FormData();
+                for (const file of fileInput.files) {
+                    formData.append('clientsFiles', file);
+                }
+
+                try {
+                    // Usamos fetchAPI, pero como es FormData, no ponemos 'Content-Type'
+                    // fetchAPI lo omitirá y el navegador lo pondrá correctamente.
+                    const result = await fetchAPI('/api/clientes/importar-csv', {
+                        method: 'POST',
+                        body: formData
+                        // No es necesario headers, el navegador lo hará por nosotros.
+                    });
+                    showStatus(`<strong>¡Proceso completado!</strong><br>${result.message}`, 'success');
+                    importForm.reset();
+                } catch (error) {
+                    console.error('Error al importar:', error);
+                    showStatus(`<strong>Error:</strong> ${error.message}`, 'error');
+                } finally {
+                    importBtn.disabled = false;
+                    importBtn.textContent = 'Iniciar Proceso de Carga';
+                }
+            });
         }
-
-        importForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!fileInput.files.length) {
-                showStatus('Por favor, selecciona al menos un archivo CSV.', 'error');
-                return;
-            }
-            importBtn.disabled = true;
-            importBtn.textContent = 'Procesando...';
-            showStatus(`Enviando ${fileInput.files.length} archivo(s) al servidor. Esto puede tardar...`, 'info');
-
-            const formData = new FormData();
-            for (const file of fileInput.files) {
-                formData.append('clientsFiles', file);
-            }
-
-            try {
-                // El endpoint del backend lo crearemos en los siguientes pasos
-                const response = await fetch(`${API_BASE_URL}/api/clientes/importar-csv`, {
-                    method: 'POST',
-                    body: formData,
-                });
-                const result = await response.json();
-                if (!response.ok) throw new Error(result.error || 'Ocurrió un error en el servidor.');
-                
-                showStatus(`<strong>¡Proceso completado!</strong><br>${result.message}`, 'success');
-                importForm.reset();
-            } catch (error) {
-                console.error('Error al importar:', error);
-                showStatus(`<strong>Error:</strong> ${error.message}`, 'error');
-            } finally {
-                importBtn.disabled = false;
-                importBtn.textContent = 'Iniciar Proceso de Carga';
-            }
-        });
-
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                loader.style.display = 'none';
-                appContent.classList.remove('hidden');
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-                `;
-                document.getElementById('logout-btn').addEventListener('click', () => auth.signOut());
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
-    </script>
+    });
+</script>    
 </body>
 </html>

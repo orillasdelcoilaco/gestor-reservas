@@ -89,197 +89,182 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.firebasestorage.app",
-            messagingSenderId: "177883383809",
-            appId: "1:177883383809:web:329694a3dc2df074f7d800"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+    // 1. Importamos todo lo que necesitamos desde api.js
+    import { checkSession, logout, fetchAPI } from './api.js';
 
+    // --- Referencias a elementos del DOM (sin cambios) ---
+    const reservasTableBody = document.getElementById('reservas-table-body');
+    const loadingState = document.getElementById('loading-state');
+    const searchInput = document.getElementById('search-input');
+    const modal = document.getElementById('edit-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalLabel = document.getElementById('modal-label');
+    const modalStatus = document.getElementById('modal-status');
+    const valorInput = document.getElementById('valor-input');
+    const nombreInput = document.getElementById('nombre-input');
+    const telefonoInput = document.getElementById('telefono-input');
+    const saveBtn = document.getElementById('save-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+
+    let allReservas = [];
+    let reservaParaEditar = null;
+    let reservasDelGrupo = [];
+
+    // --- Lógica de la página (con la función fetchAPI) ---
+    function renderTable(reservas) {
+        reservasTableBody.innerHTML = '';
+        if (reservas.length === 0) {
+            loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas.</p>';
+            loadingState.style.display = 'block';
+            return;
+        }
+        loadingState.style.display = 'none';
+        reservas.forEach(reserva => {
+            const row = document.createElement('tr');
+            row.className = "hover:bg-gray-50";
+            const iconoValorManual = reserva.valorManual ? '✏️' : '';
+            const iconoNombreManual = reserva.nombreManual ? '✏️' : '';
+            const iconoTelefonoManual = reserva.telefonoManual ? '✏️' : '';
+            const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')} ${iconoValorManual}`;
+            const nombreFormateado = `${reserva.nombre} ${iconoNombreManual}`;
+            const telefonoFormateado = `${reserva.telefono} ${iconoTelefonoManual}`;
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${nombreFormateado}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.llegada}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.salida}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.alojamiento}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-800">${reserva.totalNoches}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorFormateado}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${telefonoFormateado}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.estado}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}" data-reserva-id-original="${reserva.reservaIdOriginal}">Editar</button>
+                </td>`;
+            reservasTableBody.appendChild(row);
+        });
+        document.querySelectorAll('.edit-btn').forEach(button => {
+            button.addEventListener('click', handleEditClick);
+        });
+    }
+
+    async function loadReservas() {
+        loadingState.innerHTML = '<p class="text-gray-500">Cargando reservas...</p>';
+        try {
+            // 2. Usamos fetchAPI para obtener las reservas. ¡Esto soluciona el error 401!
+            allReservas = await fetchAPI('/api/reservas');
+            renderTable(allReservas);
+        } catch (error) {
+            console.error('Error al cargar las reservas:', error);
+            loadingState.innerHTML = `<p class="text-red-500 font-semibold">No se pudieron cargar las reservas: ${error.message}</p>`;
+        }
+    }
+
+    function handleEditClick(event) {
+        modalStatus.innerHTML = '';
+        const button = event.target;
+        const id = button.dataset.id;
+        const reservaIdOriginal = button.dataset.reservaIdOriginal;
+        reservaParaEditar = allReservas.find(r => r.id === id);
+        reservasDelGrupo = allReservas.filter(r => r.reservaIdOriginal === reservaIdOriginal);
+        nombreInput.value = reservaParaEditar.nombre;
+        telefonoInput.value = reservaParaEditar.telefono;
+        if (reservasDelGrupo.length > 1) {
+            const totalGrupo = reservasDelGrupo.reduce((sum, r) => sum + r.valorCLP, 0);
+            modalTitle.textContent = `Editar Grupo de Reserva N° ${reservaIdOriginal}`;
+            modalLabel.textContent = `Valor TOTAL del Grupo (CLP)`;
+            valorInput.value = totalGrupo;
+            reservaParaEditar.esGrupo = true;
+        } else {
+            modalTitle.textContent = `Editar Reserva N° ${reservaIdOriginal}`;
+            modalLabel.textContent = `Valor (CLP)`;
+            valorInput.value = reservaParaEditar.valorCLP;
+            reservaParaEditar.esGrupo = false;
+        }
+        modal.classList.remove('hidden');
+    }
+
+    async function handleSave() {
+        const nuevoValor = parseInt(valorInput.value);
+        const nuevoNombre = nombreInput.value.trim();
+        const nuevoTelefono = telefonoInput.value.trim();
+        const bodyPayload = {};
+        let endpoint;
+        
+        if (reservaParaEditar.esGrupo) {
+            endpoint = `/api/reservas/grupo/${reservaParaEditar.reservaIdOriginal}`;
+            const totalActualGrupo = reservasDelGrupo.reduce((s, r) => s + r.valorCLP, 0);
+            if (!isNaN(nuevoValor) && nuevoValor !== totalActualGrupo) bodyPayload.nuevoTotalCLP = nuevoValor;
+            if (nuevoNombre && nuevoNombre !== reservaParaEditar.nombre) bodyPayload.clienteNombre = nuevoNombre;
+            if (nuevoTelefono && nuevoTelefono !== reservaParaEditar.telefono) bodyPayload.telefono = nuevoTelefono;
+        } else {
+            endpoint = `/api/reservas/${reservaParaEditar.id}`;
+            if (!isNaN(nuevoValor) && nuevoValor !== reservaParaEditar.valorCLP) bodyPayload.valorCLP = nuevoValor;
+            if (nuevoNombre && nuevoNombre !== reservaParaEditar.nombre) bodyPayload.clienteNombre = nuevoNombre;
+            if (nuevoTelefono && nuevoTelefono !== reservaParaEditar.telefono) bodyPayload.telefono = nuevoTelefono;
+        }
+
+        if (Object.keys(bodyPayload).length === 0) {
+            modalStatus.textContent = 'No hay cambios para guardar.';
+            modalStatus.className = 'mt-2 text-sm text-yellow-600';
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+        modalStatus.textContent = '';
+        
+        try {
+            // 3. También usamos fetchAPI para actualizar
+            await fetchAPI(endpoint, {
+                method: 'PUT',
+                body: JSON.stringify(bodyPayload)
+            });
+            await loadReservas(); // Recargamos la tabla
+            modal.classList.add('hidden');
+        } catch (error) {
+            modalStatus.textContent = `Error al guardar: ${error.message}`;
+            modalStatus.className = 'mt-2 text-sm text-red-600';
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Guardar';
+        }
+    }
+
+    // --- Lógica de inicialización ---
+    document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
         const authInfo = document.getElementById('auth-info');
-        
-        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-        const reservasTableBody = document.getElementById('reservas-table-body');
-        const loadingState = document.getElementById('loading-state');
-        const searchInput = document.getElementById('search-input');
-        
-        const modal = document.getElementById('edit-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalLabel = document.getElementById('modal-label');
-        const modalStatus = document.getElementById('modal-status');
-        const valorInput = document.getElementById('valor-input');
-        const nombreInput = document.getElementById('nombre-input');
-        const telefonoInput = document.getElementById('telefono-input');
-        const saveBtn = document.getElementById('save-btn');
-        const cancelBtn = document.getElementById('cancel-btn');
 
-        let allReservas = [];
-        let reservaParaEditar = null;
-        let reservasDelGrupo = [];
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContent.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
 
-        function renderTable(reservas) {
-            reservasTableBody.innerHTML = '';
-            if (reservas.length === 0) {
-                loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas.</p>';
-                loadingState.style.display = 'block';
-                return;
-            }
-            loadingState.style.display = 'none';
-            reservas.forEach(reserva => {
-                const row = document.createElement('tr');
-                row.className = "hover:bg-gray-50";
-                const iconoValorManual = reserva.valorManual ? '✏️' : '';
-                const iconoNombreManual = reserva.nombreManual ? '✏️' : '';
-                const iconoTelefonoManual = reserva.telefonoManual ? '✏️' : '';
-                const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')} ${iconoValorManual}`;
-                const nombreFormateado = `${reserva.nombre} ${iconoNombreManual}`;
-                const telefonoFormateado = `${reserva.telefono} ${iconoTelefonoManual}`;
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaldOriginal}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${nombreFormateado}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.llegada}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.salida}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.alojamiento}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-800">${reserva.totalNoches}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorFormateado}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${telefonoFormateado}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.estado}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}" data-reserva-id-original="${reserva.reservaldOriginal}">Editar</button>
-                    </td>`;
-                reservasTableBody.appendChild(row);
+            // Una vez autenticado, asignamos los listeners y cargamos los datos
+            searchInput.addEventListener('input', (e) => {
+                const searchTerm = e.target.value.toLowerCase();
+                const filteredReservas = allReservas.filter(r =>
+                    (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
+                    (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
+                    (r.telefono && r.telefono.toLowerCase().includes(searchTerm)) ||
+                    (r.canal && r.canal.toLowerCase().includes(searchTerm)) ||
+                    (r.alojamiento && r.alojamiento.toLowerCase().includes(searchTerm))
+                );
+                renderTable(filteredReservas);
             });
-            document.querySelectorAll('.edit-btn').forEach(button => {
-                button.addEventListener('click', handleEditClick);
-            });
+            cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            saveBtn.addEventListener('click', handleSave);
+            loadReservas();
         }
-
-        async function loadReservas() {
-            loadingState.innerHTML = '<p class="text-gray-500">Cargando reservas...</p>';
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/reservas`);
-                if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
-                allReservas = await response.json();
-                renderTable(allReservas);
-            } catch (error) {
-                console.error('Error al cargar las reservas:', error);
-                loadingState.innerHTML = '<p class="text-red-500 font-semibold">No se pudieron cargar las reservas.</p>';
-            }
-        }
-
-        function handleEditClick(event) {
-            modalStatus.innerHTML = '';
-            const button = event.target;
-            const id = button.dataset.id;
-            const reservaldOriginal = button.dataset.reservaldOriginal;
-            reservaParaEditar = allReservas.find(r => r.id === id);
-            reservasDelGrupo = allReservas.filter(r => r.reservaldOriginal === reservaldOriginal);
-            nombreInput.value = reservaParaEditar.nombre;
-            telefonoInput.value = reservaParaEditar.telefono;
-            if (reservasDelGrupo.length > 1) {
-                const totalGrupo = reservasDelGrupo.reduce((sum, r) => sum + r.valorCLP, 0);
-                modalTitle.textContent = `Editar Grupo de Reserva N° ${reservaldOriginal}`;
-                modalLabel.textContent = `Valor TOTAL del Grupo (CLP)`;
-                valorInput.value = totalGrupo;
-                reservaParaEditar.esGrupo = true;
-            } else {
-                modalTitle.textContent = `Editar Reserva N° ${reservaldOriginal}`;
-                modalLabel.textContent = `Valor (CLP)`;
-                valorInput.value = reservaParaEditar.valorCLP;
-                reservaParaEditar.esGrupo = false;
-            }
-            modal.classList.remove('hidden');
-        }
-
-        async function handleSave() {
-            const nuevoValor = parseInt(valorInput.value);
-            const nuevoNombre = nombreInput.value.trim();
-            const nuevoTelefono = telefonoInput.value.trim();
-            const bodyPayload = {};
-            let url;
-            if (reservaParaEditar.esGrupo) {
-                url = `${API_BASE_URL}/api/reservas/grupo/${reservaParaEditar.reservaldOriginal}`;
-                const totalActualGrupo = reservasDelGrupo.reduce((s, r) => s + r.valorCLP, 0);
-                if (!isNaN(nuevoValor) && nuevoValor !== totalActualGrupo) bodyPayload.nuevoTotalCLP = nuevoValor;
-                if (nuevoNombre && nuevoNombre !== reservaParaEditar.nombre) bodyPayload.clienteNombre = nuevoNombre;
-                if (nuevoTelefono && nuevoTelefono !== reservaParaEditar.telefono) bodyPayload.telefono = nuevoTelefono;
-            } else {
-                url = `${API_BASE_URL}/api/reservas/${reservaParaEditar.id}`;
-                if (!isNaN(nuevoValor) && nuevoValor !== reservaParaEditar.valorCLP) bodyPayload.valorCLP = nuevoValor;
-                if (nuevoNombre && nuevoNombre !== reservaParaEditar.nombre) bodyPayload.clienteNombre = nuevoNombre;
-                if (nuevoTelefono && nuevoTelefono !== reservaParaEditar.telefono) bodyPayload.telefono = nuevoTelefono;
-            }
-            if (Object.keys(bodyPayload).length === 0) {
-                modalStatus.textContent = 'No hay cambios para guardar.';
-                modalStatus.className = 'mt-2 text-sm text-yellow-600';
-                return;
-            }
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Guardando...';
-            modalStatus.textContent = '';
-            try {
-                const response = await fetch(url, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(bodyPayload)
-                });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Error en el servidor');
-                }
-                await loadReservas();
-                modal.classList.add('hidden');
-            } catch (error) {
-                modalStatus.textContent = `Error al guardar: ${error.message}`;
-                modalStatus.className = 'mt-2 text-sm text-red-600';
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Guardar';
-            }
-        }
-        
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                loader.style.display = 'none';
-                appContent.classList.remove('hidden');
-                
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-                `;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-                
-                // Una vez autenticado, asignamos los listeners y cargamos los datos
-                searchInput.addEventListener('input', (e) => {
-                    const searchTerm = e.target.value.toLowerCase();
-                    const filteredReservas = allReservas.filter(r =>
-                        (r.reservaldOriginal && r.reservaldOriginal.toLowerCase().includes(searchTerm)) ||
-                        (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
-                        (r.telefono && r.telefono.toLowerCase().includes(searchTerm)) ||
-                        (r.canal && r.canal.toLowerCase().includes(searchTerm)) ||
-                        (r.alojamiento && r.alojamiento.toLowerCase().includes(searchTerm))
-                    );
-                    renderTable(filteredReservas);
-                });
-                cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-                saveBtn.addEventListener('click', handleSave);
-                loadReservas();
-
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
-    </script>
+    });
+</script>
 </body>
 </html>

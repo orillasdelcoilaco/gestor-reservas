@@ -45,93 +45,73 @@
             </div>
         </main>
     </div>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+<script type="module">
+    import { checkSession, logout, fetchAPI } from './api.js';
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.firebasestorage.app",
-            messagingSenderId: "177883383809",
-            appId: "1:177883383809:web:329694a3dc2df074f7d800"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-
+    document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
         const authInfo = document.getElementById('auth-info');
-        
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                loader.style.display = 'none';
-                appContent.classList.remove('hidden');
 
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-                `;
-                document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContent.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            
+            // --- Lógica Específica de la Página ---
+            const uploadForm = document.getElementById('upload-form');
+            const fileInput = document.getElementById('dolar-file-input');
+            const yearInput = document.getElementById('year-input');
+            const uploadBtn = document.getElementById('upload-btn');
+            const uploadStatus = document.getElementById('upload-status');
 
-                // --- Lógica original de la página ---
-                const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-                const uploadForm = document.getElementById('upload-form');
-                const fileInput = document.getElementById('dolar-file-input');
-                const yearInput = document.getElementById('year-input');
-                const uploadBtn = document.getElementById('upload-btn');
-                const uploadStatus = document.getElementById('upload-status');
-
-                function showStatus(message, isError = false) {
-                    uploadStatus.innerHTML = message;
-                    uploadStatus.className = `mt-6 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
-                    uploadStatus.classList.remove('hidden');
-                }
-
-                uploadForm.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    const year = yearInput.value;
-                    if (!fileInput.files.length) {
-                        showStatus('Por favor, selecciona un archivo.', true);
-                        return;
-                    }
-                    if (!year) {
-                        showStatus('Por favor, ingresa el año.', true);
-                        return;
-                    }
-                    uploadBtn.disabled = true;
-                    uploadBtn.textContent = 'Cargando...';
-                    showStatus('Enviando archivo al servidor...', false);
-                    const formData = new FormData();
-                    formData.append('dolarFile', fileInput.files[0]);
-                    formData.append('year', year);
-                    try {
-                        const response = await fetch(`${API_BASE_URL}/api/dolar/upload-csv`, {
-                            method: 'POST',
-                            body: formData,
-                        });
-                        const result = await response.json();
-                        if (!response.ok) {
-                            throw new Error(result.error || 'Ocurrió un error desconocido.');
-                        }
-                        showStatus(`<strong>Éxito para el año ${year}:</strong> ${result.message}<br>Se procesaron ${result.summary.processed} registros.`, false);
-                        uploadForm.reset();
-                    } catch (error) {
-                        console.error('Error al subir el archivo:', error);
-                        showStatus(`<strong>Error:</strong> ${error.message}`, true);
-                    } finally {
-                        uploadBtn.disabled = false;
-                        uploadBtn.textContent = 'Cargar Archivo';
-                    }
-                });
-                // --- Fin de la lógica original ---
-
-            } else {
-                window.location.href = 'index.html';
+            function showStatus(message, isError = false) {
+                uploadStatus.innerHTML = message;
+                uploadStatus.className = `mt-6 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
+                uploadStatus.classList.remove('hidden');
             }
-        });
-    </script>
+
+            uploadForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const year = yearInput.value;
+                if (!fileInput.files.length) {
+                    showStatus('Por favor, selecciona un archivo.', true);
+                    return;
+                }
+                if (!year) {
+                    showStatus('Por favor, ingresa el año.', true);
+                    return;
+                }
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = 'Cargando...';
+                showStatus('Enviando archivo al servidor...', false);
+                const formData = new FormData();
+                formData.append('dolarFile', fileInput.files[0]);
+                formData.append('year', year);
+                
+                try {
+                    const result = await fetchAPI('/api/dolar/upload-csv', {
+                        method: 'POST',
+                        body: formData
+                        // No es necesario headers.
+                    });
+                    showStatus(`<strong>Éxito para el año ${year}:</strong> ${result.message}<br>Se procesaron ${result.summary.processed} registros.`, false);
+                    uploadForm.reset();
+                } catch (error) {
+                    console.error('Error al subir el archivo:', error);
+                    showStatus(`<strong>Error:</strong> ${error.message}`, true);
+                } finally {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = 'Cargar Archivo';
+                }
+            });
+        }
+    });
+</script>
 </body>
 </html>

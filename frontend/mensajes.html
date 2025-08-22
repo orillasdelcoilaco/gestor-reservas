@@ -76,36 +76,25 @@
         </main>
     </div>
     
-    <script>
-        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-        const authInfo = document.getElementById('auth-info');
+   <script type="module">
+    import { checkSession, logout, fetchAPI } from './api.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
 
-        async function checkAuthStatus() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/auth/status`, { credentials: 'include' });
-                if (!response.ok) throw new Error('Sesión no válida');
-                const userData = await response.json();
-                
-                loader.style.display = 'none';
-                appContent.classList.remove('hidden');
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContent.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
 
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${userData.email}</span>
-                    <a href="${API_BASE_URL}/api/auth/logout" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</a>
-                `;
-                
-                initializePage();
-
-            } catch (error) {
-                console.error('Error de autenticación:', error);
-                window.location.href = 'index.html';
-            }
-        }
-
-        function initializePage() {
-            // Toda la lógica original del archivo mensajes.html
+            // --- Lógica Específica de la Página ---
             const fechaFiltro = document.getElementById('fecha-filtro');
             const reservaSelect = document.getElementById('reserva-select');
             const generadorSection = document.getElementById('generador-section');
@@ -128,9 +117,7 @@
                 reservaSelect.disabled = true;
                 generadorSection.classList.add('hidden');
                 try {
-                    const response = await fetch(`${API_BASE_URL}/api/mensajes/reservas-por-fecha?fecha=${fecha}`, {credentials: 'include'});
-                    if (!response.ok) throw new Error('Error al buscar reservas');
-                    const reservas = await response.json();
+                    const reservas = await fetchAPI(`/api/mensajes/reservas-por-fecha?fecha=${fecha}`);
                     if (reservas.length === 0) {
                         reservaSelect.innerHTML = '<option>No hay reservas para esta fecha</option>';
                         return;
@@ -138,27 +125,26 @@
                     reservaSelect.innerHTML = '<option value="">-- Elige una reserva --</option>';
                     reservas.forEach(res => {
                         const option = document.createElement('option');
-                        option.value = res.reservaldOriginal;
-                        option.textContent = `${res.nombre} - Llegada: ${res.llegada} (ID: ${res.reservaldOriginal})`;
+                        option.value = res.reservaIdOriginal;
+                        option.textContent = `${res.nombre} - Llegada: ${res.llegada} (ID: ${res.reservaIdOriginal})`;
                         reservaSelect.appendChild(option);
                     });
                     reservaSelect.disabled = false;
                 } catch (error) {
                     console.error(error);
-                    reservaSelect.innerHTML = '<option>Error al cargar</option>';
+                    reservaSelect.innerHTML = `<option>Error: ${error.message}</option>`;
                 }
             });
 
             reservaSelect.addEventListener('change', async () => {
-                const reservald = reservaSelect.value;
-                if (!reservald) {
+                const reservaId = reservaSelect.value;
+                if (!reservaId) {
                     generadorSection.classList.add('hidden');
                     return;
                 }
+                detallesReservaDiv.innerHTML = '<p>Cargando detalles...</p>';
                 try {
-                    const response = await fetch(`${API_BASE_URL}/api/mensajes/detalle-reserva/${reservald}`, {credentials: 'include'});
-                    if (!response.ok) throw new Error('No se pudieron obtener los detalles');
-                    reservaSeleccionada = await response.json();
+                    reservaSeleccionada = await fetchAPI(`/api/mensajes/detalle-reserva/${reservaId}`);
                     mostrarDetalles();
                     generadorSection.classList.remove('hidden');
                     mensajeCobroText.value = '';
@@ -169,10 +155,25 @@
                     detallesReservaDiv.innerHTML = `<p class="text-red-500">Error al cargar detalles.</p>`;
                 }
             });
-            // El resto de las funciones de mensajes.html...
-        }
 
-        document.addEventListener('DOMContentLoaded', checkAuthStatus);
-    </script>
+            function mostrarDetalles() {
+                if (!reservaSeleccionada) return;
+                const { info, cabanas } = reservaSeleccionada;
+                let cabanasHtml = cabanas.map(c => `<li>${c.alojamiento}: $${c.valorCLP.toLocaleString('es-CL')}</li>`).join('');
+                detallesReservaDiv.innerHTML = `
+                    <p><strong>Cliente:</strong> ${info.nombre}</p>
+                    <p><strong>Teléfono:</strong> ${info.telefono}</p>
+                    <p><strong>Llegada:</strong> ${info.llegada}</p>
+                    <p><strong>Salida:</strong> ${info.salida}</p>
+                    <p><strong>Total Noches:</strong> ${info.totalNoches}</p>
+                    <p><strong>Valor Total:</strong> $${info.totalCLP.toLocaleString('es-CL')}</p>
+                    <p><strong>Cabañas:</strong><ul>${cabanasHtml}</ul></p>
+                `;
+            }
+
+            // Aquí puedes añadir la lógica futura para los botones de generar, copiar, etc.
+        }
+    });
+</script>
 </body>
 </html>

@@ -64,41 +64,28 @@
         </main>
     </div>
 
-    <script>
-        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
-        const authInfo = document.getElementById('auth-info');
+    <script type="module">
+    import { checkSession, logout, fetchAPI } from './api.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
 
-        async function checkAuthStatus() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/auth/status`, { credentials: 'include' });
-                if (!response.ok) throw new Error('Sesión no válida');
-                
-                const userData = await response.json();
-                
-                loader.style.display = 'none';
-                appContent.classList.remove('hidden');
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContent.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
 
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${userData.email}</span>
-                    <a href="${API_BASE_URL}/api/auth/logout" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</a>
-                `;
-
-                initializePage();
-                
-            } catch (error) {
-                console.error('Error de autenticación:', error);
-                window.location.href = 'index.html';
-            }
-        }
-
-        function initializePage() {
+            // Lógica específica de la página
             const syncDriveBtn = document.getElementById('sync-drive-btn');
             const syncStatus = document.getElementById('sync-status');
-            const airbnbForm = document.getElementById('airbnb-form');
-            const airbnbStatus = document.getElementById('airbnb-status');
-
+            
             function showStatus(element, message, isError = false) {
                 element.innerHTML = message;
                 element.className = `mt-4 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`;
@@ -110,14 +97,10 @@
                 syncDriveBtn.textContent = 'Sincronizando...';
                 showStatus(syncStatus, 'Iniciando conexión con Google Drive. Esto puede tardar un momento...');
                 try {
-                    const response = await fetch(`${API_BASE_URL}/api/sincronizar-drive`, {
-                        method: 'POST',
-                        credentials: 'include'
+                    // Usamos fetchAPI en lugar de fetch
+                    const result = await fetchAPI('/api/sincronizar-drive', {
+                        method: 'POST'
                     });
-                    const result = await response.json();
-                    if (!response.ok) {
-                        throw new Error(result.error || 'Ocurrió un error desconocido en el servidor.');
-                    }
                     showStatus(syncStatus, `<strong>${result.message}</strong>`, false);
                 } catch (error) {
                     console.error('Error al sincronizar:', error);
@@ -127,11 +110,8 @@
                     syncDriveBtn.textContent = 'Sincronizar desde Google Drive';
                 }
             });
-            
-            // Aquí puedes añadir la lógica para el formulario de Airbnb si es necesario
         }
-
-        document.addEventListener('DOMContentLoaded', checkAuthStatus);
-    </script>
+    });
+</script>
 </body>
 </html>

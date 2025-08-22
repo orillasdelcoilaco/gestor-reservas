@@ -44,43 +44,24 @@
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAuth, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
-        
-        const firebaseConfig = {
-            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-            authDomain: "reservas-sodc.firebaseapp.com",
-            projectId: "reservas-sodc",
-            storageBucket: "reservas-sodc.firebasestorage.app",
-            messagingSenderId: "177883383809",
-            appId: "1:177883383809:web:329694a3dc2df074f7d800"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+    import { checkSession, logout } from './api.js';
 
+    document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
         const authInfo = document.getElementById('auth-info');
 
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                // --- LÍNEAS CORREGIDAS ---
-                loader.style.display = 'none';
-                appContent.classList.remove('hidden');
-                // --- FIN DE LA CORRECCIÓN ---
-                
-                authInfo.innerHTML = `
-                    <span class="text-sm text-gray-600 hidden sm:block">${user.email}</span>
-                    <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-                `;
-                document.getElementById('logout-btn').addEventListener('click', () => {
-                    signOut(auth);
-                });
-            } else {
-                window.location.href = 'index.html';
-            }
-        });
-    </script>
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContent.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
+        }
+    });
+</script>
 </body>
 </html>

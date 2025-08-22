@@ -1,13 +1,11 @@
-// backend/services/consolidationService.js - CÓDIGO CORREGIDO
+// backend/services/consolidationService.js - CÓDIGO FINAL Y COMPLETO
 
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
 const { createGoogleContact } = require('./googleContactsService');
 
-// --- NUEVA FUNCIÓN cleanCabanaName ---
 function cleanCabanaName(cabanaName) {
     if (!cabanaName || typeof cabanaName !== 'string') return '';
-    // Esta nueva versión elimina un número extra al final, como en "Cabaña 10 1" -> "Cabaña 10"
     return cabanaName.replace(/\s+\d+$/, '').trim();
 }
 
@@ -31,8 +29,26 @@ function parseDate(dateValue) {
     return null;
 }
 
-function parseCurrency(value, currency = 'USD') { /* ...código sin cambios... */ }
-function cleanPhoneNumber(phone) { /* ...código sin cambios... */ }
+function parseCurrency(value, currency = 'USD') {
+    if (typeof value === 'number') return value;
+    if (typeof value !== 'string') return 0;
+    if (currency === 'CLP') {
+        const digitsOnly = value.replace(/\D/g, '');
+        return parseInt(digitsOnly, 10) || 0;
+    }
+    const numberString = value.replace(/[^\d.,]/g, '');
+    const cleanedForFloat = numberString.replace(/,/g, '');
+    return parseFloat(cleanedForFloat) || 0;
+}
+
+function cleanPhoneNumber(phone) {
+    if (!phone) return null;
+    let cleaned = phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
+    if (cleaned.length === 9 && cleaned.startsWith('9')) {
+        return `56${cleaned}`;
+    }
+    return cleaned;
+}
 
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
@@ -60,12 +76,9 @@ async function processChannel(db, channel) {
     for (const doc of rawDocsSnapshot.docs) {
         const rawData = doc.data();
         const isBooking = channel === 'Booking';
-
-        const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']);
         
-        // --- LÍNEA CORREGIDA ---
+        const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']);
         const alojamientosLimpios = (alojamientosRaw || "").toString().split(',').map(c => cleanCabanaName(c));
-
         const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre";
         
         const reservaData = {
@@ -76,15 +89,81 @@ async function processChannel(db, channel) {
             fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),
             fechaSalida: parseDate(isBooking ? rawData['Salida'] : rawData['Día de salida']),
             estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
-            alojamientos: alojamientosLimpios // Usamos la variable corregida
+            alojamientos: alojamientosLimpios
         };
 
-        if (!reservaData.fechaLlegada || !reservaData.fechaSalida) continue;
+        if (!reservaData.fechaLlegada || !reservaData.fechaSalida) {
+            console.warn(`Omitiendo reserva para ${reservaData.nombreCompleto} por falta de fechas válidas.`);
+            continue;
+        }
         
         for (const cabana of reservaData.alojamientos) {
-             if (!cabana) continue;
+             if (!cabana) {
+                continue;
+            }
             
-            // ... (el resto del bucle y la función no tiene cambios) ...
+            const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
+            const reservaRef = db.collection('reservas').doc(idCompuesto);
+            
+            let clienteId;
+            const existingReservation = allExistingReservations.get(idCompuesto);
+            
+            if (existingReservation) reservasActualizadas++; else reservasCreadas++;
+
+            if (existingReservation && existingReservation.clienteId) {
+                clienteId = existingReservation.clienteId;
+            } else if (reservaData.telefono && existingClientsByPhone.has(reservaData.telefono)) {
+                clienteId = existingClientsByPhone.get(reservaData.telefono);
+            } else {
+                clientesNuevos++;
+                const newClientRef = db.collection('clientes').doc();
+                clienteId = newClientRef.id;
+                batch.set(newClientRef, {
+                    firstname: reservaData.nombreCompleto.split(' ')[0],
+                    lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
+                    email: reservaData.email,
+                    phone: reservaData.telefono
+                });
+                if (reservaData.telefono) existingClientsByPhone.set(reservaData.telefono, clienteId);
+                
+                const contactData = {
+                    name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaIdOriginal}`,
+                    phone: reservaData.telefono,
+                    email: reservaData.email
+                };
+                createGoogleContact(db, contactData);
+            }
+
+            let valorCLP = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
+            if (isBooking) {
+                const valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);
+                const precioPorCabanaUSD = reservaData.alojamientos.length > 0 ? (valorCLP / reservaData.alojamientos.length) : 0;
+                valorCLP = Math.round(precioPorCabanaUSD * valorDolarDia * 1.19);
+            }
+            const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
+
+            const dataToSave = {
+                reservaIdOriginal: reservaData.reservaIdOriginal,
+                clienteId: clienteId,
+                clienteNombre: reservaData.nombreCompleto,
+                canal: channel,
+                estado: reservaData.estado,
+                fechaReserva: parseDate(isBooking ? rawData['Fecha de reserva'] : rawData['Fecha']),
+                fechaLlegada: admin.firestore.Timestamp.fromDate(reservaData.fechaLlegada),
+                fechaSalida: admin.firestore.Timestamp.fromDate(reservaData.fechaSalida),
+                totalNoches: totalNoches > 0 ? totalNoches : 1,
+                invitados: parseInt(isBooking ? rawData['Adultos/Invitados'] : rawData['Personas'] || 0),
+                alojamiento: cabana,
+                monedaOriginal: isBooking ? 'USD' : 'CLP',
+                valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP'),
+                valorCLP: valorCLP,
+            };
+            
+            if (existingReservation) {
+                if (existingReservation.valorManual) dataToSave.valorCLP = existingReservation.valorCLP;
+                if (existingReservation.nombreManual) dataToSave.clienteNombre = existingReservation.clienteNombre;
+            }
+            batch.set(reservaRef, dataToSave, { merge: true });
         }
         batch.delete(doc.ref);
     }

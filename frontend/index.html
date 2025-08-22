@@ -12,13 +12,13 @@
         <form id="login-form" class="space-y-4">
             <div>
                 <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
-                <input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
             </div>
             <div>
                 <label for="login-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                <input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
             </div>
-            <button type="submit" id="login-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+            <button type="submit" id="login-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
                 Acceder
             </button>
         </form>
@@ -29,7 +29,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-        const API_BASE_URL = 'https://gestor-reservas.onrender.com';
         const firebaseConfig = {
             apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
             authDomain: "reservas-sodc.firebaseapp.com",
@@ -46,6 +45,9 @@
         const loginError = document.getElementById('login-error');
         const loginBtn = document.getElementById('login-btn');
 
+        // Limpiamos cualquier token antiguo al llegar a la página de login
+        localStorage.removeItem('firebaseIdToken');
+
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             loginError.classList.add('hidden');
@@ -56,29 +58,21 @@
             const password = loginForm['login-password'].value;
 
             try {
-                // 1. Autenticar con Firebase para obtener el token del usuario
+                // 1. Autenticar con Firebase
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                
+                // 2. Obtener el token de ID del usuario
                 const idToken = await userCredential.user.getIdToken();
 
-                // 2. Enviar el token a nuestro backend para crear la sesión de cookie
-                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ idToken: idToken }),
-                });
+                // 3. Guardar el token en la memoria del navegador (localStorage)
+                localStorage.setItem('firebaseIdToken', idToken);
 
-                if (!response.ok) {
-                    throw new Error('El servidor no pudo crear la sesión.');
-                }
-
-                // 3. Si el backend creó la sesión correctamente, redirigimos
+                // 4. Redirigir al dashboard
                 window.location.href = 'dashboard.html';
 
             } catch (error) {
                 console.error("Falló el inicio de sesión:", error);
-                loginError.textContent = 'Credenciales incorrectas o error del servidor.';
+                loginError.textContent = 'Credenciales incorrectas.';
                 loginError.classList.remove('hidden');
                 loginBtn.disabled = false;
                 loginBtn.textContent = 'Acceder';

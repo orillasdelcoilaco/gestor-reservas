@@ -1,77 +1,127 @@
-const { google } = require('googleapis');
+// backend/services/googleContactsService.js - CÓDIGO FINAL CORREGIDO
 
-function getPeopleApiClient() {
-    const auth = new google.auth.GoogleAuth({
-        keyFile: process.env.RENDER ? '/etc/secrets/serviceAccountKey.json' : './serviceAccountKey.json',
-        scopes: ['https://www.googleapis.com/auth/contacts.readonly'],
+const { google } = require('googleapis');
+const { OAuth2Client } = require('google-auth-library');
+const fs = require('fs');
+const path = require('path');
+
+const isProduction = process.env.RENDER === 'true';
+const CREDENTIALS_PATH = isProduction
+    ? '/etc/secrets/oauth_credentials.json'
+    : path.join(process.cwd(), 'oauth_credentials.json');
+
+async function getAuthenticatedClient(db) {
+    const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
+    const { client_secret, client_id, redirect_uris } = credentials.web;
+    const oauth2Client = new OAuth2Client(client_id, client_secret, redirect_uris[0]);
+
+    const tokenDocRef = db.collection('config').doc('google_auth_tokens');
+    const doc = await tokenDocRef.get();
+
+    if (!doc.exists || !doc.data().refreshToken) {
+        throw new Error('No se encontró el refresh token. Por favor, autoriza la aplicación primero.');
+    }
+    const refreshToken = doc.data().refreshToken;
+
+    oauth2Client.setCredentials({
+        refresh_token: refreshToken
     });
-    return google.people({ version: 'v1', auth });
+
+    return oauth2Client;
 }
 
-async function getAllGoogleContactPhones(people) {
-    const phoneNumbers = new Set();
-    let pageToken = null;
-    console.log('Obteniendo contactos existentes de Google...');
+async function findGoogleContactByName(people, name) {
     try {
-        do {
-            const response = await people.people.connections.list({
-                resourceName: 'people/me',
-                pageSize: 1000,
-                personFields: 'phoneNumbers',
-                pageToken: pageToken,
-            });
-            const connections = response.data.connections || [];
-            connections.forEach(person => {
-                if (person.phoneNumbers) {
-                    person.phoneNumbers.forEach(phone => {
-                        const cleanedPhone = phone.value.replace(/\D/g, '');
-                        if (cleanedPhone) phoneNumbers.add(cleanedPhone);
-                    });
+        const res = await people.people.searchContacts({
+            query: name,
+            readMask: 'names',
+            pageSize: 1,
+        });
+
+        if (res.data.results && res.data.results.length > 0) {
+            for (const result of res.data.results) {
+                if (result.person.names && result.person.names.some(n => n.displayName === name)) {
+                    return true;
                 }
-            });
-            pageToken = response.data.nextPageToken;
-        } while (pageToken);
-        console.log(`Se encontraron ${phoneNumbers.size} números de teléfono en Google Contacts.`);
-        return phoneNumbers;
-    } catch (error) {
-        console.error('Error al obtener los contactos de Google:', error.message);
-        throw new Error('No se pudieron obtener los contactos de Google.');
+            }
+        }
+        return false;
+    } catch (err) {
+        console.error(`Error buscando el contacto '${name}' en Google:`, err.message);
+        return false;
     }
 }
 
-function convertToCsv(clients) {
-    if (clients.length === 0) return '';
-    const headers = 'Given Name,Family Name,Phone 1 - Type,Phone 1 - Value';
-    const rows = clients.map(client => {
-        const phone = client.phone || '';
-        const givenName = `${client.firstname || ''} ${client.lastname || ''}`.trim();
-        return `"${givenName}","","Mobile","${phone}"`;
-    });
-    return [headers, ...rows].join('\n');
+async function getContactPhoneByName(db, name) {
+    try {
+        const auth = await getAuthenticatedClient(db);
+        const people = google.people({ version: 'v1', auth });
+        
+        const res = await people.people.searchContacts({
+            query: name,
+            readMask: 'names,phoneNumbers',
+            pageSize: 5
+        });
+
+        if (res.data.results && res.data.results.length > 0) {
+            const exactMatch = res.data.results.find(result =>
+                result.person.names && result.person.names.some(n => n.displayName === name)
+            );
+
+            if (exactMatch && exactMatch.person.phoneNumbers && exactMatch.person.phoneNumbers.length > 0) {
+                const phoneValue = exactMatch.person.phoneNumbers[0].value;
+                return phoneValue ? phoneValue.replace(/\D/g, '') : null;
+            }
+        }
+        return null;
+    } catch (err) {
+        console.error(`Error al obtener el teléfono de '${name}':`, err.message);
+        return null;
+    }
 }
 
-async function generateContactsCsv(db) {
-    const people = getPeopleApiClient();
-    const googlePhones = await getAllGoogleContactPhones(people);
-    const firebaseClients = [];
-    const clientsSnapshot = await db.collection('clientes').get();
-    clientsSnapshot.forEach(doc => {
-        firebaseClients.push(doc.data());
-    });
-    console.log(`Se encontraron ${firebaseClients.length} clientes en Firebase.`);
-    const newClients = firebaseClients.filter(client => {
-        if (!client.phone) return false;
-        const cleanedPhone = client.phone.replace(/\D/g, '');
-        return !googlePhones.has(cleanedPhone);
-    });
-    console.log(`Se encontraron ${newClients.length} clientes nuevos para agregar.`);
-    const csvContent = convertToCsv(newClients);
-    return {
-        csvContent: csvContent,
-        newContactsCount: newClients.length
-    };
+async function createGoogleContact(db, contactData) {
+    if (!contactData || !contactData.name || !contactData.phone) {
+        console.error('Datos de contacto insuficientes para crear contacto en Google. Se requiere nombre y teléfono.');
+        return;
+    }
+
+    try {
+        const auth = await getAuthenticatedClient(db);
+        const people = google.people({ version: 'v1', auth });
+
+        const contactExists = await findGoogleContactByName(people, contactData.name);
+        if (contactExists) {
+            console.log(`El contacto '${contactData.name}' ya existe en Google Contacts. No se creará un duplicado.`);
+            return;
+        }
+
+        // --- ESTA ES LA PARTE QUE FALTABA ---
+        const resource = {
+            names: [{
+                givenName: contactData.name
+            }],
+            phoneNumbers: [{
+                value: contactData.phone
+            }]
+        };
+
+        if (contactData.email) {
+            resource.emailAddresses = [{
+                value: contactData.email
+            }];
+        }
+        // --- FIN DE LA CORRECCIÓN ---
+
+        await people.people.createContact({ resource });
+        console.log(`Contacto '${contactData.name}' creado exitosamente en Google Contacts.`);
+
+    } catch (err) {
+        console.error(`Error al procesar el contacto '${contactData.name}' en Google:`, err.message);
+    }
 }
 
 module.exports = {
-    generateContactsCsv,
+    createGoogleContact,
+    getContactPhoneByName
 };

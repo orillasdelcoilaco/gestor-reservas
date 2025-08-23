@@ -6,13 +6,10 @@ const { createGoogleContact, getContactPhoneByName } = require('./googleContacts
 
 function cleanCabanaName(cabanaName) {
     if (!cabanaName || typeof cabanaName !== 'string') return '';
-    
-    // Usamos una expresión regular para buscar específicamente "cabaña 9" o "cabaña 10"
-    // seguido de un espacio y un "1" al final de la cadena.
-    // Esto es más flexible que la comparación estricta.
-    const trimmedName = cabanaName.trim().replace(/^(cabaña (9|10)) 1$/, '$1');
-    
-    return trimmedName;
+    const normalizedName = cabanaName.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (normalizedName === 'cabaña 9 1') return 'cabaña 9';
+    if (normalizedName === 'cabaña 10 1') return 'cabaña 10';
+    return cabanaName.trim();
 }
 
 function parseDate(dateValue) {
@@ -91,17 +88,18 @@ async function processChannel(db, channel) {
         let telefonoReporte = cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']);
 
         const reservaData = {
-            reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString(),
+            reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString() || null,
             nombreCompleto: nombreCompletoRaw,
             email: rawData['Email'] || rawData['Correo'] || null,
             telefono: telefonoReporte || genericPhone,
             fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),
             fechaSalida: parseDate(isBooking ? rawData['Salida'] : rawData['Día de salida']),
             estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
-            alojamientos: alojamientosLimpios
+            alojamientos: alojamientosLimpios,
+            pais: isBooking ? rawData['País del cliente'] : rawData['País'] || null
         };
 
-        if (!reservaData.fechaLlegada || !reservaData.fechaSalida) continue;
+        if (!reservaData.fechaLlegada || !reservaData.fechaSalida || !reservaData.reservaIdOriginal) continue;
         
         for (const cabana of reservaData.alojamientos) {
              if (!cabana) continue;
@@ -157,15 +155,15 @@ async function processChannel(db, channel) {
                 createGoogleContact(db, contactData);
             }
             
-            let valorCLP = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
-            if (isBooking) {
-                const valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);
-                const precioPorCabanaUSD = reservaData.alojamientos.length > 0 ? (valorCLP / reservaData.alojamientos.length) : 0;
-                valorCLP = Math.round(precioPorCabanaUSD * valorDolarDia * 1.19);
-            }
+            const valorOriginal = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
+            const valorDolarDia = isBooking ? await getValorDolar(db, reservaData.fechaLlegada) : null;
+            const precioPorCabana = reservaData.alojamientos.length > 0 ? (valorOriginal / reservaData.alojamientos.length) : 0;
+            const valorCLPCalculado = isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : precioPorCabana;
             const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
-
+            
+            // --- CONSTRUCCIÓN DEL OBJETO DE DATOS EXTENDIDO ---
             const dataToSave = {
+                // --- Campos existentes ---
                 reservaIdOriginal: reservaData.reservaIdOriginal,
                 clienteId: clienteId,
                 clienteNombre: reservaData.nombreCompleto,
@@ -178,13 +176,36 @@ async function processChannel(db, channel) {
                 invitados: parseInt(isBooking ? rawData['Adultos/Invitados'] : rawData['Personas'] || 0),
                 alojamiento: cabana,
                 monedaOriginal: isBooking ? 'USD' : 'CLP',
-                valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP'),
-                valorCLP: valorCLP,
+                valorOriginal: precioPorCabana, // Valor por cabaña
+                valorCLP: valorCLPCalculado,
+
+                // --- Nuevos campos ---
+                correo: reservaData.email,
+                telefono: reservaData.telefono,
+                pais: reservaData.pais,
+                valorDolarDia: valorDolarDia,
+                comision: isBooking ? parseCurrency(rawData['Importe de la comisión'], 'USD') / reservaData.alojamientos.length : null,
+                iva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 0.19) : null,
+                valorConIva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : valorCLPCalculado,
+                
+                // --- Campos con valores por defecto (a rellenar manualmente después) ---
+                abono: 0,
+                fechaAbono: null,
+                fechaPago: null,
+                pagado: false,
+                pendiente: valorCLPCalculado, // Inicialmente, todo está pendiente
+                boleta: false
             };
             
             if (existingReservation) {
                 if (existingReservation.valorManual) dataToSave.valorCLP = existingReservation.valorCLP;
                 if (existingReservation.nombreManual) dataToSave.clienteNombre = existingReservation.clienteNombre;
+                // Mantener valores manuales si ya existen
+                dataToSave.abono = existingReservation.abono || 0;
+                dataToSave.fechaAbono = existingReservation.fechaAbono || null;
+                dataToSave.pagado = existingReservation.pagado || false;
+                dataToSave.pendiente = existingReservation.pendiente === undefined ? dataToSave.valorCLP - dataToSave.abono : existingReservation.pendiente;
+                dataToSave.boleta = existingReservation.boleta || false;
             }
             batch.set(reservaRef, dataToSave, { merge: true });
         }
@@ -198,7 +219,7 @@ async function processChannel(db, channel) {
         clientesNuevos,
         reservasCreadas,
         reservasActualizadas,
-        mensaje: `Se procesaron ${rawDocsSnapshot.size} reportes.`
+        mensaje: `Se procesaron ${rawDocsSNapshot.size} reportes.`
     };
 }
 

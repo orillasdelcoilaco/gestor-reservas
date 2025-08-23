@@ -6,7 +6,14 @@ const { createGoogleContact, getContactPhoneByName } = require('./googleContacts
 
 function cleanCabanaName(cabanaName) {
     if (!cabanaName || typeof cabanaName !== 'string') return '';
-    return cabanaName.replace(/\s+\d+$/, '').trim();
+    const trimmedName = cabanaName.trim();
+    if (trimmedName === 'cabaña 9 1') {
+        return 'cabaña 9';
+    }
+    if (trimmedName === 'cabaña 10 1') {
+        return 'cabaña 10';
+    }
+    return trimmedName;
 }
 
 function parseDate(dateValue) {
@@ -159,7 +166,6 @@ async function processChannel(db, channel) {
             }
             const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
 
-            // --- ESTA ES LA PARTE QUE FALTABA ---
             const dataToSave = {
                 reservaIdOriginal: reservaData.reservaIdOriginal,
                 clienteId: clienteId,
@@ -176,7 +182,6 @@ async function processChannel(db, channel) {
                 valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP'),
                 valorCLP: valorCLP,
             };
-            // --- FIN DE LA CORRECCIÓN ---
             
             if (existingReservation) {
                 if (existingReservation.valorManual) dataToSave.valorCLP = existingReservation.valorCLP;

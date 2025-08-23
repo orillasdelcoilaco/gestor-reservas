@@ -161,9 +161,7 @@ async function processChannel(db, channel) {
             const valorCLPCalculado = isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : precioPorCabana;
             const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
             
-            // --- CONSTRUCCIÓN DEL OBJETO DE DATOS EXTENDIDO ---
             const dataToSave = {
-                // --- Campos existentes ---
                 reservaIdOriginal: reservaData.reservaIdOriginal,
                 clienteId: clienteId,
                 clienteNombre: reservaData.nombreCompleto,
@@ -176,10 +174,8 @@ async function processChannel(db, channel) {
                 invitados: parseInt(isBooking ? rawData['Adultos/Invitados'] : rawData['Personas'] || 0),
                 alojamiento: cabana,
                 monedaOriginal: isBooking ? 'USD' : 'CLP',
-                valorOriginal: precioPorCabana, // Valor por cabaña
+                valorOriginal: precioPorCabana,
                 valorCLP: valorCLPCalculado,
-
-                // --- Nuevos campos ---
                 correo: reservaData.email,
                 telefono: reservaData.telefono,
                 pais: reservaData.pais,
@@ -187,20 +183,17 @@ async function processChannel(db, channel) {
                 comision: isBooking ? parseCurrency(rawData['Importe de la comisión'], 'USD') / reservaData.alojamientos.length : null,
                 iva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 0.19) : null,
                 valorConIva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : valorCLPCalculado,
-                
-                // --- Campos con valores por defecto (a rellenar manualmente después) ---
                 abono: 0,
                 fechaAbono: null,
                 fechaPago: null,
                 pagado: false,
-                pendiente: valorCLPCalculado, // Inicialmente, todo está pendiente
+                pendiente: valorCLPCalculado,
                 boleta: false
             };
             
             if (existingReservation) {
                 if (existingReservation.valorManual) dataToSave.valorCLP = existingReservation.valorCLP;
                 if (existingReservation.nombreManual) dataToSave.clienteNombre = existingReservation.clienteNombre;
-                // Mantener valores manuales si ya existen
                 dataToSave.abono = existingReservation.abono || 0;
                 dataToSave.fechaAbono = existingReservation.fechaAbono || null;
                 dataToSave.pagado = existingReservation.pagado || false;
@@ -219,7 +212,8 @@ async function processChannel(db, channel) {
         clientesNuevos,
         reservasCreadas,
         reservasActualizadas,
-        mensaje: `Se procesaron ${rawDocsSNapshot.size} reportes.`
+        // --- CORRECCIÓN DEL ERROR DE TIPEO ---
+        mensaje: `Se procesaron ${rawDocsSnapshot.size} reportes.`
     };
 }
 

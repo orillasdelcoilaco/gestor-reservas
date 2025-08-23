@@ -3,7 +3,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { importClientsFromCsv, getAllClientsWithStats, updateClient } = require('../services/clienteService');
+const { importClientsFromCsv, getAllClientsWithStats, updateClient, syncClientToGoogle } = require('../services/clienteService');
 
 const upload = multer({ storage: multer.memoryStorage() }).array('clientsFiles', 10);
 
@@ -55,6 +55,20 @@ module.exports = (db) => {
         } catch (error) {
             console.error('Error al procesar el archivo CSV de clientes:', error);
             res.status(500).json({ error: 'Falló el procesamiento del archivo CSV.' });
+        }
+    });
+
+    // --- NUEVO ENDPOINT PARA SINCRONIZACIÓN MANUAL ---
+    router.post('/clientes/:id/sincronizar-google', async (req, res) => {
+        const { id } = req.params;
+        console.log(`Solicitud recibida para sincronizar cliente ${id} con Google Contacts.`);
+
+        try {
+            const result = await syncClientToGoogle(db, id);
+            res.status(200).json(result);
+        } catch (error) {
+            console.error(`Error al sincronizar manualmente el cliente ${id}:`, error);
+            res.status(500).json({ error: error.message });
         }
     });
 

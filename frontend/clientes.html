@@ -45,7 +45,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Reservas</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal Origen</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Fuente</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Sincro. Google</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                             </tr>
                         </thead>
@@ -159,13 +159,22 @@
             clientes.forEach(cliente => {
                 const row = document.createElement('tr');
                 row.className = "hover:bg-gray-50";
+                
+                // --- LÓGICA PARA MOSTRAR ESTADO DE SINCRONIZACIÓN ---
+                let syncStatusHtml = '';
+                if (cliente.googleContactSynced) {
+                    syncStatusHtml = '<span title="Sincronizado con Google Contacts">✅</span>';
+                } else {
+                    syncStatusHtml = `<button class="sync-btn text-xs bg-blue-500 hover:bg-blue-600 text-white py-1 px-2 rounded" data-id="${cliente.id}">Sincronizar</button>`;
+                }
+
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${cliente.nombre}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cliente.telefono}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cliente.email}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-800">${cliente.totalReservas}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cliente.canal}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cliente.fuente}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-center">${syncStatusHtml}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${cliente.id}">Editar</button>
                     </td>
@@ -173,9 +182,40 @@
                 clientesTableBody.appendChild(row);
             });
             
+            // Re-asignar listeners a los botones
             document.querySelectorAll('.edit-btn').forEach(button => {
                 button.addEventListener('click', handleEditClick);
             });
+            document.querySelectorAll('.sync-btn').forEach(button => {
+                button.addEventListener('click', handleSyncClick);
+            });
+        }
+        
+        async function handleSyncClick(event) {
+            const button = event.target;
+            const clientId = button.dataset.id;
+            
+            button.disabled = true;
+            button.textContent = '...';
+
+            try {
+                const result = await fetchAPI(`/api/clientes/${clientId}/sincronizar-google`, {
+                    method: 'POST'
+                });
+                // Si la API tiene éxito, actualizamos la UI
+                const cell = button.parentElement;
+                cell.innerHTML = '<span title="Sincronizado con Google Contacts">✅</span>';
+                // Actualizamos el estado en la data local para que no reaparezca el botón al filtrar
+                const clienteIndex = allClientes.findIndex(c => c.id === clientId);
+                if (clienteIndex !== -1) {
+                    allClientes[clienteIndex].googleContactSynced = true;
+                }
+            } catch (error) {
+                console.error('Error al sincronizar cliente:', error);
+                alert(`Error: ${error.message}`);
+                button.disabled = false;
+                button.textContent = 'Sincronizar';
+            }
         }
 
         async function loadClientes() {
@@ -254,7 +294,14 @@
                     body: JSON.stringify(payload)
                 });
                 modal.classList.add('hidden');
-                await loadClientes();
+                // Optimizacion: Actualizar solo el cliente modificado en la data local y re-renderizar
+                const clienteIndex = allClientes.findIndex(c => c.id === editingClientId);
+                if (clienteIndex !== -1) {
+                    allClientes[clienteIndex] = { ...allClientes[clienteIndex], ...payload };
+                    renderTable(allClientes);
+                } else {
+                    await loadClientes(); // Fallback si no lo encuentra
+                }
             } catch (error) {
                 modalStatus.innerHTML = `<p class="text-red-600">Error al guardar: ${error.message}</p>`;
             } finally {

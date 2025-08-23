@@ -1,4 +1,4 @@
-// backend/services/consolidationService.js - CÓDIGO FINAL CORREGIDO Y COMPLETO
+// backend/services/consolidationService.js - CÓDIGO ACTUALIZADO
 
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
@@ -114,45 +114,33 @@ async function processChannel(db, channel) {
 
             if (existingReservation && existingReservation.clienteId) {
                 clienteId = existingReservation.clienteId;
-                const clienteRef = db.collection('clientes').doc(clienteId);
-                const clienteDoc = await clienteRef.get();
-                const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
-
-                if (telefonoReporte && clienteData.phone === genericPhone) {
-                    batch.update(clienteRef, { phone: telefonoReporte });
-                } 
-                else if (clienteData.phone === genericPhone) {
-                    const nombreContactoGoogle = `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaIdOriginal}`;
-                    const telefonoReal = await getContactPhoneByName(db, nombreContactoGoogle);
-                    
-                    if (telefonoReal && telefonoReal !== genericPhone) {
-                        console.log(`¡Teléfono actualizado encontrado en Google! Sincronizando ${telefonoReal} para el cliente ${clienteId}.`);
-                        batch.update(clienteRef, { phone: telefonoReal });
-                    }
-                }
             } else if (reservaData.telefono !== genericPhone && existingClientsByPhone.has(reservaData.telefono)) {
                 clienteId = existingClientsByPhone.get(reservaData.telefono);
             } else {
                 clientesNuevos++;
                 const newClientRef = db.collection('clientes').doc();
                 clienteId = newClientRef.id;
-                batch.set(newClientRef, {
-                    firstname: reservaData.nombreCompleto.split(' ')[0],
-                    lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
-                    email: reservaData.email,
-                    phone: reservaData.telefono
-                });
-                
-                if (reservaData.telefono !== genericPhone) {
-                    existingClientsByPhone.set(reservaData.telefono, clienteId);
-                }
-                
+
                 const contactData = {
                     name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaIdOriginal}`,
                     phone: reservaData.telefono,
                     email: reservaData.email
                 };
-                createGoogleContact(db, contactData);
+                
+                // Intentamos crear el contacto y guardamos el resultado
+                const syncSuccess = await createGoogleContact(db, contactData);
+
+                batch.set(newClientRef, {
+                    firstname: reservaData.nombreCompleto.split(' ')[0],
+                    lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
+                    email: reservaData.email,
+                    phone: reservaData.telefono,
+                    googleContactSynced: syncSuccess // <-- AÑADIMOS EL NUEVO CAMPO
+                });
+                
+                if (reservaData.telefono !== genericPhone) {
+                    existingClientsByPhone.set(reservaData.telefono, clienteId);
+                }
             }
             
             const valorOriginal = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
@@ -212,7 +200,6 @@ async function processChannel(db, channel) {
         clientesNuevos,
         reservasCreadas,
         reservasActualizadas,
-        // --- CORRECCIÓN DEL ERROR DE TIPEO ---
         mensaje: `Se procesaron ${rawDocsSnapshot.size} reportes.`
     };
 }

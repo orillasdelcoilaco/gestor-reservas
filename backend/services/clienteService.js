@@ -1,8 +1,9 @@
-// backend/services/clienteService.js - CÓDIGO COMPLETO Y CORREGIDO
+// backend/services/clienteService.js - CÓDIGO ACTUALIZADO
 
 const csv = require('csv-parser');
 const stream = require('stream');
 const { cleanPhoneNumber } = require('../utils/helpers');
+const { createGoogleContact } = require('./googleContactsService'); // <-- IMPORTAMOS LA FUNCIÓN
 
 function parseCsvBuffer(buffer) {
     return new Promise((resolve, reject) => {
@@ -57,7 +58,8 @@ async function importClientsFromCsv(db, files) {
                         firstname: row['First Name'] || '',
                         lastname: row['Last Name'] || '',
                         phone: cleanedPhone,
-                        email: row['E-mail 1 - Value'] || null
+                        email: row['E-mail 1 - Value'] || null,
+                        googleContactSynced: false // Por defecto no sincronizado en importación CSV
                     };
                     if (!clientData.firstname && !clientData.lastname && row['Name']) {
                         const nameParts = row['Name'].split(' ');
@@ -119,7 +121,8 @@ async function getAllClientsWithStats(db) {
             fuente: clientData.fuente || '',
             origen: clientData.origen || '',
             calificacion: clientData.calificacion || 0,
-            notas: clientData.notas || ''
+            notas: clientData.notas || '',
+            googleContactSynced: clientData.googleContactSynced || false // <-- AÑADIMOS EL NUEVO CAMPO
         });
     });
 
@@ -146,8 +149,49 @@ async function updateClient(db, clientId, clientData) {
     await clientRef.update(dataToUpdate);
 }
 
+/**
+ * Reintenta la sincronización de un cliente específico con Google Contacts.
+ */
+async function syncClientToGoogle(db, clientId) {
+    const clientRef = db.collection('clientes').doc(clientId);
+    const clientDoc = await clientRef.get();
+
+    if (!clientDoc.exists) {
+        throw new Error('El cliente no existe.');
+    }
+
+    const clientData = clientDoc.data();
+    
+    // Para el nombre del contacto, necesitamos saber de qué reserva vino originalmente.
+    // Buscamos la reserva más reciente de este cliente para obtener el canal y el ID de reserva.
+    const q = db.collection('reservas').where('clienteId', '==', clientId).orderBy('fechaReserva', 'desc').limit(1);
+    const snapshot = await q.get();
+
+    if (snapshot.empty) {
+        throw new Error('No se encontraron reservas para este cliente, no se puede crear el nombre del contacto.');
+    }
+    const reservaData = snapshot.docs[0].data();
+
+    const contactPayload = {
+        name: `${reservaData.clienteNombre} ${reservaData.canal} ${reservaData.reservaIdOriginal}`,
+        phone: clientData.phone,
+        email: clientData.email
+    };
+    
+    const syncSuccess = await createGoogleContact(db, contactPayload);
+
+    if (syncSuccess) {
+        await clientRef.update({ googleContactSynced: true });
+        return { success: true, message: 'Cliente sincronizado con Google Contacts.' };
+    } else {
+        throw new Error('Falló la sincronización con la API de Google. Revisa los logs del servidor.');
+    }
+}
+
+
 module.exports = {
     importClientsFromCsv,
     getAllClientsWithStats,
-    updateClient
+    updateClient,
+    syncClientToGoogle // <-- EXPORTAMOS LA NUEVA FUNCIÓN
 };

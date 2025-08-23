@@ -1,9 +1,12 @@
+// backend/services/clienteService.js - CÓDIGO COMPLETO Y CORREGIDO
+
 const csv = require('csv-parser');
 const stream = require('stream');
 const { cleanPhoneNumber } = require('../utils/helpers');
 
 /**
  * Parsea un buffer de archivo CSV y devuelve las filas como un array de objetos.
+ * (Función original restaurada)
  * @param {Buffer} buffer El buffer del archivo CSV.
  * @returns {Promise<Array<Object>>} Una promesa que se resuelve con los datos del CSV.
  */
@@ -25,6 +28,7 @@ function parseCsvBuffer(buffer) {
 
 /**
  * Procesa una lista de archivos CSV, extrae clientes válidos y los guarda en Firebase.
+ * (Función original restaurada)
  * @param {admin.firestore.Firestore} db La instancia de Firestore.
  * @param {Array<Object>} files Un array de archivos subidos por multer.
  * @returns {Promise<Object>} Un resumen del proceso de importación.
@@ -32,7 +36,6 @@ function parseCsvBuffer(buffer) {
 async function importClientsFromCsv(db, files) {
     console.log(`Procesando ${files.length} archivo(s)...`);
 
-    // 1. Obtener teléfonos existentes de Firebase para evitar duplicados
     const existingPhones = new Set();
     const clientsSnapshot = await db.collection('clientes').get();
     clientsSnapshot.forEach(doc => {
@@ -42,58 +45,46 @@ async function importClientsFromCsv(db, files) {
     });
     console.log(`Se encontraron ${existingPhones.size} clientes existentes en la base de datos.`);
 
-    // 2. Definir palabras clave y preparar el lote de escritura
     const keywords = ['booking', 'reserva', 'posible cliente', 'airbnb', 'sodc'];
     const batch = db.batch();
     let newClientsAdded = 0;
     let totalRowsRead = 0;
 
-    // 3. Procesar cada archivo subido
     for (const file of files) {
         const rows = await parseCsvBuffer(file.buffer);
         totalRowsRead += rows.length;
-        console.log(`Archivo ${file.originalname} leído, contiene ${rows.length} filas.`);
-
+        
         for (const row of rows) {
-            // Unificar los posibles campos de nombre en un solo string para buscar
             const fullName = `${row['Name'] || ''} ${row['First Name'] || ''} ${row['Last Name'] || ''}`.toLowerCase();
             const phoneValue = row['Phone 1 - Value'];
-
             if (!fullName || !phoneValue) continue;
 
-            // 4. Aplicar el filtro inteligente
             const hasKeyword = keywords.some(keyword => fullName.includes(keyword));
             const hasNumber = /\d/.test(fullName);
 
             if (hasKeyword || hasNumber) {
                 const cleanedPhone = cleanPhoneNumber(phoneValue);
-
                 if (cleanedPhone && !existingPhones.has(cleanedPhone)) {
                     const newClientRef = db.collection('clientes').doc();
-                    
                     const clientData = {
                         firstname: row['First Name'] || '',
                         lastname: row['Last Name'] || '',
                         phone: cleanedPhone,
                         email: row['E-mail 1 - Value'] || null
                     };
-
-                    // Si no hay nombre y apellido pero sí un nombre completo, lo usamos
                     if (!clientData.firstname && !clientData.lastname && row['Name']) {
                         const nameParts = row['Name'].split(' ');
                         clientData.firstname = nameParts[0] || '';
                         clientData.lastname = nameParts.slice(1).join(' ');
                     }
-
                     batch.set(newClientRef, clientData);
-                    existingPhones.add(cleanedPhone); // Añadir al set para no duplicarlo en este mismo proceso
+                    existingPhones.add(cleanedPhone);
                     newClientsAdded++;
                 }
             }
         }
     }
 
-    // 5. Guardar los nuevos clientes en Firebase si se encontró alguno
     if (newClientsAdded > 0) {
         await batch.commit();
         console.log(`Commit a Firestore: Se guardaron ${newClientsAdded} nuevos clientes.`);
@@ -106,6 +97,60 @@ async function importClientsFromCsv(db, files) {
     };
 }
 
+
+/**
+ * ¡NUEVA FUNCIÓN!
+ * Obtiene todos los clientes y calcula estadísticas adicionales para cada uno.
+ * @param {admin.firestore.Firestore} db La instancia de Firestore.
+ * @returns {Promise<Array<Object>>} Una lista de clientes con sus estadísticas.
+ */
+async function getAllClientsWithStats(db) {
+    const reservasSnapshot = await db.collection('reservas').get();
+    const reservationStatsMap = new Map();
+
+    reservasSnapshot.forEach(doc => {
+        const reserva = doc.data();
+        if (reserva.clienteId) {
+            if (!reservationStatsMap.has(reserva.clienteId)) {
+                // Guardamos el canal de la primera reserva que encontremos para este cliente
+                reservationStatsMap.set(reserva.clienteId, { totalReservas: 0, primerCanal: reserva.canal });
+            }
+            const stats = reservationStatsMap.get(reserva.clienteId);
+            stats.totalReservas += 1;
+        }
+    });
+
+    const clientsSnapshot = await db.collection('clientes').get();
+    if (clientsSnapshot.empty) {
+        return [];
+    }
+
+    const clientsWithStats = [];
+    clientsSnapshot.forEach(doc => {
+        const clientData = doc.data();
+        const stats = reservationStatsMap.get(doc.id) || { totalReservas: 0, primerCanal: 'Desconocido' };
+
+        clientsWithStats.push({
+            id: doc.id,
+            nombre: `${clientData.firstname || ''} ${clientData.lastname || ''}`.trim(),
+            telefono: clientData.phone || 'Sin Teléfono',
+            email: clientData.email || 'Sin Email',
+            totalReservas: stats.totalReservas,
+            canal: clientData.canal || stats.primerCanal,
+            fuente: clientData.fuente || '',
+            origen: clientData.origen || '',
+            calificacion: clientData.calificacion || 0,
+            notas: clientData.notas || ''
+        });
+    });
+
+    clientsWithStats.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    
+    return clientsWithStats;
+}
+
+// Exportamos todas las funciones necesarias
 module.exports = {
     importClientsFromCsv,
+    getAllClientsWithStats
 };

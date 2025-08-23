@@ -41,9 +41,12 @@
                     </a>
                 </div>
             </div>
-             <div class="bg-white p-8 rounded-lg shadow mt-8">
+            <div class="bg-white p-8 rounded-lg shadow mt-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas y Configuración</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <a href="clientes.html" class="bg-blue-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-blue-700 transition shadow">
+                        Gestionar Clientes
+                    </a>
                     <a href="importar-contactos.html" class="bg-sky-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-sky-700 transition shadow">
                         Importar Contactos (CSV)
                     </a>
@@ -56,35 +59,22 @@
     </div>
 
     <script type="module">
-  // Importamos las funciones que creamos en api.js
-  import { checkSession, logout } from './api.js';
-
-  document.addEventListener('DOMContentLoaded', () => {
-    const loader = document.getElementById('loader');
-    const appContent = document.getElementById('app-content');
-    const authInfo = document.getElementById('auth-info');
-
-    // 1. Verificamos la sesión usando nuestra nueva función centralizada.
-    const session = checkSession();
-
-    // Si checkSession() devuelve datos, significa que la sesión es válida.
-    if (session) {
-      loader.style.display = 'none';
-      appContent.classList.remove('hidden');
-
-      // 2. Mostramos el email del usuario y el botón para cerrar sesión.
-      authInfo.innerHTML = `
-        <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
-        <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-      `;
-
-      // 3. Asignamos el evento al botón de logout usando nuestra nueva función.
-      document.getElementById('logout-btn').addEventListener('click', () => {
-        logout();
+      import { checkSession, logout } from './api.js';
+      document.addEventListener('DOMContentLoaded', () => {
+        const loader = document.getElementById('loader');
+        const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
+        const session = checkSession();
+        if (session) {
+          loader.style.display = 'none';
+          appContent.classList.remove('hidden');
+          authInfo.innerHTML = `
+            <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+            <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+          `;
+          document.getElementById('logout-btn').addEventListener('click', logout);
+        }
       });
-    }
-    // Nota: Si la sesión no es válida, la función checkSession() ya se encarga de redirigir al login.
-  });
-</script>
+    </script>
 </body>
 </html>

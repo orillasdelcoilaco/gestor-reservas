@@ -100,8 +100,9 @@ async function getContactPhoneByName(db, name) {
 /**
  * Verifica si el contacto existe antes de crearlo. (Función sin cambios)
  */
+// Reemplaza solo esta función en backend/services/googleContactsService.js
+
 async function createGoogleContact(db, contactData) {
-    // ... (Esta función no cambia)
     if (!contactData || !contactData.name || !contactData.phone) {
         console.error('Datos de contacto insuficientes para crear contacto en Google. Se requiere nombre y teléfono.');
         return;
@@ -117,7 +118,25 @@ async function createGoogleContact(db, contactData) {
             return;
         }
 
-        const resource = { /* ... */ };
+        const resource = {
+            names: [{
+                givenName: contactData.name
+            }],
+            phoneNumbers: [{
+                value: contactData.phone
+            }]
+        };
+
+        if (contactData.email) {
+            resource.emailAddresses = [{
+                value: contactData.email
+            }];
+        }
+
+        // --- LÍNEA DE DIAGNÓSTICO AÑADIDA ---
+        console.log(`[DIAGNÓSTICO] Intentando crear contacto con este resource:`, JSON.stringify(resource, null, 2));
+        // ------------------------------------
+
         await people.people.createContact({ resource });
         console.log(`Contacto '${contactData.name}' creado exitosamente en Google Contacts.`);
 

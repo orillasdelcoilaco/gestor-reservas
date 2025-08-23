@@ -3,17 +3,12 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-// Importamos ambas funciones del servicio
-const { importClientsFromCsv, getAllClientsWithStats } = require('../services/clienteService');
+const { importClientsFromCsv, getAllClientsWithStats, updateClient } = require('../services/clienteService');
 
 const upload = multer({ storage: multer.memoryStorage() }).array('clientsFiles', 10);
 
 module.exports = (db) => {
-    /**
-     * ¡NUEVA RUTA!
-     * GET /api/clientes
-     * Devuelve una lista de todos los clientes con estadísticas calculadas.
-     */
+    
     router.get('/clientes', async (req, res) => {
         console.log('Solicitud recibida para obtener todos los clientes.');
         try {
@@ -24,11 +19,26 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor al obtener clientes.' });
         }
     });
+    
+    router.put('/clientes/:id', async (req, res) => {
+        const { id } = req.params;
+        const clientData = req.body;
 
-    /**
-     * POST /api/clientes/importar-csv (Ruta original restaurada)
-     * Recibe archivos CSV, los procesa y crea nuevos clientes en Firebase.
-     */
+        console.log(`Solicitud recibida para actualizar cliente con ID: ${id}`);
+
+        if (!id || !clientData) {
+            return res.status(400).json({ error: 'Faltan el ID del cliente o los datos a actualizar.' });
+        }
+
+        try {
+            await updateClient(db, id, clientData);
+            res.status(200).json({ message: 'Cliente actualizado correctamente.' });
+        } catch (error) {
+            console.error(`Error al actualizar el cliente ${id}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor al actualizar el cliente.' });
+        }
+    });
+
     router.post('/clientes/importar-csv', upload, async (req, res) => {
         console.log('Solicitud recibida para importar clientes desde CSV.');
 

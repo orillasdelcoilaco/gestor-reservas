@@ -10,6 +10,7 @@
         body { font-family: 'Inter', sans-serif; }
         .table-container { max-height: 70vh; }
         thead th { position: sticky; top: 0; z-index: 1; }
+        #edit-modal { background-color: rgba(0, 0, 0, 0.5); }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -58,13 +59,67 @@
         </main>
     </div>
 
+    <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Cliente</h3>
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="origen-input" class="block text-sm font-medium text-gray-700">Origen (Ciudad)</label>
+                    <input type="text" id="origen-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="fuente-select" class="block text-sm font-medium text-gray-700">Fuente (Cómo nos conoció)</label>
+                    <select id="fuente-select" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                        <option value="">-- Sin especificar --</option>
+                        <option value="TikTok">TikTok</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="Google">Google</option>
+                        <option value="Boca a boca">Boca a boca</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label for="calificacion-select" class="block text-sm font-medium text-gray-700">Calificación</label>
+                    <select id="calificacion-select" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                        <option value="0">-- Sin calificar --</option>
+                        <option value="1">⭐</option>
+                        <option value="2">⭐⭐</option>
+                        <option value="3">⭐⭐⭐</option>
+                        <option value="4">⭐⭐⭐⭐</option>
+                        <option value="5">⭐⭐⭐⭐⭐</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label for="notas-textarea" class="block text-sm font-medium text-gray-700">Notas</label>
+                    <textarea id="notas-textarea" rows="4" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"></textarea>
+                </div>
+            </div>
+            <div id="modal-status" class="mt-4 text-sm text-center"></div>
+            <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                <button type="button" id="save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar Cambios</button>
+                <button type="button" id="cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0">Cancelar</button>
+            </div>
+        </div>
+    </div>
     <script type="module">
         import { checkSession, logout, fetchAPI } from './api.js';
 
         let allClientes = [];
+        let editingClientId = null;
+
         const clientesTableBody = document.getElementById('clientes-table-body');
         const loadingState = document.getElementById('loading-state');
         const searchInput = document.getElementById('search-input');
+        
+        const modal = document.getElementById('edit-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalStatus = document.getElementById('modal-status');
+        const origenInput = document.getElementById('origen-input');
+        const fuenteSelect = document.getElementById('fuente-select');
+        const calificacionSelect = document.getElementById('calificacion-select');
+        const notasTextarea = document.getElementById('notas-textarea');
+        const saveBtn = document.getElementById('save-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
 
         function renderTable(clientes) {
             clientesTableBody.innerHTML = '';
@@ -91,6 +146,10 @@
                 `;
                 clientesTableBody.appendChild(row);
             });
+            
+            document.querySelectorAll('.edit-btn').forEach(button => {
+                button.addEventListener('click', handleEditClick);
+            });
         }
 
         async function loadClientes() {
@@ -103,7 +162,57 @@
                 loadingState.innerHTML = `<p class="text-red-500 font-semibold">No se pudieron cargar los clientes: ${error.message}</p>`;
             }
         }
-        
+
+        function handleEditClick(event) {
+            editingClientId = event.target.dataset.id;
+            const cliente = allClientes.find(c => c.id === editingClientId);
+            if (!cliente) return;
+
+            modalTitle.textContent = `Editar Cliente: ${cliente.nombre}`;
+            origenInput.value = cliente.origen || '';
+            fuenteSelect.value = cliente.fuente || '';
+            calificacionSelect.value = cliente.calificacion || 0;
+            notasTextarea.value = cliente.notas || '';
+            
+            modalStatus.innerHTML = '';
+            modal.classList.remove('hidden');
+        }
+
+        async function handleSaveClick() {
+            if (!editingClientId) return;
+            
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Guardando...';
+            modalStatus.innerHTML = '<p class="text-blue-600">Guardando datos...</p>';
+
+            const payload = {
+                origen: origenInput.value,
+                fuente: fuenteSelect.value,
+                calificacion: Number(calificacionSelect.value),
+                notas: notasTextarea.value
+            };
+
+            try {
+                await fetchAPI(`/api/clientes/${editingClientId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                });
+                modal.classList.add('hidden');
+                await loadClientes();
+            } catch (error) {
+                modalStatus.innerHTML = `<p class="text-red-600">Error al guardar: ${error.message}</p>`;
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Guardar Cambios';
+                editingClientId = null;
+            }
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            editingClientId = null;
+        }
+
         searchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
             const filteredClientes = allClientes.filter(c =>
@@ -128,6 +237,9 @@
                     <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
                 `;
                 document.getElementById('logout-btn').addEventListener('click', logout);
+
+                saveBtn.addEventListener('click', handleSaveClick);
+                cancelBtn.addEventListener('click', closeModal);
 
                 loadClientes();
             }

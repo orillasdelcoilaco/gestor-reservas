@@ -4,17 +4,11 @@ const csv = require('csv-parser');
 const stream = require('stream');
 const { cleanPhoneNumber } = require('../utils/helpers');
 
-/**
- * Parsea un buffer de archivo CSV y devuelve las filas como un array de objetos.
- * (Función original restaurada)
- * @param {Buffer} buffer El buffer del archivo CSV.
- * @returns {Promise<Array<Object>>} Una promesa que se resuelve con los datos del CSV.
- */
 function parseCsvBuffer(buffer) {
     return new Promise((resolve, reject) => {
         const results = [];
         const readableStream = new stream.Readable();
-        readableStream._read = () => {}; // No-op
+        readableStream._read = () => {};
         readableStream.push(buffer);
         readableStream.push(null);
 
@@ -26,13 +20,6 @@ function parseCsvBuffer(buffer) {
     });
 }
 
-/**
- * Procesa una lista de archivos CSV, extrae clientes válidos y los guarda en Firebase.
- * (Función original restaurada)
- * @param {admin.firestore.Firestore} db La instancia de Firestore.
- * @param {Array<Object>} files Un array de archivos subidos por multer.
- * @returns {Promise<Object>} Un resumen del proceso de importación.
- */
 async function importClientsFromCsv(db, files) {
     console.log(`Procesando ${files.length} archivo(s)...`);
 
@@ -97,13 +84,6 @@ async function importClientsFromCsv(db, files) {
     };
 }
 
-
-/**
- * ¡NUEVA FUNCIÓN!
- * Obtiene todos los clientes y calcula estadísticas adicionales para cada uno.
- * @param {admin.firestore.Firestore} db La instancia de Firestore.
- * @returns {Promise<Array<Object>>} Una lista de clientes con sus estadísticas.
- */
 async function getAllClientsWithStats(db) {
     const reservasSnapshot = await db.collection('reservas').get();
     const reservationStatsMap = new Map();
@@ -112,7 +92,6 @@ async function getAllClientsWithStats(db) {
         const reserva = doc.data();
         if (reserva.clienteId) {
             if (!reservationStatsMap.has(reserva.clienteId)) {
-                // Guardamos el canal de la primera reserva que encontremos para este cliente
                 reservationStatsMap.set(reserva.clienteId, { totalReservas: 0, primerCanal: reserva.canal });
             }
             const stats = reservationStatsMap.get(reserva.clienteId);
@@ -149,8 +128,26 @@ async function getAllClientsWithStats(db) {
     return clientsWithStats;
 }
 
-// Exportamos todas las funciones necesarias
+async function updateClient(db, clientId, clientData) {
+    const clientRef = db.collection('clientes').doc(clientId);
+
+    const dataToUpdate = {};
+    if (clientData.origen !== undefined) dataToUpdate.origen = clientData.origen;
+    if (clientData.fuente !== undefined) dataToUpdate.fuente = clientData.fuente;
+    if (clientData.calificacion !== undefined) dataToUpdate.calificacion = Number(clientData.calificacion);
+    if (clientData.notas !== undefined) dataToUpdate.notas = clientData.notas;
+
+    if (Object.keys(dataToUpdate).length === 0) {
+        console.log("No hay datos para actualizar.");
+        return;
+    }
+
+    console.log(`Actualizando cliente ${clientId} con:`, dataToUpdate);
+    await clientRef.update(dataToUpdate);
+}
+
 module.exports = {
     importClientsFromCsv,
-    getAllClientsWithStats
+    getAllClientsWithStats,
+    updateClient
 };

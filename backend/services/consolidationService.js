@@ -6,13 +6,12 @@ const { createGoogleContact, getContactPhoneByName } = require('./googleContacts
 
 function cleanCabanaName(cabanaName) {
     if (!cabanaName || typeof cabanaName !== 'string') return '';
-    const trimmedName = cabanaName.trim();
-    if (trimmedName === 'cabaña 9 1') {
-        return 'cabaña 9';
-    }
-    if (trimmedName === 'cabaña 10 1') {
-        return 'cabaña 10';
-    }
+    
+    // Usamos una expresión regular para buscar específicamente "cabaña 9" o "cabaña 10"
+    // seguido de un espacio y un "1" al final de la cadena.
+    // Esto es más flexible que la comparación estricta.
+    const trimmedName = cabanaName.trim().replace(/^(cabaña (9|10)) 1$/, '$1');
+    
     return trimmedName;
 }
 

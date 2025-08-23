@@ -112,7 +112,7 @@ async function processChannel(db, channel) {
                 clienteId = existingReservation.clienteId;
                 const clienteRef = db.collection('clientes').doc(clienteId);
                 const clienteDoc = await clienteRef.get();
-                const clienteData = clienteDoc.exists() ? clienteDoc.data() : {};
+                const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
 
                 if (telefonoReporte && clienteData.phone === genericPhone) {
                     batch.update(clienteRef, { phone: telefonoReporte });

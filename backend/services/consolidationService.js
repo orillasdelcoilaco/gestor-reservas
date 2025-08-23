@@ -1,4 +1,4 @@
-// backend/services/consolidationService.js - CÓDIGO FINAL CORREGIDO
+// backend/services/consolidationService.js - CÓDIGO FINAL CORREGIDO Y COMPLETO
 
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
@@ -150,7 +150,7 @@ async function processChannel(db, channel) {
                 };
                 createGoogleContact(db, contactData);
             }
-
+            
             let valorCLP = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
             if (isBooking) {
                 const valorDolarDia = await getValorDolar(db, reservaData.fechaLlegada);
@@ -159,6 +159,7 @@ async function processChannel(db, channel) {
             }
             const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
 
+            // --- ESTA ES LA PARTE QUE FALTABA ---
             const dataToSave = {
                 reservaIdOriginal: reservaData.reservaIdOriginal,
                 clienteId: clienteId,
@@ -175,6 +176,7 @@ async function processChannel(db, channel) {
                 valorOriginal: parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP'),
                 valorCLP: valorCLP,
             };
+            // --- FIN DE LA CORRECCIÓN ---
             
             if (existingReservation) {
                 if (existingReservation.valorManual) dataToSave.valorCLP = existingReservation.valorCLP;

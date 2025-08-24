@@ -1,4 +1,4 @@
-// frontend/api.js
+// frontend/api.js - CÓDIGO CORREGIDO
 
 // URL base de tu API en Render. Centralizarla aquí facilita cambios futuros.
 const API_BASE_URL = 'https://gestor-reservas.onrender.com';
@@ -15,28 +15,35 @@ export async function fetchAPI(endpoint, options = {}) {
   if (!token) {
     console.error('No se encontró token. Redirigiendo al login.');
     window.location.href = 'index.html';
-    // Lanza un error para detener la ejecución del código que llamó a fetchAPI
     throw new Error('No autenticado');
   }
 
-  // Prepara las cabeceras (headers) de la solicitud
+  // --- INICIO DE LA CORRECCIÓN ---
+  const isFormData = options.body instanceof FormData;
+
   const headers = {
-    'Content-Type': 'application/json',
-    // Esta es la línea clave: envía el token al backend
+    // Solo añadimos Content-Type si NO es un FormData.
+    // El navegador lo añadirá automáticamente con el boundary correcto para los archivos.
+    ...(!isFormData && { 'Content-Type': 'application/json' }),
     'Authorization': `Bearer ${token}`,
     ...options.headers,
   };
+
+  // Si no es FormData, convertimos el cuerpo a JSON. Si lo es, lo dejamos como está.
+  const body = isFormData ? options.body : JSON.stringify(options.body);
+  // --- FIN DE LA CORRECCIÓN ---
+
 
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
+      body, // Usamos el cuerpo que preparamos
     });
 
-    // Si el token es inválido o expiró, el servidor devolverá 401
     if (response.status === 401) {
       console.error('Token inválido o expirado. Redirigiendo al login.');
-      logout(); // Llama a la función de logout para limpiar todo
+      logout();
       throw new Error('No autorizado');
     }
 
@@ -45,7 +52,6 @@ export async function fetchAPI(endpoint, options = {}) {
       throw new Error(errorResult.error || `Error en la solicitud: ${response.statusText}`);
     }
 
-    // Si la respuesta no tiene contenido (ej. un 204 No Content), no intentes parsear JSON
     if (response.status === 204) {
         return null;
     }
@@ -53,15 +59,12 @@ export async function fetchAPI(endpoint, options = {}) {
     return await response.json();
   } catch (error) {
     console.error(`Error en fetchAPI para el endpoint ${endpoint}:`, error);
-    // Re-lanza el error para que la página que llama pueda manejarlo si es necesario
     throw error;
   }
 }
 
 /**
  * Verifica si el usuario tiene una sesión activa. Si no, lo redirige al login.
- * Reemplaza la lógica repetida en cada página.
- * @returns {object|null} Un objeto con el email del usuario si la sesión es válida, o null si no lo es.
  */
 export function checkSession() {
   const token = localStorage.getItem('firebaseIdToken');

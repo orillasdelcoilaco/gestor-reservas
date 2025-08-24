@@ -1,9 +1,10 @@
-// backend/services/googleContactsService.js - CÓDIGO ACTUALIZADO
+// backend/services/googleContactsService.js - CÓDIGO ACTUALIZADO Y COMPLETO
 
 const { google } = require('googleapis');
 const { OAuth2Client } = require('google-auth-library');
 const fs = require('fs');
 const path = require('path');
+const { cleanPhoneNumber } = require('../utils/helpers');
 
 const isProduction = process.env.RENDER === 'true';
 const CREDENTIALS_PATH = isProduction
@@ -47,9 +48,8 @@ async function findGoogleContactByName(people, name) {
         }
         return false;
     } catch (err) {
-        // Si la búsqueda falla (ej. por cuota), lo consideramos como un error.
         console.error(`Error buscando el contacto '${name}' en Google:`, err.message);
-        throw err; // Lanzamos el error para que sea capturado por la función principal.
+        throw err;
     }
 }
 
@@ -81,16 +81,10 @@ async function getContactPhoneByName(db, name) {
     }
 }
 
-/**
- * Intenta crear un contacto en Google.
- * @param {object} db - Instancia de Firestore.
- * @param {object} contactData - Datos del contacto { name, phone, email }.
- * @returns {Promise<boolean>} Devuelve `true` si el contacto se creó o ya existía. Devuelve `false` si hubo un error (ej. cuota excedida).
- */
 async function createGoogleContact(db, contactData) {
     if (!contactData || !contactData.name || !contactData.phone) {
         console.error('Datos de contacto insuficientes para crear contacto en Google.');
-        return false; // Falla si no hay datos.
+        return false;
     }
 
     try {
@@ -100,7 +94,7 @@ async function createGoogleContact(db, contactData) {
         const contactExists = await findGoogleContactByName(people, contactData.name);
         if (contactExists) {
             console.log(`El contacto '${contactData.name}' ya existe en Google Contacts. Marcado como sincronizado.`);
-            return true; // Éxito porque ya existe.
+            return true;
         }
 
         const resource = {
@@ -114,16 +108,87 @@ async function createGoogleContact(db, contactData) {
 
         await people.people.createContact({ resource });
         console.log(`Contacto '${contactData.name}' creado exitosamente en Google Contacts.`);
-        return true; // Éxito porque se creó.
+        return true;
 
     } catch (err) {
-        // Si cualquier parte del proceso falla (búsqueda o creación), lo capturamos aquí.
         console.error(`Error al procesar el contacto '${contactData.name}' en Google:`, err.message);
-        return false; // Falla debido a un error de API (ej. cuota).
+        return false;
     }
 }
 
+
+/**
+ * --- NUEVA FUNCIÓN ---
+ * Busca un contacto en Google por su número de teléfono.
+ * @param {object} db - Instancia de Firestore.
+ * @param {string} phone - Número de teléfono a buscar.
+ * @returns {Promise<object|null>} El recurso completo del contacto si se encuentra, o null.
+ */
+async function findContactByPhone(db, phone) {
+    if (!phone) return null;
+    const cleanedPhone = cleanPhoneNumber(phone);
+
+    try {
+        const auth = await getAuthenticatedClient(db);
+        const people = google.people({ version: 'v1', auth });
+
+        const res = await people.people.searchContacts({
+            query: cleanedPhone,
+            readMask: 'names,phoneNumbers,emailAddresses', // Pedimos todos los datos que podríamos necesitar
+            pageSize: 10
+        });
+
+        if (res.data.results && res.data.results.length > 0) {
+            // Buscamos una coincidencia exacta del número de teléfono
+            for (const result of res.data.results) {
+                if (result.person.phoneNumbers) {
+                    const hasMatchingPhone = result.person.phoneNumbers.some(p => cleanPhoneNumber(p.value) === cleanedPhone);
+                    if (hasMatchingPhone) {
+                        return result.person; // Devolvemos el objeto completo de la persona
+                    }
+                }
+            }
+        }
+        return null; // No se encontró coincidencia
+    } catch (err) {
+        console.error(`Error buscando contacto por teléfono '${cleanedPhone}':`, err.message);
+        throw err;
+    }
+}
+
+/**
+ * --- NUEVA FUNCIÓN ---
+ * Actualiza un contacto existente en Google Contacts.
+ * @param {object} db - Instancia de Firestore.
+ * @param {string} resourceName - El ID del recurso del contacto (ej. 'people/c12345').
+ * @param {object} payload - Objeto con los campos a actualizar (ej. { names: [...], phoneNumbers: [...] }).
+ * @param {string[]} updateMask - Array con los nombres de los campos que se están actualizando (ej. ['names', 'phoneNumbers']).
+ */
+async function updateContact(db, resourceName, payload, updateMask) {
+    try {
+        const auth = await getAuthenticatedClient(db);
+        const people = google.people({ version: 'v1', auth });
+
+        await people.people.updateContact({
+            resourceName: resourceName,
+            updatePersonFields: updateMask.join(','),
+            requestBody: {
+                ...payload,
+                etag: '*' // Usamos etag '*' para forzar la actualización
+            }
+        });
+
+        return true;
+    } catch (err) {
+        console.error(`Error al actualizar el contacto ${resourceName}:`, err.message);
+        throw err;
+    }
+}
+
+
 module.exports = {
     createGoogleContact,
-    getContactPhoneByName
+    getContactPhoneByName,
+    findContactByPhone, // <-- Exportamos la nueva función
+    updateContact       // <-- Exportamos la nueva función
 };

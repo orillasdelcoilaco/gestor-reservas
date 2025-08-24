@@ -1,9 +1,10 @@
-// backend/routes/clientes.js - CÓDIGO COMPLETO Y CORREGIDO
+// backend/routes/clientes.js - CÓDIGO ACTUALIZADO Y CENTRALIZADO
 
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { importClientsFromCsv, getAllClientsWithStats, updateClient, syncClientToGoogle } = require('../services/clienteService');
+// Importamos la nueva función maestra y removemos la antigua 'updateClient'
+const { importClientsFromCsv, getAllClientsWithStats, syncClientToGoogle, updateClientMaster } = require('../services/clienteService');
 
 const upload = multer({ storage: multer.memoryStorage() }).array('clientsFiles', 10);
 const jsonParser = express.json();
@@ -21,19 +22,21 @@ module.exports = (db) => {
         }
     });
     
-    router.put('/clientes/:id', async (req, res) => {
+    // --- ESTA RUTA AHORA USA LA FUNCIÓN MAESTRA ---
+    router.put('/clientes/:id', jsonParser, async (req, res) => {
         const { id } = req.params;
         const clientData = req.body;
 
-        console.log(`Solicitud recibida para actualizar cliente con ID: ${id}`);
+        console.log(`Solicitud RECIBIDA para actualizar cliente con ID: ${id}`);
 
         if (!id || !clientData) {
             return res.status(400).json({ error: 'Faltan el ID del cliente o los datos a actualizar.' });
         }
 
         try {
-            await updateClient(db, id, clientData);
-            res.status(200).json({ message: 'Cliente actualizado correctamente.' });
+            // Llamamos a la función maestra centralizada
+            const result = await updateClientMaster(db, id, clientData);
+            res.status(200).json({ message: result.message });
         } catch (error) {
             console.error(`Error al actualizar el cliente ${id}:`, error);
             res.status(500).json({ error: 'Error interno del servidor al actualizar el cliente.' });
@@ -59,7 +62,6 @@ module.exports = (db) => {
         }
     });
 
-    // --- NUEVO ENDPOINT PARA SINCRONIZACIÓN MANUAL ---
     router.post('/clientes/:id/sincronizar-google', async (req, res) => {
         const { id } = req.params;
         console.log(`Solicitud recibida para sincronizar cliente ${id} con Google Contacts.`);

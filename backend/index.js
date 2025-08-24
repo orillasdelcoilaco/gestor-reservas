@@ -35,7 +35,7 @@ const PORT = process.env.PORT || 3001;
 
 //--- Middlewares
 app.use(cors(corsOptions));
-app.use(express.json());
+// app.use(express.json());
 // Ya no necesitamos cookieParser, así que se elimina.
 
 //--- Rutas ---

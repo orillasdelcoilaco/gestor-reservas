@@ -6,6 +6,7 @@ const multer = require('multer');
 const { importClientsFromCsv, getAllClientsWithStats, updateClient, syncClientToGoogle } = require('../services/clienteService');
 
 const upload = multer({ storage: multer.memoryStorage() }).array('clientsFiles', 10);
+const jsonParser = express.json();
 
 module.exports = (db) => {
     

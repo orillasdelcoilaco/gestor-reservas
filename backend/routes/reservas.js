@@ -2,6 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
+const jsonParser = express.json();
 
 module.exports = (db) => {
     // --- OBTENER TODAS LAS RESERVAS (GET) ---

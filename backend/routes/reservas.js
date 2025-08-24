@@ -1,8 +1,8 @@
-// backend/routes/reservas.js - CÓDIGO COMPLETO Y CORREGIDO
+// backend/routes/reservas.js - CÓDIGO CORREGIDO Y FINAL
 
 const express = require('express');
 const router = express.Router();
-const jsonParser = express.json(); // <-- Definimos el parser de JSON
+const jsonParser = express.json();
 
 module.exports = (db) => {
     // --- OBTENER TODAS LAS RESERVAS (GET) ---
@@ -49,7 +49,7 @@ module.exports = (db) => {
     });
 
     // --- ACTUALIZAR UNA RESERVA INDIVIDUAL (PUT) ---
-    router.put('/reservas/:id', jsonParser, async (req, res) => { // <-- AÑADIMOS EL PARSER AQUÍ
+    router.put('/reservas/:id', jsonParser, async (req, res) => {
         try {
             const { id } = req.params;
             const { valorCLP, clienteNombre, telefono } = req.body;
@@ -58,25 +58,35 @@ module.exports = (db) => {
             const doc = await reservaRef.get();
             if (!doc.exists) return res.status(404).json({ error: 'La reserva no existe.' });
 
-            const updateData = {};
+            const updateReservaData = {};
+            const updateClienteData = {};
             const originalData = doc.data();
+            const clienteRef = db.collection('clientes').doc(originalData.clienteId);
 
             if (valorCLP !== undefined) {
-                updateData.valorCLP = valorCLP;
-                updateData.valorOriginalCLP = originalData.valorCLP;
-                updateData.valorManual = true;
+                updateReservaData.valorCLP = valorCLP;
+                updateReservaData.valorOriginalCLP = originalData.valorCLP;
+                updateReservaData.valorManual = true;
             }
             if (clienteNombre !== undefined) {
-                updateData.clienteNombre = clienteNombre;
-                updateData.nombreManual = true;
+                updateReservaData.clienteNombre = clienteNombre;
+                updateReservaData.nombreManual = true;
+                // Actualizamos también el cliente
+                const nameParts = clienteNombre.split(' ');
+                updateClienteData.firstname = nameParts[0] || '';
+                updateClienteData.lastname = nameParts.slice(1).join(' ');
             }
             if (telefono !== undefined) {
-                const clienteRef = db.collection('clientes').doc(originalData.clienteId);
-                await clienteRef.update({ phone: telefono, telefonoManual: true });
+                updateClienteData.phone = telefono;
+                updateClienteData.telefonoManual = true;
             }
 
-            if (Object.keys(updateData).length > 0) {
-                await reservaRef.update(updateData);
+            // Ejecutamos las actualizaciones
+            if (Object.keys(updateReservaData).length > 0) {
+                await reservaRef.update(updateReservaData);
+            }
+            if (Object.keys(updateClienteData).length > 0) {
+                await clienteRef.update(updateClienteData);
             }
 
             res.status(200).json({ message: 'Reserva actualizada correctamente.' });
@@ -87,7 +97,7 @@ module.exports = (db) => {
     });
 
     // --- ACTUALIZAR UN GRUPO DE RESERVAS (PUT) ---
-    router.put('/reservas/grupo/:reservaIdOriginal', jsonParser, async (req, res) => { // <-- AÑADIMOS EL PARSER AQUÍ
+    router.put('/reservas/grupo/:reservaIdOriginal', jsonParser, async (req, res) => {
         try {
             const { reservaIdOriginal } = req.params;
             const { nuevoTotalCLP, clienteNombre, telefono } = req.body;
@@ -98,16 +108,34 @@ module.exports = (db) => {
 
             const batch = db.batch();
             const clienteId = snapshot.docs[0].data().clienteId;
+            const clienteRef = db.collection('clientes').doc(clienteId);
+            const updateClienteData = {};
 
             if (telefono !== undefined) {
-                const clienteRef = db.collection('clientes').doc(clienteId);
-                batch.update(clienteRef, { phone: telefono, telefonoManual: true });
+                updateClienteData.phone = telefono;
+                updateClienteData.telefonoManual = true;
             }
-
+            if (clienteNombre !== undefined) {
+                 const nameParts = clienteNombre.split(' ');
+                updateClienteData.firstname = nameParts[0] || '';
+                updateClienteData.lastname = nameParts.slice(1).join(' ');
+            }
+            
+            // Actualizamos el cliente si hay cambios
+            if (Object.keys(updateClienteData).length > 0) {
+                batch.update(clienteRef, updateClienteData);
+            }
+            
+            // Actualizamos todas las reservas del grupo
             snapshot.forEach(doc => {
                 const docRef = db.collection('reservas').doc(doc.id);
+                const updateReservaData = {};
                 if (clienteNombre !== undefined) {
-                    batch.update(docRef, { clienteNombre: clienteNombre, nombreManual: true });
+                    updateReservaData.clienteNombre = clienteNombre;
+                    updateReservaData.nombreManual = true;
+                }
+                if (Object.keys(updateReservaData).length > 0) {
+                    batch.update(docRef, updateReservaData);
                 }
             });
 
@@ -139,11 +167,7 @@ module.exports = (db) => {
         }
     });
 
-    /**
-     * ¡NUEVA RUTA!
-     * GET /api/reservas/cliente/:clienteId
-     * Devuelve todas las reservas de un cliente específico.
-     */
+    // --- OBTENER RESERVAS DE UN CLIENTE (GET) ---
     router.get('/reservas/cliente/:clienteId', async (req, res) => {
         const { clienteId } = req.params;
         if (!clienteId) {

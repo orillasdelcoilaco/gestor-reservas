@@ -1,11 +1,11 @@
-// backend/services/importService.js - CÓDIGO ACTUALIZADO
+// backend/services/importService.js - CÓDIGO CORREGIDO Y FINAL
 
 const admin = require('firebase-admin');
 const csv = require('csv-parser');
 const stream = require('stream');
-const { cleanPhoneNumber } = require('../utils/helpers');
-const { getValorDolar } = require('./dolarService'); // Necesitamos el servicio del dólar
-const { cleanCabanaName, parseDate, parseCurrency } = require('./consolidationService'); // Reutilizamos funciones
+const { getValorDolar } = require('./dolarService');
+// --- CORRECCIÓN: Importamos desde el archivo central de ayudantes ---
+const { cleanPhoneNumber, cleanCabanaName, parseDate, parseCurrency } = require('../utils/helpers');
 
 /**
  * Parsea un buffer de un archivo CSV a un array de objetos.
@@ -30,7 +30,6 @@ function parseCsvBuffer(buffer) {
  * Procesa el archivo CSV de clientes históricos.
  */
 async function processHistoricalClients(db, fileBuffer) {
-    // ... (Esta función se mantiene igual que antes)
     const rows = await parseCsvBuffer(fileBuffer);
     console.log(`[Importador de Clientes] Se encontraron ${rows.length} filas para procesar.`);
 
@@ -105,14 +104,12 @@ async function processHistoricalClients(db, fileBuffer) {
 }
 
 /**
- * --- NUEVA FUNCIÓN ---
  * Procesa el archivo CSV de reservas históricas de Booking.
  */
 async function processHistoricalBookings(db, fileBuffer) {
     const rows = await parseCsvBuffer(fileBuffer);
     console.log(`[Importador de Reservas] Se encontraron ${rows.length} filas para procesar.`);
 
-    // Cargamos todos los clientes y reservas existentes para evitar duplicados
     const existingClientsByPhone = new Map();
     const allClientsSnapshot = await db.collection('clientes').get();
     allClientsSnapshot.forEach(doc => {
@@ -135,7 +132,7 @@ async function processHistoricalBookings(db, fileBuffer) {
 
         const idCompuesto = `BOOKING_${reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
         if (existingReservations.has(idCompuesto)) {
-            continue; // Si la reserva ya existe, la saltamos
+            continue;
         }
         
         let clienteId;
@@ -144,14 +141,13 @@ async function processHistoricalBookings(db, fileBuffer) {
         if (phone && existingClientsByPhone.has(phone)) {
             clienteId = existingClientsByPhone.get(phone).id;
         } else {
-            // Si el cliente no existe, lo creamos con la info básica
             const newClientRef = db.collection('clientes').doc();
             clienteId = newClientRef.id;
             const nombreCompleto = row['Nombre del cliente (o clientes)'] || '';
             const clientData = {
                 firstname: nombreCompleto.split(' ')[0] || '',
                 lastname: nombreCompleto.split(' ').slice(1).join(' '),
-                email: null, // El archivo histórico no parece tener el email del cliente
+                email: null,
                 phone: phone,
                 googleContactSynced: false
             };
@@ -211,8 +207,7 @@ async function processHistoricalBookings(db, fileBuffer) {
     };
 }
 
-
 module.exports = {
     processHistoricalClients,
-    processHistoricalBookings // <-- EXPORTAMOS LA NUEVA FUNCIÓN
+    processHistoricalBookings
 };

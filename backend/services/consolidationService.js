@@ -1,57 +1,10 @@
-// backend/services/consolidationService.js - CÓDIGO FINAL CORREGIDO Y COMPLETO
+// backend/services/consolidationService.js - CÓDIGO ACTUALIZADO Y LIMPIO
 
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
 const { createGoogleContact, getContactPhoneByName } = require('./googleContactsService');
-
-function cleanCabanaName(cabanaName) {
-    if (!cabanaName || typeof cabanaName !== 'string') return '';
-    const normalizedName = cabanaName.trim().toLowerCase().replace(/\s+/g, ' ');
-    if (normalizedName === 'cabaña 9 1') return 'cabaña 9';
-    if (normalizedName === 'cabaña 10 1') return 'cabaña 10';
-    return cabanaName.trim();
-}
-
-function parseDate(dateValue) {
-    if (!dateValue) return null;
-    if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
-    if (typeof dateValue === 'number') {
-        return new Date(Date.UTC(1899, 11, 30, 0, 0, 0, 0) + dateValue * 86400000);
-    }
-    if (typeof dateValue !== 'string') return null;
-    let date;
-    if (/^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
-        date = new Date(dateValue.substring(0, 10) + 'T00:00:00Z');
-    } else if (/^\d{2}\/\d{2}\/\d{4}/.test(dateValue)) {
-        const [day, month, year] = dateValue.split('/');
-        date = new Date(`${year}-${month}-${day}T00:00:00Z`);
-    } else {
-        date = new Date(dateValue);
-    }
-    if (!isNaN(date)) return date;
-    return null;
-}
-
-function parseCurrency(value, currency = 'USD') {
-    if (typeof value === 'number') return value;
-    if (typeof value !== 'string') return 0;
-    if (currency === 'CLP') {
-        const digitsOnly = value.replace(/\D/g, '');
-        return parseInt(digitsOnly, 10) || 0;
-    }
-    const numberString = value.replace(/[^\d.,]/g, '');
-    const cleanedForFloat = numberString.replace(/,/g, '');
-    return parseFloat(cleanedForFloat) || 0;
-}
-
-function cleanPhoneNumber(phone) {
-    if (!phone) return null;
-    let cleaned = phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
-    if (cleaned.length === 9 && cleaned.startsWith('9')) {
-        return `56${cleaned}`;
-    }
-    return cleaned;
-}
+// Importamos todas las funciones de ayuda desde el archivo central
+const { cleanCabanaName, parseDate, parseCurrency, cleanPhoneNumber } = require('../utils/helpers');
 
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
@@ -96,7 +49,6 @@ async function processChannel(db, channel) {
             fechaSalida: parseDate(isBooking ? rawData['Salida'] : rawData['Día de salida']),
             estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
             alojamientos: alojamientosLimpios,
-            // --- CORRECCIÓN DEL ERROR 'pais' ---
             pais: (isBooking ? rawData['País del cliente'] : rawData['País']) || null
         };
 

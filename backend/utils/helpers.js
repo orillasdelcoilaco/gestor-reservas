@@ -1,24 +1,70 @@
+// backend/utils/helpers.js - CÓDIGO ACTUALIZADO
+
 /**
  * Limpia y estandariza un número de teléfono.
- * - Elimina espacios, guiones y signos de más.
- * - Convierte los números móviles de Chile al formato internacional E.164 (ej: 569...).
- * @param {string | number | null} phone - El número de teléfono de entrada.
- * @returns {string | null} El número de teléfono limpio o null si la entrada no es válida.
  */
 function cleanPhoneNumber(phone) {
   if (!phone) return null;
-
-  // Elimina espacios, guiones y el signo '+'
   let cleaned = phone.toString().replace(/\s+/g, '').replace(/[-+]/g, '');
-
-  // Si es un número chileno de 9 dígitos que empieza con 9, añade el prefijo 56
   if (cleaned.length === 9 && cleaned.startsWith('9')) {
     return `56${cleaned}`;
   }
-
   return cleaned;
 }
 
+/**
+ * Corrige los nombres de las cabañas que vienen con errores comunes.
+ */
+function cleanCabanaName(cabanaName) {
+    if (!cabanaName || typeof cabanaName !== 'string') return '';
+    const normalizedName = cabanaName.trim().toLowerCase().replace(/\s+/g, ' ');
+    if (normalizedName === 'cabaña 9 1') return 'cabaña 9';
+    if (normalizedName === 'cabaña 10 1') return 'cabaña 10';
+    return cabanaName.trim();
+}
+
+/**
+ * Parsea diferentes formatos de fecha a un objeto Date de JavaScript.
+ */
+function parseDate(dateValue) {
+    if (!dateValue) return null;
+    if (dateValue instanceof Date && !isNaN(dateValue)) return dateValue;
+    if (typeof dateValue === 'number') {
+        return new Date(Date.UTC(1899, 11, 30, 0, 0, 0, 0) + dateValue * 86400000);
+    }
+    if (typeof dateValue !== 'string') return null;
+    let date;
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateValue)) {
+        date = new Date(dateValue.substring(0, 10) + 'T00:00:00Z');
+    } else if (/^\d{2}\/\d{2}\/\d{4}/.test(dateValue)) {
+        const [day, month, year] = dateValue.split('/');
+        date = new Date(`${year}-${month}-${day}T00:00:00Z`);
+    } else {
+        date = new Date(dateValue);
+    }
+    if (!isNaN(date)) return date;
+    return null;
+}
+
+/**
+ * Parsea un valor de moneda (string o number) a un número flotante.
+ */
+function parseCurrency(value, currency = 'USD') {
+    if (typeof value === 'number') return value;
+    if (typeof value !== 'string') return 0;
+    if (currency === 'CLP') {
+        const digitsOnly = value.replace(/\D/g, '');
+        return parseInt(digitsOnly, 10) || 0;
+    }
+    const numberString = value.replace(/[^\d.,]/g, '');
+    const cleanedForFloat = numberString.replace(/,/g, '');
+    return parseFloat(cleanedForFloat) || 0;
+}
+
+
 module.exports = {
   cleanPhoneNumber,
+  cleanCabanaName,
+  parseDate,
+  parseCurrency
 };

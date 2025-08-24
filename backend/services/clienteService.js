@@ -1,9 +1,9 @@
-// backend/services/clienteService.js - CÓDIGO FINAL CORREGIDO
+// backend/services/clienteService.js - CÓDIGO FINAL CON LÓGICA CENTRALIZADA
 
 const csv = require('csv-parser');
 const stream = require('stream');
 const { cleanPhoneNumber } = require('../utils/helpers');
-const { createGoogleContact, findContactByPhone, updateContact } = require('./googleContactsService');
+const { createGoogleContact, findContactByName, updateContact } = require('./googleContactsService');
 
 function parseCsvBuffer(buffer) {
     return new Promise((resolve, reject) => {
@@ -165,33 +165,39 @@ async function syncClientToGoogle(db, clientId) {
     }
 }
 
+/**
+ * --- FUNCIÓN MAESTRA DE ACTUALIZACIÓN ---
+ */
 async function updateClientMaster(db, clientId, newData) {
     const clientRef = db.collection('clientes').doc(clientId);
     const clientDoc = await clientRef.get();
     if (!clientDoc.exists) throw new Error('El cliente no existe.');
 
     const oldData = clientDoc.data();
-    const dataToUpdate = {};
+    const dataToUpdateInFirestore = {};
 
-    if (newData.firstname && newData.firstname !== oldData.firstname) dataToUpdate.firstname = newData.firstname;
-    if (newData.lastname && newData.lastname !== oldData.lastname) dataToUpdate.lastname = newData.lastname;
-    if (newData.phone && cleanPhoneNumber(newData.phone) !== oldData.phone) dataToUpdate.phone = cleanPhoneNumber(newData.phone);
-    if (newData.origen !== undefined && newData.origen !== oldData.origen) dataToUpdate.origen = newData.origen;
-    if (newData.fuente !== undefined && newData.fuente !== oldData.fuente) dataToUpdate.fuente = newData.fuente;
-    if (newData.calificacion !== undefined && newData.calificacion !== oldData.calificacion) dataToUpdate.calificacion = Number(newData.calificacion);
-    if (newData.notas !== undefined && newData.notas !== oldData.notas) dataToUpdate.notas = newData.notas;
+    // Construimos el objeto solo con los datos que realmente cambiaron
+    if (newData.firstname && newData.firstname !== oldData.firstname) dataToUpdateInFirestore.firstname = newData.firstname;
+    if (newData.lastname && newData.lastname !== oldData.lastname) dataToUpdateInFirestore.lastname = newData.lastname;
+    if (newData.phone && cleanPhoneNumber(newData.phone) !== oldData.phone) dataToUpdateInFirestore.phone = cleanPhoneNumber(newData.phone);
+    if (newData.origen !== undefined && newData.origen !== oldData.origen) dataToUpdateInFirestore.origen = newData.origen;
+    if (newData.fuente !== undefined && newData.fuente !== oldData.fuente) dataToUpdateInFirestore.fuente = newData.fuente;
+    if (newData.calificacion !== undefined && newData.calificacion !== oldData.calificacion) dataToUpdateInFirestore.calificacion = Number(newData.calificacion);
+    if (newData.notas !== undefined && newData.notas !== oldData.notas) dataToUpdateInFirestore.notas = newData.notas;
     
-    if (Object.keys(dataToUpdate).length === 0) {
+    if (Object.keys(dataToUpdateInFirestore).length === 0) {
         return { success: true, message: "No se realizaron cambios." };
     }
 
-    await clientRef.update(dataToUpdate);
+    // 1. Actualizar el documento del cliente en Firestore
+    await clientRef.update(dataToUpdateInFirestore);
     console.log(`Cliente ${clientId} actualizado en Firestore.`);
 
-    const newFullName = `${dataToUpdate.firstname || oldData.firstname} ${dataToUpdate.lastname || oldData.lastname}`.trim();
+    const newFullName = `${dataToUpdateInFirestore.firstname || oldData.firstname} ${dataToUpdateInFirestore.lastname || oldData.lastname}`.trim();
     const oldFullName = `${oldData.firstname || ''} ${oldData.lastname || ''}`.trim();
     const nameHasChanged = newFullName !== oldFullName;
 
+    // 2. Actualización en Cascada a Reservas
     if (nameHasChanged) {
         const reservasQuery = db.collection('reservas').where('clienteId', '==', clientId);
         const reservasSnapshot = await reservasQuery.get();
@@ -205,32 +211,31 @@ async function updateClientMaster(db, clientId, newData) {
         }
     }
 
+    // 3. Actualización Inteligente de Google Contacts
     try {
         const q = db.collection('reservas').where('clienteId', '==', clientId).orderBy('fechaReserva', 'desc').limit(1);
         const snapshot = await q.get();
         if (snapshot.empty) throw new Error('No se encontraron reservas para obtener el ID de desambiguación.');
         
         const reservaData = snapshot.docs[0].data();
-        const reservaIdHint = reservaData.reservaIdOriginal;
+        const oldContactName = `${oldData.firstname || 'Cliente sin Nombre'} ${reservaData.canal} ${reservaData.reservaIdOriginal}`;
 
-        const contactResource = await findContactByPhone(db, oldData.phone, reservaIdHint);
+        const contactResource = await findContactByName(db, oldContactName);
 
         if (contactResource && contactResource.resourceName) {
             const updatePayload = { etag: contactResource.etag };
             const updateMask = [];
 
             if (nameHasChanged) {
-                updatePayload.names = [{ 
-                    givenName: dataToUpdate.firstname || oldData.firstname,
-                    familyName: dataToUpdate.lastname || oldData.lastname 
-                }];
+                const newContactName = `${newFullName} ${reservaData.canal} ${reservaData.reservaIdOriginal}`;
+                updatePayload.names = [{ givenName: newContactName }];
                 updateMask.push('names');
             }
 
-            if (dataToUpdate.phone) {
+            if (dataToUpdateInFirestore.phone) {
                 const googlePhone = contactResource.phoneNumbers && contactResource.phoneNumbers.find(p => p.value);
                 if (googlePhone && cleanPhoneNumber(googlePhone.value) === '56999999999') {
-                    updatePayload.phoneNumbers = [{ value: dataToUpdate.phone }];
+                    updatePayload.phoneNumbers = [{ value: dataToUpdateInFirestore.phone }];
                     updateMask.push('phoneNumbers');
                 }
             }

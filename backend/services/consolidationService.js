@@ -1,10 +1,9 @@
-// backend/services/consolidationService.js - CÓDIGO CON DIAGNÓSTICO
+// backend/services/consolidationService.js - CÓDIGO FINAL CORREGIDO Y COMPLETO
 
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
 const { createGoogleContact, getContactPhoneByName } = require('./googleContactsService');
 
-// ... (las funciones cleanCabanaName, parseDate, parseCurrency, cleanPhoneNumber no cambian y se mantienen igual)
 function cleanCabanaName(cabanaName) {
     if (!cabanaName || typeof cabanaName !== 'string') return '';
     const normalizedName = cabanaName.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -54,7 +53,6 @@ function cleanPhoneNumber(phone) {
     return cleaned;
 }
 
-
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
     const rawDocsSnapshot = await db.collection(rawCollectionName).get();
@@ -98,7 +96,8 @@ async function processChannel(db, channel) {
             fechaSalida: parseDate(isBooking ? rawData['Salida'] : rawData['Día de salida']),
             estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
             alojamientos: alojamientosLimpios,
-            pais: isBooking ? rawData['País del cliente'] : rawData['País'] || null
+            // --- CORRECCIÓN DEL ERROR 'pais' ---
+            pais: (isBooking ? rawData['País del cliente'] : rawData['País']) || null
         };
 
         if (!reservaData.fechaLlegada || !reservaData.fechaSalida || !reservaData.reservaIdOriginal) continue;
@@ -114,22 +113,14 @@ async function processChannel(db, channel) {
             
             if (existingReservation) reservasActualizadas++; else reservasCreadas++;
 
-            // --- INICIO DEL CÓDIGO DE DIAGNÓSTICO ---
             if (existingReservation && existingReservation.clienteId) {
                 clienteId = existingReservation.clienteId;
-                if(isBooking) console.log(`[DIAGNÓSTICO BOOKING] Cliente para ${reservaData.nombreCompleto} (${reservaData.telefono}) YA EXISTE porque la reserva compuesta ${idCompuesto} ya existía.`);
             } else if (reservaData.telefono !== genericPhone && existingClientsByPhone.has(reservaData.telefono)) {
                 clienteId = existingClientsByPhone.get(reservaData.telefono);
-                if(isBooking) console.log(`[DIAGNÓSTICO BOOKING] Cliente para ${reservaData.nombreCompleto} (${reservaData.telefono}) YA EXISTE porque su teléfono fue encontrado en la base de datos.`);
             } else {
-                // --- FIN DEL CÓDIGO DE DIAGNÓSTICO ---
-                
                 clientesNuevos++;
                 const newClientRef = db.collection('clientes').doc();
                 clienteId = newClientRef.id;
-
-                if(isBooking) console.log(`[DIAGNÓSTICO BOOKING] Cliente para ${reservaData.nombreCompleto} (${reservaData.telefono}) es NUEVO. Procediendo a crear.`);
-
 
                 const contactData = {
                     name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaIdOriginal}`,

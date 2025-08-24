@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const jsonParser = express.json();
+const jsonParser = express.json(); // <-- Definimos el parser de JSON
 
 module.exports = (db) => {
     // --- OBTENER TODAS LAS RESERVAS (GET) ---
@@ -49,7 +49,7 @@ module.exports = (db) => {
     });
 
     // --- ACTUALIZAR UNA RESERVA INDIVIDUAL (PUT) ---
-    router.put('/reservas/:id', async (req, res) => {
+    router.put('/reservas/:id', jsonParser, async (req, res) => { // <-- AÑADIMOS EL PARSER AQUÍ
         try {
             const { id } = req.params;
             const { valorCLP, clienteNombre, telefono } = req.body;
@@ -87,7 +87,7 @@ module.exports = (db) => {
     });
 
     // --- ACTUALIZAR UN GRUPO DE RESERVAS (PUT) ---
-    router.put('/reservas/grupo/:reservaIdOriginal', async (req, res) => {
+    router.put('/reservas/grupo/:reservaIdOriginal', jsonParser, async (req, res) => { // <-- AÑADIMOS EL PARSER AQUÍ
         try {
             const { reservaIdOriginal } = req.params;
             const { nuevoTotalCLP, clienteNombre, telefono } = req.body;

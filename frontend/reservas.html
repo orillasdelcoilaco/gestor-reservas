@@ -89,10 +89,8 @@
     </div>
 
     <script type="module">
-    // 1. Importamos todo lo que necesitamos desde api.js
     import { checkSession, logout, fetchAPI } from './api.js';
 
-    // --- Referencias a elementos del DOM (sin cambios) ---
     const reservasTableBody = document.getElementById('reservas-table-body');
     const loadingState = document.getElementById('loading-state');
     const searchInput = document.getElementById('search-input');
@@ -110,7 +108,6 @@
     let reservaParaEditar = null;
     let reservasDelGrupo = [];
 
-    // --- Lógica de la página (con la función fetchAPI) ---
     function renderTable(reservas) {
         reservasTableBody.innerHTML = '';
         if (reservas.length === 0) {
@@ -152,7 +149,6 @@
     async function loadReservas() {
         loadingState.innerHTML = '<p class="text-gray-500">Cargando reservas...</p>';
         try {
-            // 2. Usamos fetchAPI para obtener las reservas. ¡Esto soluciona el error 401!
             allReservas = await fetchAPI('/api/reservas');
             renderTable(allReservas);
         } catch (error) {
@@ -216,12 +212,12 @@
         modalStatus.textContent = '';
         
         try {
-            // 3. También usamos fetchAPI para actualizar
+            // --- CORRECCIÓN CLAVE: Enviamos el objeto directamente ---
             await fetchAPI(endpoint, {
                 method: 'PUT',
-                body: JSON.stringify(bodyPayload)
+                body: bodyPayload
             });
-            await loadReservas(); // Recargamos la tabla
+            await loadReservas();
             modal.classList.add('hidden');
         } catch (error) {
             modalStatus.textContent = `Error al guardar: ${error.message}`;
@@ -232,7 +228,6 @@
         }
     }
 
-    // --- Lógica de inicialización ---
     document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
@@ -248,7 +243,6 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
-            // Una vez autenticado, asignamos los listeners y cargamos los datos
             searchInput.addEventListener('input', (e) => {
                 const searchTerm = e.target.value.toLowerCase();
                 const filteredReservas = allReservas.filter(r =>

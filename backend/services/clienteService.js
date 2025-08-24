@@ -1,4 +1,4 @@
-// backend/services/clienteService.js - CÓDIGO FINAL CON LÓGICA CENTRALIZADA
+// backend/services/clienteService.js - CÓDIGO FINAL CORREGIDO
 
 const csv = require('csv-parser');
 const stream = require('stream');
@@ -165,9 +165,6 @@ async function syncClientToGoogle(db, clientId) {
     }
 }
 
-/**
- * --- FUNCIÓN MAESTRA DE ACTUALIZACIÓN ---
- */
 async function updateClientMaster(db, clientId, newData) {
     const clientRef = db.collection('clientes').doc(clientId);
     const clientDoc = await clientRef.get();
@@ -176,7 +173,6 @@ async function updateClientMaster(db, clientId, newData) {
     const oldData = clientDoc.data();
     const dataToUpdate = {};
 
-    // Construimos el objeto solo con los datos que realmente cambiaron
     if (newData.firstname && newData.firstname !== oldData.firstname) dataToUpdate.firstname = newData.firstname;
     if (newData.lastname && newData.lastname !== oldData.lastname) dataToUpdate.lastname = newData.lastname;
     if (newData.phone && cleanPhoneNumber(newData.phone) !== oldData.phone) dataToUpdate.phone = cleanPhoneNumber(newData.phone);
@@ -189,7 +185,6 @@ async function updateClientMaster(db, clientId, newData) {
         return { success: true, message: "No se realizaron cambios." };
     }
 
-    // 1. Actualizar el documento del cliente en Firestore
     await clientRef.update(dataToUpdate);
     console.log(`Cliente ${clientId} actualizado en Firestore.`);
 
@@ -197,7 +192,6 @@ async function updateClientMaster(db, clientId, newData) {
     const oldFullName = `${oldData.firstname || ''} ${oldData.lastname || ''}`.trim();
     const nameHasChanged = newFullName !== oldFullName;
 
-    // 2. Actualización en Cascada a Reservas
     if (nameHasChanged) {
         const reservasQuery = db.collection('reservas').where('clienteId', '==', clientId);
         const reservasSnapshot = await reservasQuery.get();
@@ -211,7 +205,6 @@ async function updateClientMaster(db, clientId, newData) {
         }
     }
 
-    // 3. Actualización Inteligente de Google Contacts
     try {
         const q = db.collection('reservas').where('clienteId', '==', clientId).orderBy('fechaReserva', 'desc').limit(1);
         const snapshot = await q.get();
@@ -254,12 +247,9 @@ async function updateClientMaster(db, clientId, newData) {
     return { success: true, message: 'Cliente actualizado en todo el sistema.' };
 }
 
-// La función 'updateClient' ahora es obsoleta, la dejamos por si alguna parte antigua del código la usa,
-// pero la nueva lógica debe usar 'updateClientMaster'.
 module.exports = {
     importClientsFromCsv,
     getAllClientsWithStats,
     syncClientToGoogle,
-    updateClient, // Mantenemos por retrocompatibilidad
     updateClientMaster
 };

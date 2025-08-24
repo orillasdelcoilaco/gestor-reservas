@@ -10,6 +10,7 @@ const consolidarRoutes = require('./routes/consolidar');
 const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
 const clientesRoutes = require('./routes/clientes');
+const importRoutes = require('./routes/import');
 
 //--- Configuración de CORS ---
 const corsOptions = {
@@ -49,7 +50,7 @@ app.use('/api', checkFirebaseToken, consolidarRoutes(db));
 app.use('/api', checkFirebaseToken, dolarRoutes(db));
 app.use('/api/mensajes', checkFirebaseToken, mensajesRoutes(db));
 app.use('/api', checkFirebaseToken, clientesRoutes(db));
-
+app.use('/api', checkFirebaseToken, importRoutes(db));
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);

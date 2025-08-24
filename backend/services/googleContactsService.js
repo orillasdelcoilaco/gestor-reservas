@@ -59,31 +59,27 @@ async function getContactPhoneByName(db, name) {
     }
 }
 
-/**
- * --- FUNCIÓN MEJORADA ---
- * Busca un contacto por su nombre exacto y devuelve el recurso completo.
- */
-async function findContactByName(db, name) {
-    if (!name) return null;
+async function findContactByName(db, nameQuery) {
+    if (!nameQuery) return null;
     try {
         const auth = await getAuthenticatedClient(db);
         const people = google.people({ version: 'v1', auth });
 
         const res = await people.people.searchContacts({
-            query: name,
-            readMask: 'names,phoneNumbers,emailAddresses',
+            query: nameQuery,
+            readMask: 'names,phoneNumbers,emailAddresses,metadata',
             pageSize: 5
         });
 
         if (res.data.results && res.data.results.length > 0) {
             const exactMatch = res.data.results.find(result =>
-                result.person.names && result.person.names.some(n => n.displayName === name)
+                result.person.names && result.person.names.some(n => n.displayName.includes(nameQuery))
             );
             return exactMatch ? exactMatch.person : null;
         }
         return null;
     } catch (err) {
-        console.error(`Error buscando el contacto por nombre '${name}':`, err.message);
+        console.error(`Error buscando el contacto por nombre '${nameQuery}':`, err.message);
         throw err;
     }
 }
@@ -136,6 +132,6 @@ async function updateContact(db, resourceName, payload, updateMask) {
 module.exports = {
     createGoogleContact,
     getContactPhoneByName,
-    findContactByName, // Cambiamos la exportación
+    findContactByName,
     updateContact
 };

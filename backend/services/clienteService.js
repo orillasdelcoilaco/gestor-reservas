@@ -165,9 +165,6 @@ async function syncClientToGoogle(db, clientId) {
     }
 }
 
-/**
- * --- FUNCIÓN MAESTRA DE ACTUALIZACIÓN ---
- */
 async function updateClientMaster(db, clientId, newData) {
     const clientRef = db.collection('clientes').doc(clientId);
     const clientDoc = await clientRef.get();
@@ -176,7 +173,6 @@ async function updateClientMaster(db, clientId, newData) {
     const oldData = clientDoc.data();
     const dataToUpdateInFirestore = {};
 
-    // Construimos el objeto solo con los datos que realmente cambiaron
     if (newData.firstname && newData.firstname !== oldData.firstname) dataToUpdateInFirestore.firstname = newData.firstname;
     if (newData.lastname && newData.lastname !== oldData.lastname) dataToUpdateInFirestore.lastname = newData.lastname;
     if (newData.phone && cleanPhoneNumber(newData.phone) !== oldData.phone) dataToUpdateInFirestore.phone = cleanPhoneNumber(newData.phone);
@@ -189,7 +185,6 @@ async function updateClientMaster(db, clientId, newData) {
         return { success: true, message: "No se realizaron cambios." };
     }
 
-    // 1. Actualizar el documento del cliente en Firestore
     await clientRef.update(dataToUpdateInFirestore);
     console.log(`Cliente ${clientId} actualizado en Firestore.`);
 
@@ -197,7 +192,6 @@ async function updateClientMaster(db, clientId, newData) {
     const oldFullName = `${oldData.firstname || ''} ${oldData.lastname || ''}`.trim();
     const nameHasChanged = newFullName !== oldFullName;
 
-    // 2. Actualización en Cascada a Reservas
     if (nameHasChanged) {
         const reservasQuery = db.collection('reservas').where('clienteId', '==', clientId);
         const reservasSnapshot = await reservasQuery.get();
@@ -211,30 +205,31 @@ async function updateClientMaster(db, clientId, newData) {
         }
     }
 
-    // 3. Actualización Inteligente de Google Contacts
     try {
         const q = db.collection('reservas').where('clienteId', '==', clientId).orderBy('fechaReserva', 'desc').limit(1);
         const snapshot = await q.get();
         if (snapshot.empty) throw new Error('No se encontraron reservas para obtener el ID de desambiguación.');
         
         const reservaData = snapshot.docs[0].data();
-        const oldContactName = `${oldData.firstname || 'Cliente sin Nombre'} ${reservaData.canal} ${reservaData.reservaIdOriginal}`;
-
-        const contactResource = await findContactByName(db, oldContactName);
+        const contactIdSuffix = `${reservaData.canal} ${reservaData.reservaIdOriginal}`;
+        const contactResource = await findContactByName(db, contactIdSuffix);
 
         if (contactResource && contactResource.resourceName) {
             const updatePayload = { etag: contactResource.etag };
             const updateMask = [];
-
-            if (nameHasChanged) {
-                const newContactName = `${newFullName} ${reservaData.canal} ${reservaData.reservaIdOriginal}`;
+            const currentGoogleName = contactResource.names && contactResource.names[0] ? contactResource.names[0].displayName : '';
+            const newContactName = `${newFullName} ${contactIdSuffix}`;
+            
+            if (newContactName !== currentGoogleName) {
                 updatePayload.names = [{ givenName: newContactName }];
                 updateMask.push('names');
             }
 
             if (dataToUpdateInFirestore.phone) {
                 const googlePhone = contactResource.phoneNumbers && contactResource.phoneNumbers.find(p => p.value);
-                if (googlePhone && cleanPhoneNumber(googlePhone.value) === '56999999999') {
+                const cleanedGooglePhone = googlePhone ? cleanPhoneNumber(googlePhone.value) : null;
+                
+                if (cleanedGooglePhone === '56999999999') {
                     updatePayload.phoneNumbers = [{ value: dataToUpdateInFirestore.phone }];
                     updateMask.push('phoneNumbers');
                 }

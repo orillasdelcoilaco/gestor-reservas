@@ -1,4 +1,4 @@
-// backend/services/googleContactsService.js - CÓDIGO ACTUALIZADO Y MEJORADO
+// backend/services/googleContactsService.js - CÓDIGO CORREGIDO Y COMPLETO
 
 const { google } = require('googleapis');
 const { OAuth2Client } = require('google-auth-library');
@@ -88,13 +88,37 @@ async function createGoogleContact(db, contactData) {
     }
 }
 
+// --- FUNCIÓN RESTAURADA ---
+async function getContactPhoneByName(db, name) {
+    try {
+        const auth = await getAuthenticatedClient(db);
+        const people = google.people({ version: 'v1', auth });
+        
+        const res = await people.people.searchContacts({
+            query: name,
+            readMask: 'names,phoneNumbers',
+            pageSize: 5
+        });
+
+        if (res.data.results && res.data.results.length > 0) {
+            const exactMatch = res.data.results.find(result =>
+                result.person.names && result.person.names.some(n => n.displayName === name)
+            );
+
+            if (exactMatch && exactMatch.person.phoneNumbers && exactMatch.person.phoneNumbers.length > 0) {
+                const phoneValue = exactMatch.person.phoneNumbers[0].value;
+                return phoneValue ? phoneValue.replace(/\D/g, '') : null;
+            }
+        }
+        return null;
+    } catch (err) {
+        console.error(`Error al obtener el teléfono de '${name}':`, err.message);
+        return null;
+    }
+}
+
 /**
- * --- FUNCIÓN MEJORADA ---
  * Busca un contacto en Google por su número de teléfono. Puede usar un ID de reserva para desambiguar.
- * @param {object} db - Instancia de Firestore.
- * @param {string} phone - Número de teléfono a buscar.
- * @param {string} [reservaIdHint] - ID de reserva opcional para encontrar el contacto correcto si hay duplicados.
- * @returns {Promise<object|null>} El recurso completo del contacto si se encuentra, o null.
  */
 async function findContactByPhone(db, phone, reservaIdHint = null) {
     if (!phone) return null;
@@ -127,15 +151,13 @@ async function findContactByPhone(db, phone, reservaIdHint = null) {
         if (candidates.length === 0) return null;
         if (candidates.length === 1) return candidates[0];
 
-        // Si hay varios candidatos, usamos el hint para encontrar el correcto
         if (reservaIdHint) {
             const specificContact = candidates.find(c => 
                 c.names && c.names.some(n => n.displayName && n.displayName.includes(reservaIdHint))
             );
             return specificContact || null;
         }
-
-        // Si no hay hint, no podemos decidir, así que no devolvemos nada para evitar errores.
+        
         return null; 
 
     } catch (err) {
@@ -152,13 +174,18 @@ async function updateContact(db, resourceName, payload, updateMask) {
         const auth = await getAuthenticatedClient(db);
         const people = google.people({ version: 'v1', auth });
 
-        // Para la API de Google, los nombres se actualizan por separado
         const requestBody = {
-            etag: '*', // Forzar la actualización
+            etag: '*',
         };
-        if (payload.names) requestBody.names = payload.names;
-        if (payload.phoneNumbers) requestBody.phoneNumbers = payload.phoneNumbers;
-
+        if (payload.names) requestBody.names = payload.names.map(name => ({
+            etag: name.etag,
+            givenName: name.givenName,
+            familyName: name.familyName
+        }));
+        if (payload.phoneNumbers) requestBody.phoneNumbers = payload.phoneNumbers.map(phone => ({
+            etag: phone.etag,
+            value: phone.value
+        }));
 
         await people.people.updateContact({
             resourceName: resourceName,
@@ -176,7 +203,7 @@ async function updateContact(db, resourceName, payload, updateMask) {
 
 module.exports = {
     createGoogleContact,
+    getContactPhoneByName,
     findContactByPhone,
-    updateContact,
-    getContactPhoneByName // Esta función se mantiene por si es usada en otra parte.
+    updateContact
 };

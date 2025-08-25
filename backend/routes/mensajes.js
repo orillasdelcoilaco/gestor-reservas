@@ -17,8 +17,6 @@ module.exports = (db) => {
       const targetDate = new Date(fecha + 'T00:00:00Z');
       const targetTimestamp = admin.firestore.Timestamp.fromDate(targetDate);
 
-      // --- CAMBIO CLAVE AQUÍ ---
-      // 1. Hacemos una consulta más simple que Firestore sí puede manejar.
       const q = db.collection('reservas')
         .where('fechaLlegada', '<=', targetTimestamp);
 
@@ -33,7 +31,6 @@ module.exports = (db) => {
         const data = doc.data();
         const fechaSalida = data.fechaSalida.toDate();
 
-        // 2. Hacemos el filtrado final aquí, en nuestro servidor.
         if (fechaSalida > targetDate && data.estado !== 'Cancelada') {
            reservasActivas.push({
             id: doc.id,
@@ -65,15 +62,13 @@ module.exports = (db) => {
       }
 
       const cabanas = [];
-      let infoGeneral = {};
       let clienteId = null;
 
       snapshot.forEach(doc => {
         const data = doc.data();
         cabanas.push({
           alojamiento: data.alojamiento,
-          valorCLP: data.valorCLP,
-          valorOriginalCLP: data.valorOriginalCLP
+          valorCLP: data.valorCLP
         });
         clienteId = data.clienteId;
       });
@@ -82,21 +77,23 @@ module.exports = (db) => {
       const clienteDoc = await db.collection('clientes').doc(clienteId).get();
       const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
 
-      infoGeneral = {
+      const infoGeneral = {
         reservaIdOriginal: primeraReserva.reservaIdOriginal,
         nombre: primeraReserva.clienteNombre,
         telefono: clienteData.phone || 'No disponible',
-        llegada: primeraReserva.fechaLlegada.toDate().toLocaleDateString('es-CL'),
-        salida: primeraReserva.fechaSalida.toDate().toLocaleDateString('es-CL'),
+        llegada: primeraReserva.fechaLlegada.toDate(), // Enviar como objeto Date
+        salida: primeraReserva.fechaSalida.toDate(),   // Enviar como objeto Date
         totalNoches: primeraReserva.totalNoches,
         totalCLP: cabanas.reduce((sum, c) => sum + c.valorCLP, 0),
-        totalOriginalCLP: cabanas.reduce((sum, c) => sum + (c.valorOriginalCLP || c.valorCLP), 0),
-        valorManual: primeraReserva.valorManual || false,
+        // --- CAMPOS NUEVOS AÑADIDOS ---
+        canal: primeraReserva.canal,
+        valorOriginalUSD: primeraReserva.monedaOriginal === 'USD' ? primeraReserva.valorOriginal * cabanas.length : null,
+        valorDolarDia: primeraReserva.valorDolarDia || null
       };
 
       res.status(200).json({ info: infoGeneral, cabanas: cabanas });
 
-    } catch (error) {
+    } catch (error)      {
       console.error("Error al obtener detalles de la reserva:", error);
       res.status(500).json({ error: 'Error interno del servidor.' });
     }

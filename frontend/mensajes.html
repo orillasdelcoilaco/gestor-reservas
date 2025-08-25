@@ -53,7 +53,7 @@
                         <div class="md:col-span-2 space-y-6">
                             <div>
                                 <h3 class="text-lg font-medium text-gray-900">Mensaje de Cobro</h3>
-                                <textarea id="mensaje-cobro" rows="12" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"></textarea>
+                                <textarea id="mensaje-cobro" rows="15" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"></textarea>
                                 <div class="mt-2 flex space-x-2">
                                     <button id="btn-generar-cobro" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Generar</button>
                                     <button id="btn-copiar-cobro" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
@@ -62,7 +62,7 @@
                             </div>
                             <div>
                                 <h3 class="text-lg font-medium text-gray-900">Mensaje de Bienvenida</h3>
-                                <textarea id="mensaje-bienvenida" rows="12" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"></textarea>
+                                <textarea id="mensaje-bienvenida" rows="15" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"></textarea>
                                 <div class="mt-2 flex space-x-2">
                                     <button id="btn-generar-bienvenida" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Generar</button>
                                     <button id="btn-copiar-bienvenida" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
@@ -94,7 +94,6 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
-            // --- Lógica Específica de la Página ---
             const fechaFiltro = document.getElementById('fecha-filtro');
             const reservaSelect = document.getElementById('reserva-select');
             const generadorSection = document.getElementById('generador-section');
@@ -109,6 +108,15 @@
             const btnCopiarBienvenida = document.getElementById('btn-copiar-bienvenida');
             const btnWhatsappBienvenida = document.getElementById('btn-whatsapp-bienvenida');
             let reservaSeleccionada = null;
+            
+            const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+            function formatDate(date) {
+                const day = date.getDate();
+                const month = monthNames[date.getMonth()];
+                const year = date.getFullYear();
+                return `${month} - ${day} - ${year}`;
+            }
 
             fechaFiltro.addEventListener('change', async () => {
                 const fecha = fechaFiltro.value;
@@ -145,9 +153,11 @@
                 detallesReservaDiv.innerHTML = '<p>Cargando detalles...</p>';
                 try {
                     reservaSeleccionada = await fetchAPI(`/api/mensajes/detalle-reserva/${reservaId}`);
-                    // Esta lógica estaba ausente en el archivo original, la agrego para que se muestren los detalles
                     if (reservaSeleccionada) {
-                         mostrarDetalles();
+                        // Las fechas vienen como string ISO, hay que convertirlas a objeto Date
+                        reservaSeleccionada.info.llegada = new Date(reservaSeleccionada.info.llegada);
+                        reservaSeleccionada.info.salida = new Date(reservaSeleccionada.info.salida);
+                        mostrarDetalles();
                     }
                     generadorSection.classList.remove('hidden');
                     mensajeCobroText.value = '';
@@ -162,20 +172,227 @@
             function mostrarDetalles() {
                 if (!reservaSeleccionada || !reservaSeleccionada.info) return;
                 const { info, cabanas } = reservaSeleccionada;
-                let cabanasHtml = cabanas.map(c => `<li>${c.alojamiento}: $${c.valorCLP.toLocaleString('es-CL')}</li>`).join('');
+                let cabanasHtml = cabanas.map(c => `<li>${c.alojamiento}</li>`).join('');
                 detallesReservaDiv.innerHTML = `
                     <p><strong>Cliente:</strong> ${info.nombre}</p>
                     <p><strong>Teléfono:</strong> ${info.telefono}</p>
-                    <p><strong>Llegada:</strong> ${info.llegada}</p>
-                    <p><strong>Salida:</strong> ${info.salida}</p>
+                    <p><strong>Llegada:</strong> ${info.llegada.toLocaleDateString('es-CL')}</p>
+                    <p><strong>Salida:</strong> ${info.salida.toLocaleDateString('es-CL')}</p>
                     <p><strong>Total Noches:</strong> ${info.totalNoches}</p>
                     <p><strong>Valor Total:</strong> $${info.totalCLP.toLocaleString('es-CL')}</p>
                     <p><strong>Cabañas:</strong><ul>${cabanasHtml}</ul></p>
                 `;
             }
 
-            // Aquí puedes añadir la lógica futura para los botones de generar, copiar, etc.
-            // que faltaba en el archivo original.
+            function generarMensajeCobro() {
+                if (!reservaSeleccionada) return;
+                const { info, cabanas } = reservaSeleccionada;
+                const abono = parseInt(abonoInput.value) || 0;
+                const saldo = info.totalCLP - abono;
+                const nombreCliente = info.nombre.split(' ')[0]; // Solo el primer nombre
+                const cabanasTexto = cabanas.map(c => c.alojamiento).join(', ');
+
+                let totalReservaTexto = `Total reserva: *$${info.totalCLP.toLocaleString('es-CL')}*`;
+                if (info.canal === 'Booking' && info.valorOriginalUSD && info.valorDolarDia) {
+                    totalReservaTexto = `Total reserva: *USD ${info.valorOriginalUSD.toFixed(2)}*
+(Valor dólar día: $${info.valorDolarDia.toLocaleString('es-CL')})
+Total en pesos: *$${info.totalCLP.toLocaleString('es-CL')}*`;
+                }
+
+                const mensaje = `*Hola ${nombreCliente},*
+Este es el detalle de tu reserva N.° *${info.reservaIdOriginal}*:
+
+Fecha de llegada:
+*${formatDate(info.llegada)}*
+Fecha de salida:
+*${formatDate(info.salida)}*
+Cantidad de noches: *${info.totalNoches}*
+
+Cabaña: *${cabanasTexto}*
+
+${totalReservaTexto}
+Abono: $${abono.toLocaleString('es-CL')}
+Saldo pendiente: $${saldo.toLocaleString('es-CL')}
+
+*****************
+*Transferir a:*
+INMOB. E INV. SACATINES SPA
+77.623.058-8
+Prepago Los Heroes
+Cuenta Vista
+177623058
+administrador@orillasdelcoilaco.cl
+
+*****************
+Favor enviar copia de la transferencia a este chat.
+Recuerda que el pago es en el check-in, gracias
+******************
+
+Esta es nuestra página para futuras reservas:
+https://orillasdelcoilaco.cl/wp/
+
+¡Muchas gracias!`;
+                mensajeCobroText.value = mensaje;
+            }
+
+            function generarMensajeBienvenida() {
+                if (!reservaSeleccionada) return;
+                const { info, cabanas } = reservaSeleccionada;
+                const nombreCliente = info.nombre.split(' ')[0];
+                const cabanasTexto = cabanas.map(c => c.alojamiento).join(', ');
+
+                 const mensaje = `*Hola ${nombreCliente},*
+Este es el detalle de tu reserva N.° *${info.reservaIdOriginal}*:
+
+Fecha de llegada:
+*${formatDate(info.llegada)}*
+Fecha de salida:
+*${formatDate(info.salida)}*
+Cantidad de noches: *${info.totalNoches}*
+
+Cabaña: *${cabanasTexto}*
+
+Como Llegar
+***********
+Desde Pucón, camino internacional hacia Caburgua, tomar ruta S-907 camino termas del Huife.
+Por ese camino hay un pueblo llamado *Villa San Pedro*, en la mitad del pueblo, a mano derecha, hay un letrero que dice *Trufulco*.
+Por ese camino debes contar *4 postes de luz*, en el cuarto poste a mano izquierda está el acceso al complejo.
+
+Con el siguiente link puedes usar el GPS de tu teléfono:
+
+📍 https://maps.app.goo.gl/TRbTkD1K7qfPdWmf6/
+
+*******************************
+O usa la siguiente dirección Plus Code en Google Maps:
+
+📍 *P6H8+V7 Villa San Pedro, Pucón*
+
+******************
+*Ingreso y Salida*
+******************
+🕒 Check-in: *Desde las 15:00 hasta las 23:59*
+🕛 Check-out: *Hasta las 12:00 PM*
+
+******************
+*Uso de la tinaja*
+******************
+🛁 El uso de la tinaja no tiene costo ni restricciones.
+Cada cabaña tiene su propia tinaja de uso exclusivo.
+
+🔥 *Solo se cobra el saco de leña para encenderla:*
+- En *invierno* usa *2 sacos*.
+- En *verano* usa *1 saco*.
+💰 *Cada saco cuesta $5.000*.
+⏳ La tinaja demora entre *6 a 8 horas en calentarse*.
+
+📢 *Puedes pedir encender la tinaja en este chat.*
+⏰ *La hora máxima para pedir encender la tinaja es hasta las 14:00.*
+⚠️ *Avísame si quieres usar la tinaja para encenderla temprano, gracias.*
+
+*********************************
+🔗 *Que hacer y donde comprar*
+*********************************
+📜 Revisa una selección de actividades y locales comerciales cercanos :
+👉 https://orillasdelcoilaco.cl/wp/blog/
+
+*****************
+*Redes WiFi*
+*****************
+🌐 *Redes exteriores:*
+- *Piscina* - Clave: *piscina2022*
+- *Gimnasio* - Clave: *gimnasio2022*
+- *Entrada* - Clave: *entrada2022*
+- *Entrada invitados* - *Sin clave*
+
+📶 *Redes por cabaña:*
+- *Casa 10* - Clave: *casa102022*
+- *Casa 2* - Clave: *Casa22022*
+- *Casa 1* - Clave: *casa12022*
+- *Casa 3* - Clave: *casa32022*
+- *Casa 9* - Clave: *casa92022*
+
+*******************
+*Toallas*
+*******************
+🛁 *Cada cabaña incluye un juego de toallas por baño:*
+- 1 toalla de cara
+- 1 toalla de cuerpo
+
+⚠️ *No se proporciona una toalla por persona.*
+*Se recomienda traer una toalla de cuerpo adicional por persona.*
+
+*********************************
+*Normas Principales del complejo*
+*********************************
+🚫 *Zona de piscina:*
+- Prohibido el uso de *pelotas*.
+- Prohibido *poner música fuerte*.
+
+🚫 *Otros:*
+- No sacar *los muebles* de las casas ni de las terrazas.
+- No mover *los juegos* de la zona de juegos.
+
+*********************************
+*Mascotas*
+*********************************
+🐾 *Se permiten mascotas pequeñas* (perros de raza pequeña, gatos, etc.)
+⚠️ *Deben ser informadas previamente a la administración.*
+
+🐕 *La mascota siempre debe andar acompañada y con arnés y correa.*
+⚠️ *Tenemos un pastor alemán que no se lleva bien con otros animales.*
+No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda suelta* y *entra a su territorio*.
+
+🚫 *Las mascotas no pueden entrar a la piscina.*
+
+*********************************
+🔗 *Términos y Condiciones*
+*********************************
+📜 Revisa todas nuestras normas y condiciones aquí:
+👉 https://orillasdelcoilaco.cl/wp/terminos-y-condiciones/`;
+                 mensajeBienvenidaText.value = mensaje;
+            }
+            
+            function copiarTexto(textarea, button) {
+                if (!textarea.value) return;
+                navigator.clipboard.writeText(textarea.value).then(() => {
+                    const originalText = button.textContent;
+                    button.textContent = '¡Copiado!';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                    }, 2000);
+                });
+            }
+
+            function prepararLinkWhatsApp(linkElement, textarea) {
+                 if (!reservaSeleccionada || !textarea.value) {
+                    linkElement.href = '#';
+                    return;
+                }
+                const telefono = reservaSeleccionada.info.telefono.replace(/\D/g, '');
+                const texto = encodeURIComponent(textarea.value);
+                linkElement.href = `https://api.whatsapp.com/send?phone=${telefono}&text=${texto}`;
+            }
+            
+            btnGenerarCobro.addEventListener('click', () => {
+                generarMensajeCobro();
+                prepararLinkWhatsApp(btnWhatsappCobro, mensajeCobroText);
+            });
+            btnGenerarBienvenida.addEventListener('click', () => {
+                generarMensajeBienvenida();
+                prepararLinkWhatsApp(btnWhatsappBienvenida, mensajeBienvenidaText);
+            });
+
+            btnCopiarCobro.addEventListener('click', () => copiarTexto(mensajeCobroText, btnCopiarCobro));
+            btnCopiarBienvenida.addEventListener('click', () => copiarTexto(mensajeBienvenidaText, btnCopiarBienvenida));
+            
+            abonoInput.addEventListener('input', () => {
+                if (mensajeCobroText.value) { // Solo regenera si ya hay un mensaje
+                    generarMensajeCobro();
+                    prepararLinkWhatsApp(btnWhatsappCobro, mensajeCobroText);
+                }
+            });
+            mensajeCobroText.addEventListener('input', () => prepararLinkWhatsApp(btnWhatsappCobro, mensajeCobroText));
+            mensajeBienvenidaText.addEventListener('input', () => prepararLinkWhatsApp(btnWhatsappBienvenida, mensajeBienvenidaText));
         }
     });
 </script>

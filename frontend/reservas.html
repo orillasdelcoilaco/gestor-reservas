@@ -33,7 +33,18 @@
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
                     <h2 class="text-2xl font-semibold text-gray-900">Listado de Reservas Consolidadas</h2>
-                    <input type="text" id="search-input" placeholder="Buscar por cliente, cabaña, canal..." class="mt-4 md:mt-0 w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <div class="flex items-center space-x-4 mt-4 md:mt-0">
+                        <input type="text" id="search-input" placeholder="Buscar por cliente, cabaña, canal..." class="w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                        <div>
+                            <label for="page-size-select" class="text-sm font-medium text-gray-700 mr-2">Mostrar:</label>
+                            <select id="page-size-select" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                <option value="10" selected>10</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                                <option value="-1">Todos</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="table-container overflow-y-auto border rounded-lg">
@@ -94,6 +105,7 @@
     const reservasTableBody = document.getElementById('reservas-table-body');
     const loadingState = document.getElementById('loading-state');
     const searchInput = document.getElementById('search-input');
+    const pageSizeSelect = document.getElementById('page-size-select');
     const modal = document.getElementById('edit-modal');
     const modalTitle = document.getElementById('modal-title');
     const modalLabel = document.getElementById('modal-label');
@@ -111,7 +123,7 @@
     function renderTable(reservas) {
         reservasTableBody.innerHTML = '';
         if (reservas.length === 0) {
-            loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas.</p>';
+            loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas que coincidan con la búsqueda.</p>';
             loadingState.style.display = 'block';
             return;
         }
@@ -146,11 +158,28 @@
         });
     }
 
+    function updateTableView() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const pageSize = parseInt(pageSizeSelect.value);
+
+        const filteredReservas = allReservas.filter(r =>
+            (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
+            (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
+            (r.telefono && r.telefono.toLowerCase().includes(searchTerm)) ||
+            (r.canal && r.canal.toLowerCase().includes(searchTerm)) ||
+            (r.alojamiento && r.alojamiento.toLowerCase().includes(searchTerm))
+        );
+
+        const paginatedReservas = pageSize === -1 ? filteredReservas : filteredReservas.slice(0, pageSize);
+        
+        renderTable(paginatedReservas);
+    }
+
     async function loadReservas() {
         loadingState.innerHTML = '<p class="text-gray-500">Cargando reservas...</p>';
         try {
             allReservas = await fetchAPI('/api/reservas');
-            renderTable(allReservas);
+            updateTableView(); // Llama a la función que filtra y pagina
         } catch (error) {
             console.error('Error al cargar las reservas:', error);
             loadingState.innerHTML = `<p class="text-red-500 font-semibold">No se pudieron cargar las reservas: ${error.message}</p>`;
@@ -212,12 +241,11 @@
         modalStatus.textContent = '';
         
         try {
-            // --- CORRECCIÓN CLAVE: Enviamos el objeto directamente ---
             await fetchAPI(endpoint, {
                 method: 'PUT',
                 body: bodyPayload
             });
-            await loadReservas();
+            await loadReservas(); // Recarga y actualiza la tabla
             modal.classList.add('hidden');
         } catch (error) {
             modalStatus.textContent = `Error al guardar: ${error.message}`;
@@ -243,17 +271,8 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
-            searchInput.addEventListener('input', (e) => {
-                const searchTerm = e.target.value.toLowerCase();
-                const filteredReservas = allReservas.filter(r =>
-                    (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
-                    (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
-                    (r.telefono && r.telefono.toLowerCase().includes(searchTerm)) ||
-                    (r.canal && r.canal.toLowerCase().includes(searchTerm)) ||
-                    (r.alojamiento && r.alojamiento.toLowerCase().includes(searchTerm))
-                );
-                renderTable(filteredReservas);
-            });
+            searchInput.addEventListener('input', updateTableView);
+            pageSizeSelect.addEventListener('change', updateTableView);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             saveBtn.addEventListener('click', handleSave);
             loadReservas();

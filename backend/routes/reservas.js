@@ -62,18 +62,27 @@ module.exports = (db) => {
 
             const originalData = doc.data();
             const clientId = originalData.clienteId;
+            
+            // --- INICIO DE LA CORRECCIÓN CLAVE ---
+            // Buscamos los datos completos del cliente en Firestore para asegurar que tenemos el teléfono correcto
+            const clienteRef = db.collection('clientes').doc(clientId);
+            const clienteDoc = await clienteRef.get();
+            const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
+            // --- FIN DE LA CORRECCIÓN CLAVE ---
 
-            // Si se modifica nombre o teléfono, usamos la función maestra
             if (clienteNombre || telefono) {
                 const nameParts = clienteNombre ? clienteNombre.split(' ') : [];
+                
+                // Usamos el teléfono del body si viene, si no, usamos el que ya está en la base de datos.
+                const telefonoParaActualizar = telefono || clienteData.phone;
+
                 await updateClientMaster(db, clientId, {
-                    firstname: nameParts[0],
-                    lastname: nameParts.slice(1).join(' '),
-                    phone: telefono
+                    firstname: nameParts.length > 0 ? nameParts[0] : clienteData.firstname,
+                    lastname: nameParts.length > 1 ? nameParts.slice(1).join(' ') : clienteData.lastname,
+                    phone: telefonoParaActualizar
                 });
             }
 
-            // Si se modifica solo el valor, lo hacemos directamente en la reserva
             if (valorCLP !== undefined) {
                 await reservaRef.update({
                     valorCLP: valorCLP,
@@ -101,17 +110,23 @@ module.exports = (db) => {
 
             const clienteId = snapshot.docs[0].data().clienteId;
 
-            // Si se modifica nombre o teléfono, usamos la función maestra
+            // --- INICIO DE LA CORRECCIÓN CLAVE ---
+            const clienteRef = db.collection('clientes').doc(clienteId);
+            const clienteDoc = await clienteRef.get();
+            const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
+             // --- FIN DE LA CORRECCIÓN CLAVE ---
+
             if (clienteNombre || telefono) {
                 const nameParts = clienteNombre ? clienteNombre.split(' ') : [];
+                const telefonoParaActualizar = telefono || clienteData.phone;
+
                 await updateClientMaster(db, clienteId, {
-                    firstname: nameParts[0],
-                    lastname: nameParts.slice(1).join(' '),
-                    phone: telefono
+                    firstname: nameParts.length > 0 ? nameParts[0] : clienteData.firstname,
+                    lastname: nameParts.length > 1 ? nameParts.slice(1).join(' ') : clienteData.lastname,
+                    phone: telefonoParaActualizar
                 });
             }
 
-            // Si se modifica el valor del grupo, lo prorrateamos
             if (nuevoTotalCLP !== undefined) {
                 const batch = db.batch();
                 let totalActualCLP = 0;
@@ -143,7 +158,33 @@ module.exports = (db) => {
 
     // --- OBTENER RESERVAS DE UN CLIENTE (GET) ---
     router.get('/reservas/cliente/:clienteId', async (req, res) => {
-        // ... (código existente sin cambios)
+       try {
+            const { clienteId } = req.params;
+            const q = db.collection('reservas').where('clienteId', '==', clienteId).orderBy('fechaLlegada', 'desc');
+            const snapshot = await q.get();
+
+            if (snapshot.empty) {
+                return res.status(200).json([]);
+            }
+
+            const historial = [];
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                historial.push({
+                    id: doc.id,
+                    llegada: data.fechaLlegada.toDate().toLocaleDateString('es-CL'),
+                    salida: data.fechaSalida.toDate().toLocaleDateString('es-CL'),
+                    alojamiento: data.alojamiento,
+                    canal: data.canal,
+                    valorCLP: data.valorCLP,
+                    estado: data.estado
+                });
+            });
+            res.status(200).json(historial);
+        } catch (error) {
+            console.error("Error al obtener el historial del cliente:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
     });
 
     return router;

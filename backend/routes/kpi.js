@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
+// Nos aseguramos de importar la función correctamente
 const { calculateKPIs } = require('../services/kpiService');
 
 module.exports = (db) => {
     /**
      * GET /api/kpi
      * Calcula y devuelve los KPIs para un rango de fechas.
-     * Espera query params: ?fechaInicio=YYYY-MM-DD&fechaFin=YYYY-MM-DD
      */
     router.get('/kpi', async (req, res) => {
         const { fechaInicio, fechaFin } = req.query;
@@ -16,6 +16,7 @@ module.exports = (db) => {
         }
 
         try {
+            // Llamamos a la función importada
             const results = await calculateKPIs(db, fechaInicio, fechaFin);
             res.status(200).json(results);
         } catch (error) {

@@ -10,6 +10,7 @@
         body { font-family: 'Inter', sans-serif; }
         .table-container { max-height: 60vh; }
         thead th { position: sticky; top: 0; z-index: 1; }
+        #edit-modal { background-color: rgba(0, 0, 0, 0.5); }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -103,6 +104,56 @@
         </main>
     </div>
 
+    <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl">
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Tarifa</h3>
+            <form id="edit-tarifa-form" class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                 <div>
+                    <label for="edit-nombreCabaña" class="block text-sm font-medium text-gray-700">Cabaña</label>
+                    <select id="edit-nombreCabaña" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <option value="Cabaña 1">Cabaña 1</option>
+                        <option value="Cabaña 2">Cabaña 2</option>
+                        <option value="Cabaña 3">Cabaña 3</option>
+                        <option value="Cabaña 9">Cabaña 9</option>
+                        <option value="Cabaña 10">Cabaña 10</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="edit-temporada" class="block text-sm font-medium text-gray-700">Temporada</label>
+                    <input type="text" id="edit-temporada" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label for="edit-fechaInicio" class="block text-sm font-medium text-gray-700">Fecha Inicio</label>
+                    <input type="date" id="edit-fechaInicio" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div>
+                    <label for="edit-fechaTermino" class="block text-sm font-medium text-gray-700">Fecha Término</label>
+                    <input type="date" id="edit-fechaTermino" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                <div class="md:col-span-2 lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">SODC (CLP)</label>
+                        <input type="number" id="edit-sodc-valor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Booking (USD)</label>
+                        <input type="number" id="edit-booking-valor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Airbnb (CLP)</label>
+                        <input type="number" id="edit-airbnb-valor" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                </div>
+            </form>
+            <div id="edit-modal-status" class="mt-4 text-sm"></div>
+            <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                <button type="button" id="edit-save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700">Guardar Cambios</button>
+                <button type="button" id="edit-cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 sm:mt-0">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+
     <script type="module">
         import { checkSession, logout, fetchAPI } from './api.js';
 
@@ -111,7 +162,13 @@
         const tarifaForm = document.getElementById('tarifa-form');
         const saveBtn = document.getElementById('save-btn');
         const formStatus = document.getElementById('form-status');
+        const modal = document.getElementById('edit-modal');
+        const editSaveBtn = document.getElementById('edit-save-btn');
+        const editCancelBtn = document.getElementById('edit-cancel-btn');
+        const editModalStatus = document.getElementById('edit-modal-status');
+
         let allTarifas = [];
+        let editingTarifaId = null;
 
         function renderTable(tarifas) {
             tarifasTableBody.innerHTML = '';
@@ -139,12 +196,16 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${tarifa.fechaInicio}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${tarifa.fechaTermino}</td>
                     <td class="px-6 py-4 text-sm text-gray-600">${tarifasHtml}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
                         <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${tarifa.id}">Editar</button>
+                        <button class="delete-btn text-red-600 hover:text-red-900" data-id="${tarifa.id}">Eliminar</button>
                     </td>
                 `;
                 tarifasTableBody.appendChild(row);
             });
+            
+            document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', handleEditClick));
+            document.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', handleDeleteClick));
         }
 
         async function loadTarifas() {
@@ -183,20 +244,87 @@
             };
 
             try {
-                const result = await fetchAPI('/api/tarifas', {
-                    method: 'POST',
-                    body: payload
-                });
+                const result = await fetchAPI('/api/tarifas', { method: 'POST', body: payload });
                 formStatus.textContent = result.message;
                 formStatus.classList.add('text-green-600');
                 tarifaForm.reset();
-                await loadTarifas(); // Recargar la tabla con la nueva tarifa
+                await loadTarifas();
             } catch (error) {
                 formStatus.textContent = `Error: ${error.message}`;
                 formStatus.classList.add('text-red-600');
             } finally {
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Guardar Tarifa';
+            }
+        }
+
+        function handleEditClick(e) {
+            editingTarifaId = e.target.dataset.id;
+            const tarifa = allTarifas.find(t => t.id === editingTarifaId);
+            if (!tarifa) return;
+
+            document.getElementById('edit-nombreCabaña').value = tarifa.nombreCabaña;
+            document.getElementById('edit-temporada').value = tarifa.temporada;
+            document.getElementById('edit-fechaInicio').value = tarifa.fechaInicio;
+            document.getElementById('edit-fechaTermino').value = tarifa.fechaTermino;
+            document.getElementById('edit-sodc-valor').value = tarifa.tarifasPorCanal.SODC?.valor || '';
+            document.getElementById('edit-booking-valor').value = tarifa.tarifasPorCanal.Booking?.valor || '';
+            document.getElementById('edit-airbnb-valor').value = tarifa.tarifasPorCanal.Airbnb?.valor || '';
+            
+            editModalStatus.textContent = '';
+            modal.classList.remove('hidden');
+        }
+
+        async function handleSaveEdit() {
+            if (!editingTarifaId) return;
+
+            editSaveBtn.disabled = true;
+            editSaveBtn.textContent = 'Guardando...';
+            editModalStatus.textContent = '';
+
+            const tarifasPorCanal = {};
+            const sodcValor = parseInt(document.getElementById('edit-sodc-valor').value);
+            const bookingValor = parseInt(document.getElementById('edit-booking-valor').value);
+            const airbnbValor = parseInt(document.getElementById('edit-airbnb-valor').value);
+
+            if (sodcValor > 0) tarifasPorCanal.SODC = { valor: sodcValor, moneda: 'CLP' };
+            if (bookingValor > 0) tarifasPorCanal.Booking = { valor: bookingValor, moneda: 'USD' };
+            if (airbnbValor > 0) tarifasPorCanal.Airbnb = { valor: airbnbValor, moneda: 'CLP' };
+
+            const payload = {
+                nombreCabaña: document.getElementById('edit-nombreCabaña').value,
+                temporada: document.getElementById('edit-temporada').value,
+                fechaInicio: document.getElementById('edit-fechaInicio').value,
+                fechaTermino: document.getElementById('edit-fechaTermino').value,
+                tarifasPorCanal
+            };
+
+            try {
+                await fetchAPI(`/api/tarifas/${editingTarifaId}`, { method: 'PUT', body: payload });
+                modal.classList.add('hidden');
+                await loadTarifas();
+            } catch (error) {
+                editModalStatus.textContent = `Error: ${error.message}`;
+                editModalStatus.className = 'mt-4 text-sm text-red-600';
+            } finally {
+                editSaveBtn.disabled = false;
+                editSaveBtn.textContent = 'Guardar Cambios';
+                editingTarifaId = null;
+            }
+        }
+
+        async function handleDeleteClick(e) {
+            const id = e.target.dataset.id;
+            const tarifa = allTarifas.find(t => t.id === id);
+            if (!tarifa) return;
+            
+            if (confirm(`¿Estás seguro de que quieres eliminar la tarifa para "${tarifa.nombreCabaña}" en la temporada "${tarifa.temporada}"?`)) {
+                try {
+                    await fetchAPI(`/api/tarifas/${id}`, { method: 'DELETE' });
+                    await loadTarifas(); // Recargar la tabla
+                } catch (error) {
+                    alert(`Error al eliminar la tarifa: ${error.message}`);
+                }
             }
         }
 
@@ -217,6 +345,8 @@
 
                 loadTarifas();
                 tarifaForm.addEventListener('submit', handleFormSubmit);
+                editSaveBtn.addEventListener('click', handleSaveEdit);
+                editCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             }
         });
     </script>

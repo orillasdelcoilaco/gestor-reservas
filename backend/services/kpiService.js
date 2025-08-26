@@ -6,7 +6,8 @@ const { getValorDolar } = require('./dolarService');
  * @param {Date} date - La fecha a normalizar.
  * @returns {Date} La fecha normalizada.
  */
-function getUTCDate(date) {
+function getUTCDate(dateStr) {
+    const date = new Date(dateStr);
     return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
@@ -20,21 +21,21 @@ function getUTCDate(date) {
 async function calculateKPIs(db, fechaInicio, fechaFin) {
     console.log(`[KPI Service] Iniciando cálculo de KPIs desde ${fechaInicio} hasta ${fechaFin}`);
     
-    const startDate = getUTCDate(new Date(fechaInicio));
-    const endDate = getUTCDate(new Date(fechaFin));
+    // Usamos UTC desde el principio para todas las comparaciones
+    const startDate = getUTCDate(fechaInicio);
+    const endDate = getUTCDate(fechaFin);
     
     // --- PASO 1: OBTENER TODOS LOS DATOS NECESARIOS ---
     
-    // Obtener todas las reservas que se cruzan con el rango de fechas.
     const reservasSnapshot = await db.collection('reservas')
-        .where('fechaLlegada', '<=', admin.firestore.Timestamp.fromDate(endDate))
+        .where('fechaLlegada', '<=', admin.firestore.Timestamp.fromDate(new Date(fechaFin + 'T23:59:59Z')))
         .get();
     
     const reservasPromises = reservasSnapshot.docs.map(async doc => {
         const data = doc.data();
-        // Solo consideramos las que no están canceladas y que tienen cruce con el período
-        if (data.estado !== 'Cancelada' && data.fechaSalida.toDate() > startDate) {
-            // Si es Booking y necesitamos convertir, obtenemos el valor del dólar
+        const fechaSalidaReserva = getUTCDate(data.fechaSalida.toDate());
+        
+        if (data.estado !== 'Cancelada' && fechaSalidaReserva > startDate) {
             if (data.canal === 'Booking' && data.monedaOriginal === 'USD') {
                 const valorDolar = await getValorDolar(db, data.fechaLlegada.toDate());
                 data.valorCLP = Math.round(data.valorOriginal * valorDolar * 1.19);
@@ -45,10 +46,11 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     });
     
     const allReservas = (await Promise.all(reservasPromises)).filter(Boolean);
+    console.log(`[KPI Service] Se encontraron ${allReservas.length} reservas relevantes.`);
 
-    // Obtener todas las tarifas
     const tarifasSnapshot = await db.collection('tarifas').get();
     const allTarifas = tarifasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    console.log(`[KPI Service] Se encontraron ${allTarifas.length} registros de tarifas.`);
 
     // --- PASO 2: CONSTRUIR ESTRUCTURAS DE DATOS PARA CÁLCULO ---
 
@@ -63,22 +65,28 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     // --- PASO 3: ITERAR DÍA POR DÍA Y CABAÑA POR CABAÑA ---
 
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
-        const currentDate = getUTCDate(new Date(d));
+        const currentDate = getUTCDate(d);
 
         for (const cabaña of cabañasDisponibles) {
-            // Encontrar la reserva para esta cabaña en esta fecha
             const reservaDelDia = allReservas.find(r => 
                 r.alojamiento === cabaña &&
                 getUTCDate(r.fechaLlegada.toDate()) <= currentDate &&
                 getUTCDate(r.fechaSalida.toDate()) > currentDate
             );
 
-            // Encontrar la tarifa oficial para esta cabaña en esta fecha
             const tarifaDelDia = allTarifas.find(t =>
                 t.nombreCabaña === cabaña &&
                 getUTCDate(t.fechaInicio.toDate()) <= currentDate &&
                 getUTCDate(t.fechaTermino.toDate()) >= currentDate
             );
+
+            // --- LOGS DE DIAGNÓSTICO ---
+            if(cabaña === "Cabaña 1") { // Log solo para la cabaña que nos interesa
+                 console.log(`\n[DIAGNÓSTICO] Fecha: ${currentDate.toISOString().split('T')[0]}, Cabaña: ${cabaña}`);
+                 if(reservaDelDia) console.log(` -> Reserva encontrada: ID ${reservaDelDia.reservaIdOriginal}`);
+                 if(tarifaDelDia) console.log(` -> Tarifa encontrada: Temporada ${tarifaDelDia.temporada}`);
+            }
+            // --- FIN LOGS ---
 
             if (reservaDelDia) {
                 totalNochesOcupadas++;
@@ -95,12 +103,10 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                     }
                     ingresoTotalPotencial += valorNochePotencial;
                 } else {
-                    // Si no hay tarifa oficial, el potencial es igual al real (sin descuento)
                     ingresoTotalPotencial += valorNocheReal;
                 }
             } else {
-                // Si no hay reserva, solo sumamos al potencial si había una tarifa definida
-                 if (tarifaDelDia && tarifaDelDia.tarifasPorCanal['SODC']) { // Usamos SODC como base
+                 if (tarifaDelDia && tarifaDelDia.tarifasPorCanal['SODC']) {
                     ingresoTotalPotencial += tarifaDelDia.tarifasPorCanal['SODC'].valor;
                  }
             }
@@ -110,9 +116,10 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     // --- PASO 4: CALCULAR Y CONSOLIDAR LOS RESULTADOS FINALES ---
 
     const tasaOcupacion = totalNochesDisponibles > 0 ? (totalNochesOcupadas / totalNochesDisponibles) * 100 : 0;
-    const adr = totalNochesOcupadas > 0 ? ingresoTotalReal / totalNochesOcupadas : 0; // Average Daily Rate
-    const revPar = totalNochesDisponibles > 0 ? ingresoTotalReal / totalNochesDisponibles : 0; // Revenue Per Available Room
-    const totalDescuentos = ingresoTotalPotencial - ingresoTotalReal;
+    const adr = totalNochesOcupadas > 0 ? ingresoTotalReal / totalNochesOcupadas : 0;
+    const revPar = totalNochesDisponibles > 0 ? ingresoTotalReal / totalNochesDisponibles : 0;
+    const totalDescuentos = ingresoTotalPotencial > ingresoTotalReal ? ingresoTotalPotencial - ingresoTotalReal : 0;
+
 
     const results = {
         ingresoTotal: Math.round(ingresoTotalReal),

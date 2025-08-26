@@ -42,13 +42,11 @@
                     </div>
                 </div>
 
+                <div id="kpi-loading" class="text-center text-gray-500 hidden">
+                    <p>Calculando KPIs, esto puede tardar unos segundos...</p>
+                </div>
                 <div id="kpi-results-container" class="hidden">
-                    <p class="text-center text-gray-500">Aquí se mostrarán los resultados de los KPIs...</p>
-                </div>
-                 <div id="kpi-loading" class="text-center text-gray-500 hidden">
-                    <p>Calculando KPIs...</p>
-                </div>
-
+                    </div>
             </div>
 
             <div class="bg-white p-8 rounded-lg shadow">
@@ -96,6 +94,7 @@
         const appContent = document.getElementById('app-content');
         const authInfo = document.getElementById('auth-info');
         const session = checkSession();
+
         if (session) {
           loader.style.display = 'none';
           appContent.classList.remove('hidden');
@@ -105,12 +104,42 @@
           `;
           document.getElementById('logout-btn').addEventListener('click', logout);
 
-          // Lógica para el futuro botón de KPIs
+          // --- LÓGICA PARA EL BOTÓN DE KPIS ---
           const calculateBtn = document.getElementById('kpi-calculate-btn');
-          calculateBtn.addEventListener('click', () => {
-              // Por ahora, solo mostraremos un mensaje.
-              // En el futuro, aquí irá la llamada a la API.
-              alert('La lógica para calcular los KPIs se implementará en los siguientes pasos.');
+          const fechaInicioInput = document.getElementById('kpi-fecha-inicio');
+          const fechaFinInput = document.getElementById('kpi-fecha-fin');
+          const resultsContainer = document.getElementById('kpi-results-container');
+          const loadingIndicator = document.getElementById('kpi-loading');
+
+          calculateBtn.addEventListener('click', async () => {
+              const fechaInicio = fechaInicioInput.value;
+              const fechaFin = fechaFinInput.value;
+
+              if (!fechaInicio || !fechaFin) {
+                  alert('Por favor, selecciona una fecha de inicio y una de fin.');
+                  return;
+              }
+
+              loadingIndicator.classList.remove('hidden');
+              resultsContainer.classList.add('hidden');
+              calculateBtn.disabled = true;
+
+              try {
+                  const kpiResults = await fetchAPI(`/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
+                  
+                  // Por ahora, solo mostramos los resultados en formato JSON para verificar la conexión
+                  resultsContainer.innerHTML = `
+                    <h3 class="text-lg font-semibold text-gray-800">Resultados (Datos Crudos)</h3>
+                    <pre class="bg-gray-100 p-4 rounded-md mt-2 text-sm">${JSON.stringify(kpiResults, null, 2)}</pre>
+                  `;
+                  
+              } catch (error) {
+                  resultsContainer.innerHTML = `<p class="text-red-500 font-semibold">Error al calcular KPIs: ${error.message}</p>`;
+              } finally {
+                  loadingIndicator.classList.add('hidden');
+                  resultsContainer.classList.remove('hidden');
+                  calculateBtn.disabled = false;
+              }
           });
         }
       });

@@ -39,6 +39,18 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     let totalNochesOcupadas = 0;
     const analisisPorCabaña = {};
 
+    cabañasDisponibles.forEach(c => {
+        analisisPorCabaña[c] = {
+            nochesOcupadas: 0,
+            nochesDisponibles: daysInRange, // Cada cabaña está disponible todos los días del rango
+            tasaOcupacion: 0,
+            ingresoRealTotal: 0,
+            ingresoPotencialTotal: 0, // Potencial de noches vendidas
+            descuentoTotal: 0,
+            canales: {}
+        };
+    });
+
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const currentDate = getUTCDate(d);
 
@@ -57,10 +69,12 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
 
             if (reservaDelDia) {
                 totalNochesOcupadas++;
+                analisisPorCabaña[cabaña].nochesOcupadas++;
+                
                 const valorNocheReal = reservaDelDia.valorCLP / reservaDelDia.totalNoches;
                 ingresoTotalReal += valorNocheReal;
-
-                // --- LÓGICA CORREGIDA: SOLO ANALIZA SI HAY TARIFA OFICIAL ---
+                analisisPorCabaña[cabaña].ingresoRealTotal += valorNocheReal;
+                
                 if (tarifaDelDia && tarifaDelDia.tarifasPorCanal[reservaDelDia.canal]) {
                     const tarifaOficial = tarifaDelDia.tarifasPorCanal[reservaDelDia.canal];
                     let valorNochePotencial = tarifaOficial.valor;
@@ -69,20 +83,13 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                          const valorDolar = await getValorDolar(db, reservaDelDia.fechaLlegada.toDate());
                          valorNochePotencial = Math.round(valorNochePotencial * valorDolar * 1.19);
                     }
-
-                    // Inicializar si no existe
-                    if (!analisisPorCabaña[cabaña]) {
-                        analisisPorCabaña[cabaña] = { nochesOcupadas: 0, ingresoRealTotal: 0, ingresoPotencialTotal: 0, canales: {} };
-                    }
+                    
+                    analisisPorCabaña[cabaña].ingresoPotencialTotal += valorNochePotencial;
+                    
                     const canal = reservaDelDia.canal;
                     if (!analisisPorCabaña[cabaña].canales[canal]) {
-                        analisisPorCabaña[cabaña].canales[canal] = { ingresoReal: 0, ingresoPotencial: 0 };
+                        analisisPorCabaña[cabaña].canales[canal] = { ingresoReal: 0, ingresoPotencial: 0, descuento: 0 };
                     }
-
-                    // Acumular valores
-                    analisisPorCabaña[cabaña].nochesOcupadas++;
-                    analisisPorCabaña[cabaña].ingresoRealTotal += valorNocheReal;
-                    analisisPorCabaña[cabaña].ingresoPotencialTotal += valorNochePotencial;
                     analisisPorCabaña[cabaña].canales[canal].ingresoReal += valorNocheReal;
                     analisisPorCabaña[cabaña].canales[canal].ingresoPotencial += valorNochePotencial;
                 }
@@ -94,13 +101,13 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         }
     }
 
-    // --- PASO 4: CONSOLIDAR RESULTADOS FINALES ---
-
-    // Calcular totales de descuento (solo para las cabañas que tuvieron análisis)
     for(const cabaña in analisisPorCabaña){
-        analisisPorCabaña[cabaña].descuentoTotal = analisisPorCabaña[cabaña].ingresoPotencialTotal - analisisPorCabaña[cabaña].ingresoRealTotal;
-        for(const canal in analisisPorCabaña[cabaña].canales){
-            const canalData = analisisPorCabaña[cabaña].canales[canal];
+        const cabañaData = analisisPorCabaña[cabaña];
+        cabañaData.descuentoTotal = cabañaData.ingresoPotencialTotal - cabañaData.ingresoRealTotal;
+        cabañaData.tasaOcupacion = cabañaData.nochesDisponibles > 0 ? parseFloat(((cabañaData.nochesOcupadas / cabañaData.nochesDisponibles) * 100).toFixed(2)) : 0;
+        
+        for(const canal in cabañaData.canales){
+            const canalData = cabañaData.canales[canal];
             canalData.descuento = canalData.ingresoPotencial - canalData.ingresoReal;
         }
     }
@@ -122,7 +129,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         analisisPorCabaña: analisisPorCabaña
     };
     
-    console.log('[KPI Service] Cálculo finalizado (lógica definitiva):', JSON.stringify(results, null, 2));
+    console.log('[KPI Service] Cálculo finalizado (lógica definitiva con ranking):', JSON.stringify(results, null, 2));
     
     return results;
 }

@@ -3,7 +3,7 @@ const cors = require('cors');
 const admin = require('firebase-admin');
 
 // --- Importar Middlewares y Rutas ---
-const { checkFirebaseToken } = require('./utils/authMiddleware'); // <-- Cambiamos al nuevo guardia
+const { checkFirebaseToken } = require('./utils/authMiddleware');
 const reservasRoutes = require('./routes/reservas');
 const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar');
@@ -11,6 +11,7 @@ const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
 const clientesRoutes = require('./routes/clientes');
 const importRoutes = require('./routes/import');
+const tarifasRoutes = require('./routes/tarifas'); // <-- 1. IMPORTAMOS LA NUEVA RUTA
 
 //--- Configuración de CORS ---
 const corsOptions = {
@@ -35,15 +36,13 @@ const PORT = process.env.PORT || 3001;
 
 //--- Middlewares
 app.use(cors(corsOptions));
-// app.use(express.json());
-// Ya no necesitamos cookieParser, así que se elimina.
 
 //--- Rutas ---
 app.get('/', (req, res) => {
   res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
 
-// Aplicamos el nuevo guardia "checkFirebaseToken" a todas las rutas que necesitan protección.
+// Aplicamos el guardia "checkFirebaseToken" a todas las rutas que necesitan protección.
 app.use('/api', checkFirebaseToken, reservasRoutes(db));
 app.use('/api', checkFirebaseToken, sincronizarRoutes(db));
 app.use('/api', checkFirebaseToken, consolidarRoutes(db));
@@ -51,6 +50,8 @@ app.use('/api', checkFirebaseToken, dolarRoutes(db));
 app.use('/api/mensajes', checkFirebaseToken, mensajesRoutes(db));
 app.use('/api', checkFirebaseToken, clientesRoutes(db));
 app.use('/api', checkFirebaseToken, importRoutes(db));
+app.use('/api', checkFirebaseToken, tarifasRoutes(db)); // <-- 2. USAMOS LA NUEVA RUTA
+
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {
   console.log(`Servidor escuchando en http://localhost:${PORT}`);

@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .table-container { max-height: 70vh; }
+        .table-container { max-height: 60vh; }
         thead th { position: sticky; top: 0; z-index: 1; }
     </style>
 </head>
@@ -29,11 +29,58 @@
         </nav>
 
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-900">Historial de Tarifas</h2>
+            <div class="bg-white p-6 md:p-8 rounded-lg shadow mb-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Añadir Nuevo Período de Tarifa</h2>
+                <form id="tarifa-form" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div>
+                        <label for="nombreCabaña" class="block text-sm font-medium text-gray-700">Cabaña</label>
+                        <select id="nombreCabaña" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <option value="Cabaña 1">Cabaña 1</option>
+                            <option value="Cabaña 2">Cabaña 2</option>
+                            <option value="Cabaña 3">Cabaña 3</option>
+                            <option value="Cabaña 9">Cabaña 9</option>
+                            <option value="Cabaña 10">Cabaña 10</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="temporada" class="block text-sm font-medium text-gray-700">Temporada</label>
+                        <input type="text" id="temporada" placeholder="Ej: Alta Verano 2025" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label for="fechaInicio" class="block text-sm font-medium text-gray-700">Fecha Inicio</label>
+                        <input type="date" id="fechaInicio" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label for="fechaTermino" class="block text-sm font-medium text-gray-700">Fecha Término</label>
+                        <input type="date" id="fechaTermino" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
 
+                    <div class="md:col-span-2 lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">SODC (CLP)</label>
+                            <input type="number" id="sodc-valor" placeholder="110000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Booking (USD)</label>
+                            <input type="number" id="booking-valor" placeholder="140" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Airbnb (CLP)</label>
+                            <input type="number" id="airbnb-valor" placeholder="120000" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </div>
+                    </div>
+
+                    <div class="lg:col-span-4">
+                        <button type="submit" id="save-btn" class="w-full md:w-auto inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700">
+                            Guardar Tarifa
+                        </button>
+                    </div>
+                </form>
+                 <div id="form-status" class="mt-4 text-sm"></div>
+            </div>
+
+            <div class="bg-white p-6 md:p-8 rounded-lg shadow">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-6">Historial de Tarifas</h2>
                 <div class="table-container overflow-y-auto border rounded-lg">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -61,6 +108,9 @@
 
         const tarifasTableBody = document.getElementById('tarifas-table-body');
         const loadingState = document.getElementById('loading-state');
+        const tarifaForm = document.getElementById('tarifa-form');
+        const saveBtn = document.getElementById('save-btn');
+        const formStatus = document.getElementById('form-status');
         let allTarifas = [];
 
         function renderTable(tarifas) {
@@ -108,6 +158,48 @@
             }
         }
 
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Guardando...';
+            formStatus.textContent = '';
+            formStatus.className = 'mt-4 text-sm';
+
+            const tarifasPorCanal = {};
+            const sodcValor = parseInt(document.getElementById('sodc-valor').value);
+            const bookingValor = parseInt(document.getElementById('booking-valor').value);
+            const airbnbValor = parseInt(document.getElementById('airbnb-valor').value);
+
+            if (sodcValor > 0) tarifasPorCanal.SODC = { valor: sodcValor, moneda: 'CLP' };
+            if (bookingValor > 0) tarifasPorCanal.Booking = { valor: bookingValor, moneda: 'USD' };
+            if (airbnbValor > 0) tarifasPorCanal.Airbnb = { valor: airbnbValor, moneda: 'CLP' };
+
+            const payload = {
+                nombreCabaña: document.getElementById('nombreCabaña').value,
+                temporada: document.getElementById('temporada').value,
+                fechaInicio: document.getElementById('fechaInicio').value,
+                fechaTermino: document.getElementById('fechaTermino').value,
+                tarifasPorCanal
+            };
+
+            try {
+                const result = await fetchAPI('/api/tarifas', {
+                    method: 'POST',
+                    body: payload
+                });
+                formStatus.textContent = result.message;
+                formStatus.classList.add('text-green-600');
+                tarifaForm.reset();
+                await loadTarifas(); // Recargar la tabla con la nueva tarifa
+            } catch (error) {
+                formStatus.textContent = `Error: ${error.message}`;
+                formStatus.classList.add('text-red-600');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Guardar Tarifa';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             const loader = document.getElementById('loader');
             const appContent = document.getElementById('app-content');
@@ -124,6 +216,7 @@
                 document.getElementById('logout-btn').addEventListener('click', logout);
 
                 loadTarifas();
+                tarifaForm.addEventListener('submit', handleFormSubmit);
             }
         });
     </script>

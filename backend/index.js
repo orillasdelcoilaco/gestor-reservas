@@ -11,7 +11,8 @@ const dolarRoutes = require('./routes/dolar');
 const mensajesRoutes = require('./routes/mensajes');
 const clientesRoutes = require('./routes/clientes');
 const importRoutes = require('./routes/import');
-const tarifasRoutes = require('./routes/tarifas'); // <-- 1. IMPORTAMOS LA NUEVA RUTA
+const tarifasRoutes = require('./routes/tarifas');
+const kpiRoutes = require('./routes/kpi'); // <-- 1. IMPORTAMOS LA NUEVA RUTA
 
 //--- Configuración de CORS ---
 const corsOptions = {
@@ -50,7 +51,8 @@ app.use('/api', checkFirebaseToken, dolarRoutes(db));
 app.use('/api/mensajes', checkFirebaseToken, mensajesRoutes(db));
 app.use('/api', checkFirebaseToken, clientesRoutes(db));
 app.use('/api', checkFirebaseToken, importRoutes(db));
-app.use('/api', checkFirebaseToken, tarifasRoutes(db)); // <-- 2. USAMOS LA NUEVA RUTA
+app.use('/api', checkFirebaseToken, tarifasRoutes(db));
+app.use('/api', checkFirebaseToken, kpiRoutes(db)); // <-- 2. USAMOS LA NUEVA RUTA
 
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {

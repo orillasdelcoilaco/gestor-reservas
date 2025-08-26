@@ -23,7 +23,6 @@ module.exports = (db) => {
                 tarifas.push({
                     id: doc.id,
                     ...data,
-                    // Convertimos los Timestamps a un formato más legible para el frontend
                     fechaInicio: data.fechaInicio.toDate().toISOString().split('T')[0],
                     fechaTermino: data.fechaTermino.toDate().toISOString().split('T')[0],
                 });
@@ -50,7 +49,6 @@ module.exports = (db) => {
                 tarifasPorCanal
             } = req.body;
 
-            // Validación simple de datos
             if (!nombreCabaña || !temporada || !fechaInicio || !fechaTermino || !tarifasPorCanal) {
                 return res.status(400).json({ error: 'Faltan datos requeridos para crear la tarifa.' });
             }
@@ -58,7 +56,6 @@ module.exports = (db) => {
             const nuevaTarifa = {
                 nombreCabaña,
                 temporada,
-                // Convertimos las fechas string del frontend a objetos Timestamp de Firestore
                 fechaInicio: admin.firestore.Timestamp.fromDate(new Date(fechaInicio)),
                 fechaTermino: admin.firestore.Timestamp.fromDate(new Date(fechaTermino)),
                 tarifasPorCanal
@@ -70,6 +67,65 @@ module.exports = (db) => {
         } catch (error) {
             console.error("Error al crear la tarifa:", error);
             res.status(500).json({ error: 'Error interno del servidor al crear la tarifa.' });
+        }
+    });
+
+    /**
+     * PUT /api/tarifas/:id
+     * Actualiza un registro de tarifa existente.
+     */
+    router.put('/tarifas/:id', jsonParser, async (req, res) => {
+        try {
+            const { id } = req.params;
+            const {
+                nombreCabaña,
+                temporada,
+                fechaInicio,
+                fechaTermino,
+                tarifasPorCanal
+            } = req.body;
+
+            if (!id || !nombreCabaña || !temporada || !fechaInicio || !fechaTermino || !tarifasPorCanal) {
+                return res.status(400).json({ error: 'Faltan datos requeridos para actualizar la tarifa.' });
+            }
+
+            const tarifaRef = db.collection('tarifas').doc(id);
+            const datosActualizados = {
+                nombreCabaña,
+                temporada,
+                fechaInicio: admin.firestore.Timestamp.fromDate(new Date(fechaInicio)),
+                fechaTermino: admin.firestore.Timestamp.fromDate(new Date(fechaTermino)),
+                tarifasPorCanal
+            };
+
+            await tarifaRef.update(datosActualizados);
+            res.status(200).json({ message: 'Tarifa actualizada exitosamente' });
+
+        } catch (error) {
+            console.error("Error al actualizar la tarifa:", error);
+            res.status(500).json({ error: 'Error interno del servidor al actualizar la tarifa.' });
+        }
+    });
+
+    /**
+     * DELETE /api/tarifas/:id
+     * Elimina un registro de tarifa.
+     */
+    router.delete('/tarifas/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            if (!id) {
+                return res.status(400).json({ error: 'Se requiere el ID de la tarifa.' });
+            }
+
+            const tarifaRef = db.collection('tarifas').doc(id);
+            await tarifaRef.delete();
+
+            res.status(200).json({ message: 'Tarifa eliminada exitosamente' });
+
+        } catch (error) {
+            console.error("Error al eliminar la tarifa:", error);
+            res.status(500).json({ error: 'Error interno del servidor al eliminar la tarifa.' });
         }
     });
 

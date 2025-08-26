@@ -19,31 +19,38 @@ El proyecto se encuentra en una fase funcional y estable, con las siguientes fas
 
 A continuación se detalla el plan para las próximas funcionalidades.
 
-### Etapa 1: Implementar el Historial de Tarifas por Canal (Trabajo Actual)
+### Etapa 1: Implementar el Historial de Tarifas por Canal (✅ Completada)
 
-**Objetivo**: Construir el sistema fundamental que nos permita registrar y gestionar las tarifas de las cabañas a lo largo del tiempo, detalladas por canal de venta. Esta es la base para el análisis de negocio.
+**Objetivo**: Construir el sistema que permite registrar y gestionar las tarifas de las cabañas a lo largo del tiempo, detalladas por canal de venta. Esta es la base para el análisis de negocio.
 
-* **Paso 1.1 (Backend - Modelo de Datos)**:
-    * **Acción**: Crear una nueva colección en Firestore llamada `tarifas`.
-    * **Estructura**: Cada documento guardará `nombreCabaña`, `fechaInicio`, `fechaTermino`, `temporada` y un objeto `tarifasPorCanal` con el precio y la moneda para SODC, Booking, Airbnb, etc.
+* **Paso 1.1 (Backend - Modelo de Datos)**: Se creó la colección `tarifas` en Firestore con una estructura que guarda `nombreCabaña`, `fechaInicio`, `fechaTermino`, `temporada` y un objeto `tarifasPorCanal`.
+* **Paso 1.2 (Backend & Frontend - Gestión de Tarifas)**: Se crearon la API (`/api/tarifas`) y la página (`tarifas.html`) que permiten Crear, Leer, Actualizar y Eliminar (CRUD) el historial de precios.
 
-* **Paso 1.2 (Backend & Frontend - Gestión de Tarifas)**:
-    * **Acción**: Crear una API (`/api/tarifas`) y una nueva página (`tarifas.html`) para administrar este historial de precios.
-    * **Resultado**: Una herramienta visual para cargar y mantener los precios oficiales del negocio.
+### Etapa 2: Construir el Dashboard de KPIs con Análisis de Descuentos (Trabajo Actual)
 
-### Etapa 2: Construir el Dashboard de KPIs con Análisis de Descuentos
-
-**Objetivo**: Crear el dashboard dinámico para analizar el rendimiento del negocio en cualquier rango de fechas.
+**Objetivo**: Crear el dashboard dinámico para analizar el rendimiento del negocio en cualquier rango de fechas, distinguiendo claramente entre el análisis de descuentos y el ingreso potencial total.
 
 * **Paso 2.1 (Backend - El Cerebro `kpiService.js`)**:
     * **Acción**: Desarrollar el servicio que contendrá la lógica de cálculo.
-    * **Lógica Clave**:
-        1.  Recibirá un rango de fechas.
-        2.  Consultará las **reservas reales** en ese período.
-        3.  Para cada noche de cada reserva, buscará en el **historial de tarifas** el precio oficial que correspondía por `nombreCabaña`, `fecha` y `canal`.
-        4.  Convertirá tarifas de USD a CLP usando el `dolarService`.
-        5.  **Calculará Métricas Clave**: Ingreso Real vs. Potencial, Total de Descuentos por Canal, Tasa de Ocupación, ADR, RevPAR, etc.
+    * **Lógica Clave a Implementar**:
+        1.  **Análisis de Descuentos (Por Cabaña y Canal)**:
+            * **Universo**: Se calculará **únicamente sobre las noches realmente vendidas** en el período.
+            * **Lógica**: Para cada noche vendida, se comparará el `Ingreso Real` (de la reserva) con el `Ingreso Potencial de esa Noche` (según el historial de `tarifas` para esa cabaña, canal y fecha).
+            * **Resultado**: Un desglose preciso de los descuentos por cabaña y canal.
+        2.  **KPIs Generales**:
+            * **Universo**: Se calcularán sobre todas las noches **disponibles** (ocupadas o no) en el período.
+            * **Lógica**: Se calcularán métricas como `Tasa de Ocupación`, `ADR`, `RevPAR`, `Ingreso Total Real` y el `Ingreso Potencial Total` (el ingreso máximo posible si se hubieran vendido todas las noches disponibles a su tarifa oficial).
+            * **Resultado**: Indicadores clave de rendimiento para una visión global del negocio.
 
 * **Paso 2.2 (Backend & Frontend - Interfaz del Dashboard)**:
     * **Acción**: Modificar `dashboard.html` para añadir selectores de fecha y un botón "Calcular", y crear la API (`/api/kpi`) para conectar ambos.
-    *
+    * **Resultado**: Un dashboard donde podrás obtener un análisis financiero y de ocupación completo, con los cálculos correctos y separados.
+
+### Funcionalidades Futuras (Plan Original - Pendientes)
+
+* Actualización de Contactos (Generación de CSV).
+* Sincronización con Google Calendar.
+* Reporte Operacional Diario.
+* Consulta de Disponibilidad.
+* Gestión de Leads y Creación Manual de Reservas.
+* API de FAQs.

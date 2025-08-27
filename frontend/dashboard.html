@@ -6,6 +6,7 @@
     <title>Dashboard - Gestor de Reservas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style> body { font-family: 'Inter', sans-serif; } </style>
 </head>
 <body class="bg-gray-100">
@@ -42,46 +43,53 @@
                     </div>
                 </div>
 
-                <div id="kpi-loading" class="text-center text-gray-500 hidden">
-                    <p>Calculando KPIs, esto puede tardar unos segundos...</p>
-                </div>
-                <div id="kpi-results-container" class="hidden">
+                <div id="kpi-loading" class="text-center text-gray-500 hidden"><p>Calculando KPIs, esto puede tardar unos segundos...</p></div>
+                
+                <div id="kpi-results-container" class="hidden space-y-8">
+                    <div id="kpi-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center"></div>
+                    
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div class="lg:col-span-1">
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">Distribución por Canal</h3>
+                            <canvas id="canal-chart"></canvas>
+                        </div>
+                        <div class="lg:col-span-2">
+                             <h3 class="text-lg font-semibold text-gray-800 mb-2">Ranking de Ocupación por Cabaña</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cabaña</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"># Reservas</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"># Noches</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ingreso Real</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descuento Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="ranking-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                                </table>
+                            </div>
+                        </div>
                     </div>
+                </div>
             </div>
 
             <div class="bg-white p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo</h2>
-                <p class="text-gray-600 mb-6">Sigue estos pasos en orden para actualizar y gestionar tus reservas.</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <a href="sincronizar.html" class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow">
-                        <span class="text-3xl">1</span><p class="mt-2">Sincronizar Datos</p>
-                    </a>
-                    <a href="procesar.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow">
-                        <span class="text-3xl">2</span><p class="mt-2">Procesar y Consolidar</p>
-                    </a>
-                    <a href="reservas.html" class="bg-white border border-gray-300 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">
-                        <span class="text-3xl">3</span><p class="mt-2">Ver y Editar Reservas</p>
-                    </a>
-                    <a href="mensajes.html" class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow">
-                        <span class="text-3xl">4</span><p class="mt-2">Generar Mensajes</p>
-                    </a>
+                     <a href="sincronizar.html" class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow"><span class="text-3xl">1</span><p class="mt-2">Sincronizar Datos</p></a>
+                    <a href="procesar.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow"><span class="text-3xl">2</span><p class="mt-2">Procesar y Consolidar</p></a>
+                    <a href="reservas.html" class="bg-white border border-gray-300 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition"><span class="text-3xl">3</span><p class="mt-2">Ver y Editar Reservas</p></a>
+                    <a href="mensajes.html" class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow"><span class="text-3xl">4</span><p class="mt-2">Generar Mensajes</p></a>
                 </div>
             </div>
             <div class="bg-white p-8 rounded-lg shadow mt-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas y Configuración</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <a href="clientes.html" class="bg-blue-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-blue-700 transition shadow">
-                        Gestionar Clientes
-                    </a>
-                    <a href="tarifas.html" class="bg-purple-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-purple-700 transition shadow">
-                        Gestionar Tarifas
-                    </a>
-                    <a href="importar-historicos.html" class="bg-teal-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-teal-700 transition shadow">
-                        Importar Históricos (CSV)
-                    </a>
-                    <a href="autorizar.html" class="bg-gray-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-700 transition shadow">
-                        Autorizar Google Contacts
-                    </a>
+                    <a href="clientes.html" class="bg-blue-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-blue-700 transition shadow">Gestionar Clientes</a>
+                    <a href="tarifas.html" class="bg-purple-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-purple-700 transition shadow">Gestionar Tarifas</a>
+                    <a href="importar-historicos.html" class="bg-teal-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-teal-700 transition shadow">Importar Históricos</a>
+                    <a href="autorizar.html" class="bg-gray-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-700 transition shadow">Autorizar Google</a>
                 </div>
             </div>
         </main>
@@ -89,6 +97,63 @@
 
     <script type="module">
       import { checkSession, logout, fetchAPI } from './api.js';
+
+      let canalChartInstance = null; // Para poder destruir el gráfico anterior
+
+      function formatCurrency(value) {
+          return `$${value.toLocaleString('es-CL')}`;
+      }
+
+      function displayKPIs(results) {
+          const { kpisGenerales, rankingCabañas } = results;
+
+          // --- 1. Rellenar las tarjetas de KPIs ---
+          const kpiCardsContainer = document.getElementById('kpi-cards');
+          kpiCardsContainer.innerHTML = `
+            <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">Ocupación</div><div class="text-2xl font-bold text-gray-900">${kpisGenerales.tasaOcupacion}%</div></div>
+            <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">ADR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.adr)}</div></div>
+            <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">RevPAR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.revPar)}</div></div>
+            <div class="p-4 bg-green-100 rounded-lg"><div class="text-sm font-medium text-green-700">Ingreso Real</div><div class="text-2xl font-bold text-green-900">${formatCurrency(kpisGenerales.ingresoTotal)}</div></div>
+            <div class="p-4 bg-blue-100 rounded-lg"><div class="text-sm font-medium text-blue-700">Ingreso Potencial</div><div class="text-2xl font-bold text-blue-900">${formatCurrency(kpisGenerales.ingresoPotencialTotal)}</div></div>
+            <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuentos</div><div class="text-2xl font-bold text-red-900">${formatCurrency(kpisGenerales.ingresoPotencialTotal - kpisGenerales.ingresoTotal)}</div></div>
+          `;
+
+          // --- 2. Crear el gráfico de canales ---
+          const chartCanvas = document.getElementById('canal-chart').getContext('2d');
+          const canalData = kpisGenerales.reservasPorCanal;
+          if (canalChartInstance) {
+              canalChartInstance.destroy(); // Destruir gráfico anterior
+          }
+          canalChartInstance = new Chart(chartCanvas, {
+              type: 'doughnut',
+              data: {
+                  labels: Object.keys(canalData),
+                  datasets: [{
+                      label: '# de Reservas',
+                      data: Object.values(canalData),
+                      backgroundColor: ['#4F46E5', '#10B981', '#F59E0B', '#6366F1', '#3B82F6'],
+                      borderWidth: 1
+                  }]
+              },
+              options: { responsive: true, maintainAspectRatio: true }
+          });
+
+          // --- 3. Rellenar la tabla de ranking ---
+          const rankingTableBody = document.getElementById('ranking-table-body');
+          rankingTableBody.innerHTML = '';
+          rankingCabañas.forEach(cabaña => {
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${cabaña.nombre}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${cabaña.totalReservas}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${cabaña.nochesOcupadas}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(cabaña.ingresoRealTotal)}</td>
+                <td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">${formatCurrency(cabaña.descuentoTotal || 0)}</td>
+              `;
+              rankingTableBody.appendChild(row);
+          });
+      }
+
       document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
@@ -98,13 +163,9 @@
         if (session) {
           loader.style.display = 'none';
           appContent.classList.remove('hidden');
-          authInfo.innerHTML = `
-            <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
-            <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-          `;
+          authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
           document.getElementById('logout-btn').addEventListener('click', logout);
 
-          // --- LÓGICA PARA EL BOTÓN DE KPIS ---
           const calculateBtn = document.getElementById('kpi-calculate-btn');
           const fechaInicioInput = document.getElementById('kpi-fecha-inicio');
           const fechaFinInput = document.getElementById('kpi-fecha-fin');
@@ -116,8 +177,7 @@
               const fechaFin = fechaFinInput.value;
 
               if (!fechaInicio || !fechaFin) {
-                  alert('Por favor, selecciona una fecha de inicio y una de fin.');
-                  return;
+                  alert('Por favor, selecciona una fecha de inicio y una de fin.'); return;
               }
 
               loadingIndicator.classList.remove('hidden');
@@ -126,13 +186,7 @@
 
               try {
                   const kpiResults = await fetchAPI(`/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
-                  
-                  // Por ahora, solo mostramos los resultados en formato JSON para verificar la conexión
-                  resultsContainer.innerHTML = `
-                    <h3 class="text-lg font-semibold text-gray-800">Resultados (Datos Crudos)</h3>
-                    <pre class="bg-gray-100 p-4 rounded-md mt-2 text-sm">${JSON.stringify(kpiResults, null, 2)}</pre>
-                  `;
-                  
+                  displayKPIs(kpiResults);
               } catch (error) {
                   resultsContainer.innerHTML = `<p class="text-red-500 font-semibold">Error al calcular KPIs: ${error.message}</p>`;
               } finally {

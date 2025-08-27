@@ -20,6 +20,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         const data = doc.data();
         const fechaSalidaReserva = getUTCDate(data.fechaSalida.toDate());
         
+        // --- FILTRO MEJORADO: APLICADO A TODO ---
         if (data.estado !== 'Cancelada' && fechaSalidaReserva > startDate) {
             return { id: doc.id, ...data };
         }
@@ -38,31 +39,32 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     let ingresoPotencialTotalGeneral = 0;
     let totalNochesOcupadas = 0;
     const analisisTemporal = {};
-    const reservasPorCanal = {}; // Nuevo KPI
+    const reservasPorCanal = {};
 
-    // --- PASO 3: CÁLCULO DE RESERVAS ÚNICAS (NUEVO) ---
-    const reservasUnicas = allReservas.filter((reserva, index, self) =>
-        index === self.findIndex((r) => (
-            r.reservaIdOriginal === reserva.reservaIdOriginal && r.canal === reserva.canal
-        ))
-    );
+    // --- LÓGICA DE CONTEO DE RESERVAS CORREGIDA ---
+    // 1. Encontrar los IDs únicos de las reservas que caen en el rango.
+    const uniqueReservationIds = [...new Set(allReservas.map(r => `${r.reservaIdOriginal}|${r.canal}`))];
 
-    reservasUnicas.forEach(reserva => {
-        // Conteo por canal
-        if (!reservasPorCanal[reserva.canal]) {
-            reservasPorCanal[reserva.canal] = 0;
-        }
-        reservasPorCanal[reserva.canal]++;
+    // 2. Iterar sobre los IDs únicos y contar para cada cabaña asociada.
+    uniqueReservationIds.forEach(uniqueId => {
+        const [reservaId, canal] = uniqueId.split('|');
+        const reservasDeEsteId = allReservas.filter(r => r.reservaIdOriginal === reservaId && r.canal === canal);
+
+        // Contar para el KPI general de canales
+        if (!reservasPorCanal[canal]) reservasPorCanal[canal] = 0;
+        reservasPorCanal[canal]++;
         
-        // Conteo por cabaña
-        if (!analisisTemporal[reserva.alojamiento]) {
-            analisisTemporal[reserva.alojamiento] = { nombre: reserva.alojamiento, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0 };
-        }
-        analisisTemporal[reserva.alojamiento].totalReservas++;
+        // Contar para cada cabaña
+        const cabañasDeEstaReserva = [...new Set(reservasDeEsteId.map(r => r.alojamiento))];
+        cabañasDeEstaReserva.forEach(cabañaNombre => {
+            if (!analisisTemporal[cabañaNombre]) {
+                analisisTemporal[cabañaNombre] = { nombre: cabañaNombre, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0 };
+            }
+            analisisTemporal[cabañaNombre].totalReservas++;
+        });
     });
 
-
-    // --- PASO 4: ITERAR DÍA POR DÍA PARA CÁLCULOS FINANCIEROS Y DE OCUPACIÓN ---
+    // --- CÁLCULOS FINANCIEROS Y DE OCUPACIÓN ---
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const currentDate = getUTCDate(d);
 
@@ -78,7 +80,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                 const valorNocheReal = reservaDelDia.valorCLP / reservaDelDia.totalNoches;
                 ingresoTotalReal += valorNocheReal;
 
-                if (!analisisTemporal[cabaña]) { // Asegurarse de que exista si no tuvo reservas únicas contadas
+                if (!analisisTemporal[cabaña]) {
                     analisisTemporal[cabaña] = { nombre: cabaña, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0 };
                 }
                 analisisTemporal[cabaña].nochesOcupadas++;
@@ -117,7 +119,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         }
     }
 
-    // --- PASO 5: CONSOLIDAR RESULTADOS FINALES ---
+    // --- CONSOLIDACIÓN FINAL ---
     const rankingCabañas = Object.values(analisisTemporal).filter(c => c.nochesOcupadas > 0);
 
     rankingCabañas.forEach(cabañaData => {
@@ -130,7 +132,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         }
     });
 
-    rankingCabañas.sort((a, b) => b.totalReservas - a.totalReservas); // Ordenar por total de reservas
+    rankingCabañas.sort((a, b) => b.totalReservas - a.totalReservas);
 
     const tasaOcupacion = totalNochesDisponibles > 0 ? (totalNochesOcupadas / totalNochesDisponibles) * 100 : 0;
     const adr = totalNochesOcupadas > 0 ? ingresoTotalReal / totalNochesOcupadas : 0;
@@ -145,12 +147,12 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
             revPar: Math.round(revPar),
             nochesOcupadas: totalNochesOcupadas,
             nochesDisponibles: totalNochesDisponibles,
-            reservasPorCanal: reservasPorCanal // Nuevo KPI
+            reservasPorCanal: reservasPorCanal
         },
         rankingCabañas: rankingCabañas
     };
     
-    console.log('[KPI Service] Cálculo finalizado (con ranking por # reservas):', JSON.stringify(results, null, 2));
+    console.log('[KPI Service] Cálculo finalizado (conteo corregido):', JSON.stringify(results, null, 2));
     
     return results;
 }

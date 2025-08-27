@@ -1,5 +1,5 @@
 const admin = require('firebase-admin');
-const { getValorDolar } = require('./dolarService');
+const { getValorDolar, updateTodaysDolarValue } = require('./dolarService');
 
 function getUTCDate(dateStr) {
     const date = new Date(dateStr);
@@ -11,21 +11,32 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     
     const startDate = getUTCDate(fechaInicio);
     const endDate = getUTCDate(fechaFin);
+
+    // --- OPTIMIZACIÓN CLAVE: OBTENER EL VALOR DEL DÓLAR UNA SOLA VEZ ---
+    console.log('[KPI Service] Obteniendo valor del dólar actual para cálculos...');
+    const valorDolarHoy = await updateTodaysDolarValue(db);
+    console.log(`[KPI Service] Valor del dólar para hoy obtenido: ${valorDolarHoy}`);
     
     const reservasSnapshot = await db.collection('reservas')
         .where('fechaLlegada', '<=', admin.firestore.Timestamp.fromDate(new Date(fechaFin + 'T23:59:59Z')))
         .get();
     
-    const allReservasPromises = reservasSnapshot.docs.map(async doc => {
+    // Usamos un bucle for...of para manejar las llamadas asíncronas de forma controlada
+    const allReservas = [];
+    for (const doc of reservasSnapshot.docs) {
         const data = doc.data();
         const fechaSalidaReserva = getUTCDate(data.fechaSalida.toDate());
+        
         if (data.estado !== 'Cancelada' && fechaSalidaReserva > startDate) {
-            return { id: doc.id, ...data };
+            // La conversión a CLP se hace aquí, de forma más eficiente
+            if (data.canal === 'Booking' && data.monedaOriginal === 'USD') {
+                const valorDolarReserva = await getValorDolar(db, data.fechaLlegada.toDate());
+                data.valorCLP = Math.round(data.valorOriginal * valorDolarReserva * 1.19);
+            }
+            allReservas.push({ id: doc.id, ...data });
         }
-        return null;
-    });
-    
-    const allReservas = (await Promise.all(allReservasPromises)).filter(Boolean);
+    }
+
     const tarifasSnapshot = await db.collection('tarifas').get();
     const allTarifas = tarifasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -38,36 +49,30 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     let totalNochesOcupadas = 0;
     const analisisTemporal = {};
     const reservasPorCanalGeneral = {};
-
-    // --- LÓGICA DE CONTEO DE RESERVAS (DEFINITIVA) ---
-    const reservasUnicas = [...new Set(allReservas.map(r => `${r.reservaIdOriginal}|${r.canal}`))];
-
-    reservasUnicas.forEach(uniqueId => {
-        const [reservaId, canal] = uniqueId.split('|');
+    const reservasUnicasContadas = new Set();
+    
+    allReservas.forEach(reserva => {
+        const uniqueId = `${reserva.reservaIdOriginal}|${reserva.canal}`;
+        const cabañaNombre = cabañasDisponibles.find(c => c.toLowerCase() === reserva.alojamiento.toLowerCase());
+        if (!cabañaNombre) return;
         
-        // Conteo para KPI General
-        if (!reservasPorCanalGeneral[canal]) reservasPorCanalGeneral[canal] = 0;
-        reservasPorCanalGeneral[canal]++;
-
-        const cabañasDeLaReserva = [...new Set(allReservas.filter(r => r.reservaIdOriginal === reservaId && r.canal === canal).map(r => r.alojamiento))];
+        if (!analisisTemporal[cabañaNombre]) {
+            analisisTemporal[cabañaNombre] = { nombre: cabañaNombre, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0, canales: {} };
+        }
         
-        cabañasDeLaReserva.forEach(cabañaNombre => {
-            const cabañaCanonico = cabañasDisponibles.find(c => c.toLowerCase() === cabañaNombre.toLowerCase());
-            if (!cabañaCanonico) return;
+        const uniqueKeyForCabin = `${uniqueId}|${cabañaNombre}`;
+        if (!reservasUnicasContadas.has(uniqueKeyForCabin)) {
+            analisisTemporal[cabañaNombre].totalReservas++;
+            reservasUnicasContadas.add(uniqueKeyForCabin);
 
-            if (!analisisTemporal[cabañaCanonico]) {
-                analisisTemporal[cabañaCanonico] = { nombre: cabañaCanonico, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0, canales: {} };
+            if(!reservasUnicasContadas.has(uniqueId)){
+                 if (!reservasPorCanalGeneral[reserva.canal]) reservasPorCanalGeneral[reserva.canal] = 0;
+                 reservasPorCanalGeneral[reserva.canal]++;
+                 reservasUnicasContadas.add(uniqueId);
             }
-            analisisTemporal[cabañaCanonico].totalReservas++;
-            
-            if (!analisisTemporal[cabañaCanonico].canales[canal]) {
-                analisisTemporal[cabañaCanonico].canales[canal] = { totalReservas: 0, noches: 0, ingresoReal: 0, ingresoPotencial: 0 };
-            }
-            analisisTemporal[cabañaCanonico].canales[canal].totalReservas++;
-        });
+        }
     });
 
-    // --- CÁLCULOS FINANCIEROS Y DE OCUPACIÓN ---
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const currentDate = getUTCDate(d);
 
@@ -95,7 +100,6 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                 }
                 analisisTemporal[cabaña].canales[canal].noches++;
                 analisisTemporal[cabaña].canales[canal].ingresoReal += valorNocheReal;
-
 
                 const tarifaDelDia = allTarifas.find(t =>
                     t.nombreCabaña.toLowerCase() === cabaña.toLowerCase() &&
@@ -160,7 +164,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         rankingCabañas: rankingCabañas
     };
     
-    console.log('[KPI Service] Cálculo finalizado (versión definitiva):', JSON.stringify(results, null, 2));
+    console.log('[KPI Service] Cálculo finalizado (versión optimizada):', JSON.stringify(results, null, 2));
     
     return results;
 }

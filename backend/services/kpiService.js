@@ -37,31 +37,38 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     let ingresoPotencialTotalGeneral = 0;
     let totalNochesOcupadas = 0;
     const analisisTemporal = {};
-    const reservasPorCanal = {};
-    const reservasUnicasContadas = new Set();
-    
-    allReservas.forEach(reserva => {
-        const uniqueId = `${reserva.reservaIdOriginal}|${reserva.canal}`;
-        const cabañaNombre = cabañasDisponibles.find(c => c.toLowerCase() === reserva.alojamiento.toLowerCase());
-        if (!cabañaNombre) return;
-        
-        if (!analisisTemporal[cabañaNombre]) {
-            analisisTemporal[cabañaNombre] = { nombre: cabañaNombre, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0 };
-        }
-        
-        const uniqueKeyForCabin = `${uniqueId}|${cabañaNombre}`;
-        if (!reservasUnicasContadas.has(uniqueKeyForCabin)) {
-            analisisTemporal[cabañaNombre].totalReservas++;
-            reservasUnicasContadas.add(uniqueKeyForCabin);
+    const reservasPorCanalGeneral = {};
 
-            if(!reservasUnicasContadas.has(uniqueId)){
-                 if (!reservasPorCanal[reserva.canal]) reservasPorCanal[reserva.canal] = 0;
-                 reservasPorCanal[reserva.canal]++;
-                 reservasUnicasContadas.add(uniqueId);
+    // --- LÓGICA DE CONTEO DE RESERVAS (DEFINITIVA) ---
+    const reservasUnicas = [...new Set(allReservas.map(r => `${r.reservaIdOriginal}|${r.canal}`))];
+
+    reservasUnicas.forEach(uniqueId => {
+        const [reservaId, canal] = uniqueId.split('|');
+        
+        // Conteo para KPI General
+        if (!reservasPorCanalGeneral[canal]) reservasPorCanalGeneral[canal] = 0;
+        reservasPorCanalGeneral[canal]++;
+
+        // Conteo para el Ranking por Cabaña y Canal
+        const cabañasDeLaReserva = [...new Set(allReservas.filter(r => r.reservaIdOriginal === reservaId && r.canal === canal).map(r => r.alojamiento))];
+        
+        cabañasDeLaReserva.forEach(cabañaNombre => {
+            const cabañaCanonico = cabañasDisponibles.find(c => c.toLowerCase() === cabañaNombre.toLowerCase());
+            if (!cabañaCanonico) return;
+
+            if (!analisisTemporal[cabañaCanonico]) {
+                analisisTemporal[cabañaCanonico] = { nombre: cabañaCanonico, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0, canales: {} };
             }
-        }
+            analisisTemporal[cabañaCanonico].totalReservas++;
+            
+            if (!analisisTemporal[cabañaCanonico].canales[canal]) {
+                analisisTemporal[cabañaCanonico].canales[canal] = { totalReservas: 0, noches: 0, ingresoReal: 0, ingresoPotencial: 0 };
+            }
+            analisisTemporal[cabañaCanonico].canales[canal].totalReservas++;
+        });
     });
 
+    // --- CÁLCULOS FINANCIEROS Y DE OCUPACIÓN ---
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const currentDate = getUTCDate(d);
 
@@ -78,10 +85,18 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                 ingresoTotalReal += valorNocheReal;
 
                 if (!analisisTemporal[cabaña]) {
-                    analisisTemporal[cabaña] = { nombre: cabaña, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0 };
+                    analisisTemporal[cabaña] = { nombre: cabaña, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0, canales: {} };
                 }
                 analisisTemporal[cabaña].nochesOcupadas++;
                 analisisTemporal[cabaña].ingresoRealTotal += valorNocheReal;
+                const canal = reservaDelDia.canal;
+
+                if (!analisisTemporal[cabaña].canales[canal]) {
+                    analisisTemporal[cabaña].canales[canal] = { totalReservas: 0, noches: 0, ingresoReal: 0, ingresoPotencial: 0 };
+                }
+                analisisTemporal[cabaña].canales[canal].noches++;
+                analisisTemporal[cabaña].canales[canal].ingresoReal += valorNocheReal;
+
 
                 const tarifaDelDia = allTarifas.find(t =>
                     t.nombreCabaña.toLowerCase() === cabaña.toLowerCase() &&
@@ -89,13 +104,8 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                     getUTCDate(t.fechaTermino.toDate()) >= currentDate
                 );
                 
-                if (tarifaDelDia && tarifaDelDia.tarifasPorCanal[reservaDelDia.canal]) {
+                if (tarifaDelDia && tarifaDelDia.tarifasPorCanal[canal]) {
                     if (!analisisTemporal[cabaña].ingresoPotencialTotal) analisisTemporal[cabaña].ingresoPotencialTotal = 0;
-                    if (!analisisTemporal[cabaña].canales) analisisTemporal[cabaña].canales = {};
-                    const canal = reservaDelDia.canal;
-                    if (!analisisTemporal[cabaña].canales[canal]) {
-                        analisisTemporal[cabaña].canales[canal] = { noches: 0, ingresoReal: 0, ingresoPotencial: 0 };
-                    }
                     
                     let valorNochePotencial = tarifaDelDia.tarifasPorCanal[canal].valor;
                     if (tarifaDelDia.tarifasPorCanal[canal].moneda === 'USD') {
@@ -104,8 +114,6 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                     }
                     
                     analisisTemporal[cabaña].ingresoPotencialTotal += valorNochePotencial;
-                    analisisTemporal[cabaña].canales[canal].noches++;
-                    analisisTemporal[cabaña].canales[canal].ingresoReal += valorNocheReal;
                     analisisTemporal[cabaña].canales[canal].ingresoPotencial += valorNochePotencial;
                 }
             } 
@@ -148,12 +156,12 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
             revPar: Math.round(revPar),
             nochesOcupadas: totalNochesOcupadas,
             nochesDisponibles: totalNochesDisponibles,
-            reservasPorCanal: reservasPorCanal
+            reservasPorCanal: reservasPorCanalGeneral
         },
         rankingCabañas: rankingCabañas
     };
     
-    console.log('[KPI Service] Cálculo finalizado (versión pulida):', JSON.stringify(results, null, 2));
+    console.log('[KPI Service] Cálculo finalizado (versión definitiva):', JSON.stringify(results, null, 2));
     
     return results;
 }

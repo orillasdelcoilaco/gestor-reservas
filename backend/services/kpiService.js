@@ -38,27 +38,22 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     let totalNochesOcupadas = 0;
     const analisisTemporal = {};
     const reservasPorCanal = {};
-
-    // --- LÓGICA DE CONTEO DE RESERVAS (CORREGIDA Y SIMPLIFICADA) ---
-    const reservasUnicasContadas = new Set(); // Para no contar la misma reserva dos veces
+    const reservasUnicasContadas = new Set();
     
     allReservas.forEach(reserva => {
         const uniqueId = `${reserva.reservaIdOriginal}|${reserva.canal}`;
         const cabañaNombre = cabañasDisponibles.find(c => c.toLowerCase() === reserva.alojamiento.toLowerCase());
-        if (!cabañaNombre) return; // Ignorar si el nombre de la cabaña no es canónico
+        if (!cabañaNombre) return;
         
-        // Inicializar si es la primera vez que vemos la cabaña
         if (!analisisTemporal[cabañaNombre]) {
             analisisTemporal[cabañaNombre] = { nombre: cabañaNombre, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0 };
         }
         
-        // Contar la reserva solo una vez por cabaña
         const uniqueKeyForCabin = `${uniqueId}|${cabañaNombre}`;
         if (!reservasUnicasContadas.has(uniqueKeyForCabin)) {
             analisisTemporal[cabañaNombre].totalReservas++;
             reservasUnicasContadas.add(uniqueKeyForCabin);
 
-            // Contar para el KPI general de canales (solo una vez por ID de reserva)
             if(!reservasUnicasContadas.has(uniqueId)){
                  if (!reservasPorCanal[reserva.canal]) reservasPorCanal[reserva.canal] = 0;
                  reservasPorCanal[reserva.canal]++;
@@ -67,7 +62,6 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         }
     });
 
-    // --- CÁLCULOS FINANCIEROS Y DE OCUPACIÓN ---
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const currentDate = getUTCDate(d);
 
@@ -100,7 +94,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                     if (!analisisTemporal[cabaña].canales) analisisTemporal[cabaña].canales = {};
                     const canal = reservaDelDia.canal;
                     if (!analisisTemporal[cabaña].canales[canal]) {
-                        analisisTemporal[cabaña].canales[canal] = { ingresoReal: 0, ingresoPotencial: 0 };
+                        analisisTemporal[cabaña].canales[canal] = { noches: 0, ingresoReal: 0, ingresoPotencial: 0 };
                     }
                     
                     let valorNochePotencial = tarifaDelDia.tarifasPorCanal[canal].valor;
@@ -110,6 +104,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                     }
                     
                     analisisTemporal[cabaña].ingresoPotencialTotal += valorNochePotencial;
+                    analisisTemporal[cabaña].canales[canal].noches++;
                     analisisTemporal[cabaña].canales[canal].ingresoReal += valorNocheReal;
                     analisisTemporal[cabaña].canales[canal].ingresoPotencial += valorNochePotencial;
                 }
@@ -125,10 +120,14 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     const rankingCabañas = Object.values(analisisTemporal).filter(c => c.nochesOcupadas > 0);
 
     rankingCabañas.forEach(cabañaData => {
+        cabañaData.ingresoRealTotal = Math.round(cabañaData.ingresoRealTotal);
         if (cabañaData.ingresoPotencialTotal) {
+            cabañaData.ingresoPotencialTotal = Math.round(cabañaData.ingresoPotencialTotal);
             cabañaData.descuentoTotal = cabañaData.ingresoPotencialTotal - cabañaData.ingresoRealTotal;
             for(const canal in cabañaData.canales){
                 const canalData = cabañaData.canales[canal];
+                canalData.ingresoReal = Math.round(canalData.ingresoReal);
+                canalData.ingresoPotencial = Math.round(canalData.ingresoPotencial);
                 canalData.descuento = canalData.ingresoPotencial - canalData.ingresoReal;
             }
         }
@@ -154,7 +153,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         rankingCabañas: rankingCabañas
     };
     
-    console.log('[KPI Service] Cálculo finalizado (conteo definitivo):', JSON.stringify(results, null, 2));
+    console.log('[KPI Service] Cálculo finalizado (versión pulida):', JSON.stringify(results, null, 2));
     
     return results;
 }

@@ -174,22 +174,18 @@
         let allTarifas = [];
         let editingTarifaId = null;
         
-        // --- NUEVA FUNCIÓN DE ORDENAMIENTO ---
         function sortTarifas(tarifas) {
             return tarifas.sort((a, b) => {
-                // Extraer el número de la cabaña para un ordenamiento numérico
                 const numA = parseInt(a.nombreCabaña.match(/\d+/)[0]);
                 const numB = parseInt(b.nombreCabaña.match(/\d+/)[0]);
                 
                 if (numA !== numB) {
-                    return numA - numB; // Ordena por número de cabaña primero
+                    return numA - numB;
                 }
-                // Si las cabañas son iguales, ordena por fecha de inicio (más nueva primero)
                 return new Date(b.fechaInicio) - new Date(a.fechaInicio);
             });
         }
         
-        // --- NUEVA FUNCIÓN CENTRAL PARA ACTUALIZAR LA VISTA ---
         function updateTableView() {
             const searchTerm = searchInput.value.toLowerCase();
             
@@ -247,7 +243,7 @@
             loadingState.style.display = 'block';
             try {
                 allTarifas = await fetchAPI('/api/tarifas');
-                updateTableView(); // Llama a la nueva función central
+                updateTableView();
             } catch (error) {
                 console.error('Error al cargar las tarifas:', error);
                 loadingState.innerHTML = `<p class="text-red-500 font-semibold">No se pudieron cargar las tarifas: ${error.message}</p>`;
@@ -265,13 +261,14 @@
             document.getElementById('booking-valor').value = tarifa.tarifasPorCanal.Booking?.valor || '';
             document.getElementById('airbnb-valor').value = tarifa.tarifasPorCanal.Airbnb?.valor || '';
             
-            // Limpia las fechas para que el usuario ingrese nuevas
-            document.getElementById('fechaInicio').value = '';
-            document.getElementById('fechaTermino').value = '';
+            // --- INICIO DE LA CORRECCIÓN ---
+            document.getElementById('fechaInicio').value = tarifa.fechaInicio;
+            document.getElementById('fechaTermino').value = tarifa.fechaTermino;
+            // --- FIN DE LA CORRECCIÓN ---
             
-            window.scrollTo(0, 0); // Lleva al usuario arriba al formulario
+            window.scrollTo(0, 0);
             document.getElementById('temporada').focus();
-            formStatus.textContent = `Copiado desde la temporada "${tarifa.temporada}". Por favor, ajusta las fechas y el nombre.`;
+            formStatus.textContent = `Copiado desde la temporada "${tarifa.temporada}". Por favor, ajusta lo que necesites.`;
             formStatus.className = 'mt-4 text-sm text-blue-600';
         }
 
@@ -403,7 +400,7 @@
                 tarifaForm.addEventListener('submit', handleFormSubmit);
                 editSaveBtn.addEventListener('click', handleSaveEdit);
                 editCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-                searchInput.addEventListener('input', updateTableView); // Activa el buscador
+                searchInput.addEventListener('input', updateTableView);
             }
         });
     </script>

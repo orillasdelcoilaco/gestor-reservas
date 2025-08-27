@@ -49,7 +49,6 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         if (!reservasPorCanalGeneral[canal]) reservasPorCanalGeneral[canal] = 0;
         reservasPorCanalGeneral[canal]++;
 
-        // Conteo para el Ranking por Cabaña y Canal
         const cabañasDeLaReserva = [...new Set(allReservas.filter(r => r.reservaIdOriginal === reservaId && r.canal === canal).map(r => r.alojamiento))];
         
         cabañasDeLaReserva.forEach(cabañaNombre => {

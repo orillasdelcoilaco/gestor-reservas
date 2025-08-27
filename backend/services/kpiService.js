@@ -43,27 +43,26 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         const currentDate = getUTCDate(d);
 
         for (const cabaña of cabañasDisponibles) {
+            // --- INICIO DE LA CORRECCIÓN ---
             const reservaDelDia = allReservas.find(r => 
-                r.alojamiento === cabaña &&
+                r.alojamiento.toLowerCase() === cabaña.toLowerCase() && // Comparación insensible
                 getUTCDate(r.fechaLlegada.toDate()) <= currentDate &&
                 getUTCDate(r.fechaSalida.toDate()) > currentDate
             );
+
+            const tarifaDelDia = allTarifas.find(t =>
+                t.nombreCabaña.toLowerCase() === cabaña.toLowerCase() && // Comparación insensible
+                getUTCDate(t.fechaInicio.toDate()) <= currentDate &&
+                getUTCDate(t.fechaTermino.toDate()) >= currentDate
+            );
+            // --- FIN DE LA CORRECCIÓN ---
 
             if (reservaDelDia) {
                 totalNochesOcupadas++;
                 const valorNocheReal = reservaDelDia.valorCLP / reservaDelDia.totalNoches;
                 ingresoTotalReal += valorNocheReal;
 
-                const tarifaDelDia = allTarifas.find(t =>
-                    t.nombreCabaña === cabaña &&
-                    getUTCDate(t.fechaInicio.toDate()) <= currentDate &&
-                    getUTCDate(t.fechaTermino.toDate()) >= currentDate
-                );
-                
-                // --- LÓGICA CORREGIDA Y REFORZADA ---
-                // Solo procedemos al análisis si existe una tarifa oficial para la venta
                 if (tarifaDelDia && tarifaDelDia.tarifasPorCanal[reservaDelDia.canal]) {
-                    
                     if (!analisisTemporal[cabaña]) {
                         analisisTemporal[cabaña] = { 
                             nombre: cabaña,
@@ -96,7 +95,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                 }
             } 
             
-            const tarifaPotencialDelDia = allTarifas.find(t => t.nombreCabaña === cabaña && getUTCDate(t.fechaInicio.toDate()) <= currentDate && getUTCDate(t.fechaTermino.toDate()) >= currentDate);
+            const tarifaPotencialDelDia = allTarifas.find(t => t.nombreCabaña.toLowerCase() === cabaña.toLowerCase() && getUTCDate(t.fechaInicio.toDate()) <= currentDate && getUTCDate(t.fechaTermino.toDate()) >= currentDate);
             if (tarifaPotencialDelDia && tarifaPotencialDelDia.tarifasPorCanal['SODC']) { 
                 ingresoPotencialTotalGeneral += tarifaPotencialDelDia.tarifasPorCanal['SODC'].valor;
             }

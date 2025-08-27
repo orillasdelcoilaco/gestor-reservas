@@ -81,7 +81,10 @@
             </div>
 
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                <h2 class="text-2xl font-semibold text-gray-900 mb-6">Historial de Tarifas</h2>
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+                    <h2 class="text-2xl font-semibold text-gray-900">Historial de Tarifas</h2>
+                    <input type="text" id="search-input" placeholder="Buscar por cabaña, temporada..." class="mt-4 md:mt-0 w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
                 <div class="table-container overflow-y-auto border rounded-lg">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
@@ -162,6 +165,7 @@
         const tarifaForm = document.getElementById('tarifa-form');
         const saveBtn = document.getElementById('save-btn');
         const formStatus = document.getElementById('form-status');
+        const searchInput = document.getElementById('search-input');
         const modal = document.getElementById('edit-modal');
         const editSaveBtn = document.getElementById('edit-save-btn');
         const editCancelBtn = document.getElementById('edit-cancel-btn');
@@ -169,11 +173,40 @@
 
         let allTarifas = [];
         let editingTarifaId = null;
+        
+        // --- NUEVA FUNCIÓN DE ORDENAMIENTO ---
+        function sortTarifas(tarifas) {
+            return tarifas.sort((a, b) => {
+                // Extraer el número de la cabaña para un ordenamiento numérico
+                const numA = parseInt(a.nombreCabaña.match(/\d+/)[0]);
+                const numB = parseInt(b.nombreCabaña.match(/\d+/)[0]);
+                
+                if (numA !== numB) {
+                    return numA - numB; // Ordena por número de cabaña primero
+                }
+                // Si las cabañas son iguales, ordena por fecha de inicio (más nueva primero)
+                return new Date(b.fechaInicio) - new Date(a.fechaInicio);
+            });
+        }
+        
+        // --- NUEVA FUNCIÓN CENTRAL PARA ACTUALIZAR LA VISTA ---
+        function updateTableView() {
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            const filteredTarifas = allTarifas.filter(tarifa => 
+                tarifa.nombreCabaña.toLowerCase().includes(searchTerm) ||
+                tarifa.temporada.toLowerCase().includes(searchTerm) ||
+                tarifa.fechaInicio.includes(searchTerm)
+            );
+            
+            const sortedTarifas = sortTarifas(filteredTarifas);
+            renderTable(sortedTarifas);
+        }
 
         function renderTable(tarifas) {
             tarifasTableBody.innerHTML = '';
             if (tarifas.length === 0) {
-                loadingState.innerHTML = '<p class="text-gray-500">No se encontraron tarifas. Añade una para comenzar.</p>';
+                loadingState.innerHTML = '<p class="text-gray-500">No se encontraron tarifas que coincidan con la búsqueda.</p>';
                 loadingState.style.display = 'block';
                 return;
             }
@@ -197,6 +230,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${tarifa.fechaTermino}</td>
                     <td class="px-6 py-4 text-sm text-gray-600">${tarifasHtml}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
+                        <button class="copy-btn text-green-600 hover:text-green-900" data-id="${tarifa.id}">Copiar</button>
                         <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${tarifa.id}">Editar</button>
                         <button class="delete-btn text-red-600 hover:text-red-900" data-id="${tarifa.id}">Eliminar</button>
                     </td>
@@ -204,6 +238,7 @@
                 tarifasTableBody.appendChild(row);
             });
             
+            document.querySelectorAll('.copy-btn').forEach(b => b.addEventListener('click', handleCopyClick));
             document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', handleEditClick));
             document.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', handleDeleteClick));
         }
@@ -212,11 +247,32 @@
             loadingState.style.display = 'block';
             try {
                 allTarifas = await fetchAPI('/api/tarifas');
-                renderTable(allTarifas);
+                updateTableView(); // Llama a la nueva función central
             } catch (error) {
                 console.error('Error al cargar las tarifas:', error);
                 loadingState.innerHTML = `<p class="text-red-500 font-semibold">No se pudieron cargar las tarifas: ${error.message}</p>`;
             }
+        }
+        
+        function handleCopyClick(e) {
+            const id = e.target.dataset.id;
+            const tarifa = allTarifas.find(t => t.id === id);
+            if (!tarifa) return;
+            
+            document.getElementById('nombreCabaña').value = tarifa.nombreCabaña;
+            document.getElementById('temporada').value = tarifa.temporada;
+            document.getElementById('sodc-valor').value = tarifa.tarifasPorCanal.SODC?.valor || '';
+            document.getElementById('booking-valor').value = tarifa.tarifasPorCanal.Booking?.valor || '';
+            document.getElementById('airbnb-valor').value = tarifa.tarifasPorCanal.Airbnb?.valor || '';
+            
+            // Limpia las fechas para que el usuario ingrese nuevas
+            document.getElementById('fechaInicio').value = '';
+            document.getElementById('fechaTermino').value = '';
+            
+            window.scrollTo(0, 0); // Lleva al usuario arriba al formulario
+            document.getElementById('temporada').focus();
+            formStatus.textContent = `Copiado desde la temporada "${tarifa.temporada}". Por favor, ajusta las fechas y el nombre.`;
+            formStatus.className = 'mt-4 text-sm text-blue-600';
         }
 
         async function handleFormSubmit(e) {
@@ -321,7 +377,7 @@
             if (confirm(`¿Estás seguro de que quieres eliminar la tarifa para "${tarifa.nombreCabaña}" en la temporada "${tarifa.temporada}"?`)) {
                 try {
                     await fetchAPI(`/api/tarifas/${id}`, { method: 'DELETE' });
-                    await loadTarifas(); // Recargar la tabla
+                    await loadTarifas();
                 } catch (error) {
                     alert(`Error al eliminar la tarifa: ${error.message}`);
                 }
@@ -347,6 +403,7 @@
                 tarifaForm.addEventListener('submit', handleFormSubmit);
                 editSaveBtn.addEventListener('click', handleSaveEdit);
                 editCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+                searchInput.addEventListener('input', updateTableView); // Activa el buscador
             }
         });
     </script>

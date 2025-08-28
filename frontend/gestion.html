@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        #gestion-modal { background-color: rgba(0, 0, 0, 0.5); }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -50,10 +51,48 @@
         </main>
     </div>
 
+    <div id="gestion-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Registrar Acción</h3>
+            <form id="modal-form" class="mt-4 space-y-4">
+                
+                <div id="pago-fields" class="hidden space-y-4">
+                    <div>
+                        <label for="monto-input" class="block text-sm font-medium text-gray-700">Monto (CLP)</label>
+                        <input type="number" id="monto-input" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div>
+                        <label for="medio-pago-select" class="block text-sm font-medium text-gray-700">Medio de Pago</label>
+                        <select id="medio-pago-select" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <option value="Transferencia">Transferencia</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Tarjeta">Tarjeta</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center">
+                        <input id="pago-final-checkbox" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                        <label for="pago-final-checkbox" class="ml-2 block text-sm text-gray-900">¿Es el pago final?</label>
+                    </div>
+                </div>
+
+                <div id="documento-field" class="hidden">
+                    <label for="documento-input" id="documento-label" class="block text-sm font-medium text-gray-700">Comprobante</label>
+                    <input type="file" id="documento-input" class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
+                </div>
+
+                <div id="modal-status" class="mt-2 text-sm text-red-600"></div>
+            </form>
+            <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+                <button type="button" id="modal-save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar</button>
+                <button type="button" id="modal-cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
 <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
-    // --- Lógica de la Página ---
+    // --- Referencias a Elementos ---
     const loader = document.getElementById('loader');
     const appContent = document.getElementById('app-content');
     const authInfo = document.getElementById('auth-info');
@@ -63,6 +102,21 @@
     const proximasContainer = document.getElementById('proximas-container');
     const proximasList = document.getElementById('proximas-list');
     const noPendientes = document.getElementById('no-pendientes');
+    
+    // --- Referencias a Elementos del Modal ---
+    const modal = document.getElementById('gestion-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalForm = document.getElementById('modal-form');
+    const pagoFields = document.getElementById('pago-fields');
+    const documentoField = document.getElementById('documento-field');
+    const documentoLabel = document.getElementById('documento-label');
+    const documentoInput = document.getElementById('documento-input');
+    const modalStatus = document.getElementById('modal-status');
+    const modalSaveBtn = document.getElementById('modal-save-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+    let currentAction = null;
+    let currentReservaId = null;
 
     function getTodayUTC() {
         const today = new Date();
@@ -102,7 +156,7 @@
                     <p><strong>ID Reserva:</strong> ${reserva.reservaIdOriginal}</p>
                 </div>
             </div>
-            <div class="mt-4 md:mt-0 md:ml-4">
+            <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
                 <button 
                     data-id="${reserva.id}" 
                     data-action="${statusInfo.action}" 
@@ -116,35 +170,104 @@
         return card;
     }
     
+    function setupModalForAction() {
+        // Resetear modal
+        modalForm.reset();
+        pagoFields.classList.add('hidden');
+        documentoField.classList.add('hidden');
+        modalStatus.textContent = '';
+        
+        switch (currentAction) {
+            case 'registrar_pago':
+                modalTitle.textContent = 'Registrar Pago o Abono';
+                pagoFields.classList.remove('hidden');
+                documentoField.classList.remove('hidden');
+                documentoLabel.textContent = 'Comprobante de Pago (Opcional)';
+                documentoInput.required = false;
+                break;
+            case 'marcar_boleta_enviada':
+                modalTitle.textContent = 'Subir Boleta';
+                documentoField.classList.remove('hidden');
+                documentoLabel.textContent = 'Archivo de la Boleta';
+                documentoInput.required = true;
+                break;
+        }
+        modal.classList.remove('hidden');
+    }
+
     async function handleActionClick(event) {
         const button = event.target;
-        const reservaId = button.dataset.id;
-        const action = button.dataset.action;
+        currentReservaId = button.dataset.id;
+        currentAction = button.dataset.action;
 
-        button.disabled = true;
-        button.textContent = 'Procesando...';
+        // Acciones que no necesitan modal
+        if (currentAction === 'marcar_bienvenida_enviada' || currentAction === 'marcar_cobro_enviado') {
+            button.disabled = true;
+            button.textContent = 'Procesando...';
+            try {
+                await fetchAPI(`/api/gestion/actualizar-estado/${currentReservaId}`, {
+                    method: 'POST',
+                    body: { accion: currentAction }
+                });
+                loadGestion();
+            } catch (error) {
+                console.error('Error al ejecutar la acción:', error);
+                alert(`Error: ${error.message}`);
+                button.disabled = false;
+            }
+        } else {
+            // Acciones que sí necesitan modal
+            setupModalForAction();
+        }
+    }
+
+    async function handleModalSave() {
+        modalSaveBtn.disabled = true;
+        modalSaveBtn.textContent = 'Guardando...';
+        modalStatus.textContent = '';
+
+        const formData = new FormData();
+        const detalles = {};
+
+        // Validar y recolectar datos según la acción
+        if (currentAction === 'registrar_pago') {
+            const monto = document.getElementById('monto-input').value;
+            if (!monto || monto <= 0) {
+                modalStatus.textContent = 'El monto debe ser un número positivo.';
+                modalSaveBtn.disabled = false;
+                modalSaveBtn.textContent = 'Guardar';
+                return;
+            }
+            detalles.monto = monto;
+            detalles.medioDePago = document.getElementById('medio-pago-select').value;
+            detalles.esPagoFinal = document.getElementById('pago-final-checkbox').checked;
+        }
+
+        if (documentoInput.files.length > 0) {
+            formData.append('documento', documentoInput.files[0]);
+        } else if (currentAction === 'marcar_boleta_enviada') {
+            modalStatus.textContent = 'Debes seleccionar un archivo para la boleta.';
+            modalSaveBtn.disabled = false;
+            modalSaveBtn.textContent = 'Guardar';
+            return;
+        }
+
+        formData.append('accion', currentAction);
+        formData.append('detalles', JSON.stringify(detalles));
 
         try {
-            // Lógica para acciones futuras (pago, boleta) se añadirá aquí
-            if (action === 'registrar_pago') {
-                 alert('Funcionalidad para registrar pago y subir archivo se implementará aquí.');
-                 // Por ahora, no hacemos nada para esta acción
-            } else if (action === 'marcar_boleta_enviada') {
-                 alert('Funcionalidad para subir boleta se implementará aquí.');
-                 // Por ahora, no hacemos nada para esta acción
-            } else {
-                 await fetchAPI(`/api/gestion/actualizar-estado/${reservaId}`, {
-                    method: 'POST',
-                    body: { accion: action }
-                });
-            }
-           
-            loadGestion(); // Recargar la lista para reflejar el cambio de estado
+            await fetchAPI(`/api/gestion/actualizar-estado/${currentReservaId}`, {
+                method: 'POST',
+                body: formData // fetchAPI maneja FormData automáticamente
+            });
+            modal.classList.add('hidden');
+            loadGestion();
         } catch (error) {
-            console.error('Error al ejecutar la acción:', error);
-            alert(`Error: ${error.message}`);
-            button.disabled = false;
-            button.textContent = getStatusInfo(action.replace('marcar_','').replace('_enviada','')).button;
+            console.error('Error al guardar desde el modal:', error);
+            modalStatus.textContent = `Error: ${error.message}`;
+        } finally {
+            modalSaveBtn.disabled = false;
+            modalSaveBtn.textContent = 'Guardar';
         }
     }
 
@@ -204,6 +327,9 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
             
+            modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            modalSaveBtn.addEventListener('click', handleModalSave);
+
             loadGestion();
         }
     });

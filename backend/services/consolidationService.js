@@ -139,7 +139,12 @@ async function processChannel(db, channel) {
                 dataToSave.pagado = existingReservation.pagado || false;
                 dataToSave.pendiente = existingReservation.pendiente === undefined ? dataToSave.valorCLP - dataToSave.abono : existingReservation.pendiente;
                 dataToSave.boleta = existingReservation.boleta || false;
+                dataToSave.estadoGestion = existingReservation.estadoGestion || 'Pendiente Bienvenida';
+            } else {
+                // Se asigna el estado inicial solo a las reservas nuevas
+                dataToSave.estadoGestion = 'Pendiente Bienvenida';
             }
+
             batch.set(reservaRef, dataToSave, { merge: true });
         }
         batch.delete(doc.ref);

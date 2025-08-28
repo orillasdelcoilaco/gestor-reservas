@@ -20,14 +20,16 @@ async function getReservasPendientes(db) {
 
     const reservas = snapshot.docs.map(doc => {
         const data = doc.data();
+        // --- CORRECCIÓN APLICADA AQUÍ ---
+        // Se añade una validación para asegurar que las fechas existan antes de convertirlas.
         return {
             id: doc.id,
             ...data,
-            fechaLlegada: data.fechaLlegada.toDate(),
-            fechaSalida: data.fechaSalida.toDate(),
-            fechaReserva: data.fechaReserva.toDate()
+            fechaLlegada: data.fechaLlegada ? data.fechaLlegada.toDate() : null,
+            fechaSalida: data.fechaSalida ? data.fechaSalida.toDate() : null,
+            fechaReserva: data.fechaReserva ? data.fechaReserva.toDate() : null
         };
-    });
+    }).filter(reserva => reserva.fechaLlegada); // Filtramos cualquier reserva que no tenga fecha de llegada
 
     const today = getTodayUTC();
 

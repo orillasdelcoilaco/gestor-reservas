@@ -73,11 +73,12 @@ module.exports = (db) => {
                 if (reservationNumber && status === 'OK' && originalAmount > 0 && roomNights > 0) {
                     const reservaEnDb = reservasBookingDb.get(reservationNumber);
                     if (reservaEnDb) {
-                        const precioPorNoche = originalAmount / roomNights;
+                        // --- CORRECCIÓN APLICADA AQUÍ: Se añade el 19% de IVA ---
+                        const precioPorNocheConIVA = (originalAmount / roomNights) * 1.19;
                         preciosPorNoche.push({
                             cabaña: reservaEnDb.alojamiento,
                             temporada: getTemporada(reservaEnDb.fechaLlegada),
-                            precioPorNocheUSD: precioPorNoche
+                            precioPorNocheUSD: precioPorNocheConIVA
                         });
                     }
                 }
@@ -92,11 +93,10 @@ module.exports = (db) => {
                     analisis[key] = {
                         cabaña: item.cabaña,
                         temporada: item.temporada,
-                        precioMaximoUSD: 0, // Iniciar en 0
+                        precioMaximoUSD: 0,
                         conteoNoches: 0
                     };
                 }
-                // Si el precio actual es mayor que el máximo guardado, se actualiza
                 if (item.precioPorNocheUSD > analisis[key].precioMaximoUSD) {
                     analisis[key].precioMaximoUSD = item.precioPorNocheUSD;
                 }
@@ -106,7 +106,7 @@ module.exports = (db) => {
             const resultadoFinal = Object.values(analisis).map(item => ({
                 cabaña: item.cabaña,
                 temporada: item.temporada,
-                precioMaximoUSD: Math.round(item.precioMaximoUSD), // Devolvemos el precio máximo
+                precioMaximoUSD: Math.round(item.precioMaximoUSD),
                 nochesAnalizadas: item.conteoNoches
             })).sort((a, b) => a.cabaña.localeCompare(b.cabaña) || a.temporada.localeCompare(b.temporada));
             

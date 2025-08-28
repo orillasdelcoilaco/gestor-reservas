@@ -66,14 +66,14 @@ module.exports = (db) => {
             const preciosPorNoche = [];
             for (const row of results) {
                 const reservationNumber = row['Reservation number'];
-                const finalAmount = parseFloat(row['Final amount']);
+                const originalAmount = parseFloat(row['Original amount']); // <-- CORRECCIÓN APLICADA AQUÍ
                 const roomNights = parseInt(row['Room nights']);
                 const status = row['Status'];
 
-                if (reservationNumber && status === 'OK' && finalAmount > 0 && roomNights > 0) {
+                if (reservationNumber && status === 'OK' && originalAmount > 0 && roomNights > 0) { // <-- CORRECCIÓN APLICADA AQUÍ
                     const reservaEnDb = reservasBookingDb.get(reservationNumber);
                     if (reservaEnDb) {
-                        const precioPorNoche = finalAmount / roomNights;
+                        const precioPorNoche = originalAmount / roomNights; // <-- CORRECCIÓN APLICADA AQUÍ
                         preciosPorNoche.push({
                             cabaña: reservaEnDb.alojamiento,
                             temporada: getTemporada(reservaEnDb.fechaLlegada),

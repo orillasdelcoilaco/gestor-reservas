@@ -15,9 +15,15 @@ let oauth2Client;
 
 try {
     const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
-    const { client_secret, client_id, redirect_uris } = credentials.web;
-    oauth2Client = new OAuth2Client(client_id, client_secret, redirect_uris[0]);
-    console.log('Credenciales de OAuth cargadas exitosamente.');
+    const { client_secret, client_id } = credentials.web; // No leemos más redirect_uris
+
+    // --- CORRECCIÓN APLICADA AQUÍ ---
+    // Definimos explícitamente la URI de redirección correcta.
+    const correctRedirectUri = 'https://gestor-reservas.onrender.com/auth/google/callback';
+
+    oauth2Client = new OAuth2Client(client_id, client_secret, correctRedirectUri);
+    console.log('Credenciales de OAuth cargadas y URI de redirección configurada correctamente.');
+
 } catch (err) {
     console.error('Error al cargar el archivo de credenciales de OAuth:', err);
 }

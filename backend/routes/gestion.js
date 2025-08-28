@@ -2,7 +2,12 @@ const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
 const jsonParser = express.json();
+const multer = require('multer');
 const { getReservasPendientes } = require('../services/gestionService');
+const driveService = require('../services/driveService');
+const config = require('../config');
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 module.exports = (db) => {
 
@@ -17,10 +22,10 @@ module.exports = (db) => {
         }
     });
 
-    // Endpoint para actualizar el estado de gestión de una reserva
-    router.post('/gestion/actualizar-estado/:id', jsonParser, async (req, res) => {
+    // Endpoint para actualizar el estado de gestión de una reserva (incluye subida de archivos)
+    router.post('/gestion/actualizar-estado/:id', upload.single('documento'), async (req, res) => {
         const { id } = req.params;
-        const { accion, detalles } = req.body; // detalles puede contener { medioDePago: '...' }
+        const { accion, detalles } = req.body; // detalles es un JSON stringificado
 
         if (!accion) {
             return res.status(400).json({ error: 'La acción es requerida.' });
@@ -28,8 +33,29 @@ module.exports = (db) => {
 
         try {
             const reservaRef = db.collection('reservas').doc(id);
+            const reservaDoc = await reservaRef.get();
+            if (!reservaDoc.exists) {
+                return res.status(404).json({ error: 'Reserva no encontrada.' });
+            }
+            const reservaData = reservaDoc.data();
+
             const dataToUpdate = {};
             let nuevoEstado = '';
+            const detallesParseados = detalles ? JSON.parse(detalles) : {};
+
+            // --- Lógica de subida de archivos a Drive ---
+            let archivoSubido = null;
+            if (req.file) {
+                const drive = driveService.getDriveClient();
+                const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
+                const reservaId = reservaData.reservaIdOriginal;
+
+                const anioFolderId = await driveService.findOrCreateFolder(drive, year, config.DRIVE_FOLDER_ID);
+                const reservaFolderId = await driveService.findOrCreateFolder(drive, reservaId, anioFolderId);
+                
+                archivoSubido = await driveService.uploadFile(drive, req.file.originalname, req.file.mimetype, req.file.buffer, reservaFolderId);
+            }
+            // --- Fin lógica de subida ---
 
             switch (accion) {
                 case 'marcar_bienvenida_enviada':
@@ -41,32 +67,34 @@ module.exports = (db) => {
                     dataToUpdate.fechaMensajeCobro = admin.firestore.FieldValue.serverTimestamp();
                     break;
                 case 'registrar_pago':
-                     if (!detalles || !detalles.medioDePago || !detalles.monto) {
-                        return res.status(400).json({ error: 'El medio de pago y el monto son requeridos.' });
+                    if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {
+                        return res.status(400).json({ error: 'Monto y medio de pago son requeridos.' });
                     }
-                    // Esta acción crea un documento en la subcolección 'transacciones'
                     const transaccionRef = reservaRef.collection('transacciones').doc();
                     await transaccionRef.set({
-                        monto: detalles.monto,
-                        medioDePago: detalles.medioDePago,
-                        tipo: detalles.tipo || 'Abono', // 'Abono' o 'Pago Final'
+                        monto: parseFloat(detallesParseados.monto),
+                        medioDePago: detallesParseados.medioDePago,
+                        tipo: detallesParseados.tipo || 'Abono',
                         fecha: admin.firestore.FieldValue.serverTimestamp(),
-                        enlaceComprobante: detalles.enlaceComprobante || null
+                        enlaceComprobante: archivoSubido ? archivoSubido.webViewLink : null
                     });
                     
-                    // Si es el pago final, actualizamos el estado principal
-                    if (detalles.esPagoFinal) {
+                    if (detallesParseados.esPagoFinal) {
                         nuevoEstado = 'Pendiente Boleta';
                         dataToUpdate.pagado = true;
-                        dataToUpdate.pendiente = 0;
                     }
                     break;
                 case 'marcar_boleta_enviada':
                     nuevoEstado = 'Facturado';
                     dataToUpdate.fechaBoletaEnviada = admin.firestore.FieldValue.serverTimestamp();
                     dataToUpdate.boleta = true;
-                    if(detalles && detalles.enlaceBoleta) {
-                        dataToUpdate['documentos.enlaceBoleta'] = detalles.enlaceBoleta;
+                    if (archivoSubido) {
+                        dataToUpdate['documentos.enlaceBoleta'] = archivoSubido.webViewLink;
+                    }
+                    break;
+                 case 'subir_documento_reserva':
+                    if (archivoSubido) {
+                         dataToUpdate['documentos.enlaceReserva'] = archivoSubido.webViewLink;
                     }
                     break;
                 default:

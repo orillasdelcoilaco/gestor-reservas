@@ -24,7 +24,7 @@ module.exports = (db) => {
     /**
      * POST /api/analizar-tarifas-historicas
      * Recibe un archivo CSV de Booking, lo cruza con las reservas existentes
-     * y devuelve un análisis de precios promedio por cabaña y temporada.
+     * y devuelve el análisis del precio MÁXIMO por cabaña y temporada.
      */
     router.post('/analizar-tarifas-historicas', upload.single('reporteFile'), async (req, res) => {
         if (!req.file) {
@@ -66,14 +66,14 @@ module.exports = (db) => {
             const preciosPorNoche = [];
             for (const row of results) {
                 const reservationNumber = row['Reservation number'];
-                const originalAmount = parseFloat(row['Original amount']); // <-- CORRECCIÓN APLICADA AQUÍ
+                const originalAmount = parseFloat(row['Original amount']);
                 const roomNights = parseInt(row['Room nights']);
                 const status = row['Status'];
 
-                if (reservationNumber && status === 'OK' && originalAmount > 0 && roomNights > 0) { // <-- CORRECCIÓN APLICADA AQUÍ
+                if (reservationNumber && status === 'OK' && originalAmount > 0 && roomNights > 0) {
                     const reservaEnDb = reservasBookingDb.get(reservationNumber);
                     if (reservaEnDb) {
-                        const precioPorNoche = originalAmount / roomNights; // <-- CORRECCIÓN APLICADA AQUÍ
+                        const precioPorNoche = originalAmount / roomNights;
                         preciosPorNoche.push({
                             cabaña: reservaEnDb.alojamiento,
                             temporada: getTemporada(reservaEnDb.fechaLlegada),
@@ -84,7 +84,7 @@ module.exports = (db) => {
             }
             console.log(`[Análisis Histórico] Se encontraron ${preciosPorNoche.length} noches válidas para analizar.`);
 
-            // 4. Agrupar y calcular promedios
+            // 4. Agrupar y encontrar el valor MÁXIMO
             const analisis = {};
             preciosPorNoche.forEach(item => {
                 const key = `${item.cabaña}|${item.temporada}`;
@@ -92,18 +92,21 @@ module.exports = (db) => {
                     analisis[key] = {
                         cabaña: item.cabaña,
                         temporada: item.temporada,
-                        totalPrecio: 0,
+                        precioMaximoUSD: 0, // Iniciar en 0
                         conteoNoches: 0
                     };
                 }
-                analisis[key].totalPrecio += item.precioPorNocheUSD;
+                // Si el precio actual es mayor que el máximo guardado, se actualiza
+                if (item.precioPorNocheUSD > analisis[key].precioMaximoUSD) {
+                    analisis[key].precioMaximoUSD = item.precioPorNocheUSD;
+                }
                 analisis[key].conteoNoches++;
             });
 
             const resultadoFinal = Object.values(analisis).map(item => ({
                 cabaña: item.cabaña,
                 temporada: item.temporada,
-                precioPromedioUSD: Math.round(item.totalPrecio / item.conteoNoches),
+                precioMaximoUSD: Math.round(item.precioMaximoUSD), // Devolvemos el precio máximo
                 nochesAnalizadas: item.conteoNoches
             })).sort((a, b) => a.cabaña.localeCompare(b.cabaña) || a.temporada.localeCompare(b.temporada));
             

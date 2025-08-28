@@ -30,8 +30,8 @@ module.exports = (db) => {
         });
         return router;
     }
-
-    // <-- CAMBIO: La ruta ahora es /google (se combinará con /auth de index.js)
+    
+    // Esta ruta se convierte en /auth/google
     router.get('/google', (req, res) => {
         const authUrl = oauth2Client.generateAuthUrl({
             access_type: 'offline',
@@ -41,7 +41,7 @@ module.exports = (db) => {
         res.redirect(authUrl);
     });
 
-    // <-- CAMBIO: La ruta ahora es /google/callback
+    // Esta ruta se convierte en /auth/google/callback
     router.get('/google/callback', async (req, res) => {
         const code = req.query.code;
         if (!code) {

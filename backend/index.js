@@ -46,7 +46,8 @@ const publicRouter = express.Router();
 const privateRouter = express.Router();
 
 //--- Configuración de Rutas Públicas ---
-publicRouter.use('/auth', authRoutes(db));
+// Las rutas dentro de authRoutes (ej. /google) se combinarán con /auth
+app.use('/auth', authRoutes(db)); 
 publicRouter.get('/', (req, res) => {
   res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
@@ -65,8 +66,8 @@ privateRouter.use(analisisRoutes(db));
 privateRouter.use(gestionRoutes(db));
 
 //--- Aplicación de los Routers a la App ---
-app.use(publicRouter); // El router público se aplica SIN seguridad
-app.use('/api', checkFirebaseToken, privateRouter); // El router privado se aplica CON el middleware de seguridad
+app.use(publicRouter); // Router público sin seguridad
+app.use('/api', checkFirebaseToken, privateRouter); // Router privado con el middleware de seguridad
 
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {

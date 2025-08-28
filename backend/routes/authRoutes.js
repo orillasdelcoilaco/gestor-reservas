@@ -6,15 +6,13 @@ const path = require('path');
 const router = express.Router();
 
 // --- Configuración del Cliente OAuth2 ---
-// Lógica para determinar la ruta correcta de las credenciales
 const isProduction = process.env.RENDER === 'true';
 const CREDENTIALS_PATH = isProduction 
-    ? '/etc/secrets/oauth_credentials.json' // Ruta en producción (Render)
-    : path.join(process.cwd(), 'oauth_credentials.json'); // Ruta en desarrollo (asume que el archivo está en la carpeta 'backend')
+    ? '/etc/secrets/oauth_credentials.json'
+    : path.join(process.cwd(), 'oauth_credentials.json');
 
 let oauth2Client;
 
-// Cargar las credenciales al iniciar
 try {
     const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
     const { client_secret, client_id, redirect_uris } = credentials.web;
@@ -27,13 +25,14 @@ try {
 // --- Rutas de Autenticación ---
 module.exports = (db) => {
     if (!oauth2Client) {
-        router.use('/api/auth/google', (req, res) => {
+        router.use('/google', (req, res) => {
             res.status(500).send('Error de configuración del servidor: No se pudieron cargar las credenciales de OAuth.');
         });
         return router;
     }
 
-    router.get('/auth/google', (req, res) => {
+    // <-- CAMBIO: La ruta ahora es /google (se combinará con /auth de index.js)
+    router.get('/google', (req, res) => {
         const authUrl = oauth2Client.generateAuthUrl({
             access_type: 'offline',
             scope: ['https://www.googleapis.com/auth/contacts'],
@@ -42,7 +41,8 @@ module.exports = (db) => {
         res.redirect(authUrl);
     });
 
-    router.get('/auth/google/callback', async (req, res) => {
+    // <-- CAMBIO: La ruta ahora es /google/callback
+    router.get('/google/callback', async (req, res) => {
         const code = req.query.code;
         if (!code) {
             return res.status(400).send('No se recibió el código de autorización.');

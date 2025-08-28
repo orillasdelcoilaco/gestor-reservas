@@ -4,7 +4,7 @@ const admin = require('firebase-admin');
 
 // --- Importar Middlewares y Rutas ---
 const { checkFirebaseToken } = require('./utils/authMiddleware');
-const authRoutes = require('./routes/authRoutes'); // <-- 1. IMPORTAR RUTA DE AUTORIZACIÓN
+const authRoutes = require('./routes/authRoutes');
 const reservasRoutes = require('./routes/reservas');
 const sincronizarRoutes = require('./routes/sincronizar');
 const consolidarRoutes = require('./routes/consolidar');
@@ -43,14 +43,14 @@ app.use(cors(corsOptions));
 
 //--- Rutas ---
 
-// 2. RUTAS PÚBLICAS (sin protección de token)
-app.use('/', authRoutes(db)); 
+// RUTAS PÚBLICAS (sin protección de token)
+app.use('/auth', authRoutes(db)); // <-- CAMBIO: Rutas de autenticación ahora bajo el prefijo /auth
 
 app.get('/', (req, res) => {
   res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
 
-// 3. RUTAS PROTEGIDAS (requieren token de Firebase)
+// RUTAS PROTEGIDAS (requieren token de Firebase)
 app.use('/api', checkFirebaseToken, reservasRoutes(db));
 app.use('/api', checkFirebaseToken, sincronizarRoutes(db));
 app.use('/api', checkFirebaseToken, consolidarRoutes(db));

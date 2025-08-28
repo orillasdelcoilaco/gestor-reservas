@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Diaria - Gestor de Reservas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="loader" class="text-center p-8">
+        <p class="text-gray-500">Verificando sesión...</p>
+    </div>
+
+    <div id="app-content" class="min-h-screen hidden">
+        <nav class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
+                    <div id="auth-info" class="flex items-center space-x-4"></div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="bg-white p-6 md:p-8 rounded-lg shadow">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Panel de Gestión Diaria</h2>
+                <div id="loading-state" class="text-center py-8">
+                    <p class="text-gray-500">Cargando tareas pendientes...</p>
+                </div>
+                
+                <div id="hoy-container" class="hidden">
+                    <h3 class="text-xl font-bold text-red-600 mb-4 border-b pb-2">Requiere Acción Hoy</h3>
+                    <div id="hoy-list" class="space-y-4"></div>
+                </div>
+
+                <div id="proximas-container" class="mt-8 hidden">
+                    <h3 class="text-xl font-semibold text-blue-600 mb-4 border-b pb-2">Próximas Llegadas</h3>
+                    <div id="proximas-list" class="space-y-4"></div>
+                </div>
+
+                 <div id="no-pendientes" class="text-center py-12 hidden">
+                    <p class="text-2xl font-semibold text-green-600">¡Todo al día!</p>
+                    <p class="text-gray-500 mt-2">No hay reservas con gestiones pendientes.</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+<script type="module">
+    import { checkSession, logout, fetchAPI } from './api.js';
+
+    // --- Lógica de la Página ---
+    const loader = document.getElementById('loader');
+    const appContent = document.getElementById('app-content');
+    const authInfo = document.getElementById('auth-info');
+    const loadingState = document.getElementById('loading-state');
+    const hoyContainer = document.getElementById('hoy-container');
+    const hoyList = document.getElementById('hoy-list');
+    const proximasContainer = document.getElementById('proximas-container');
+    const proximasList = document.getElementById('proximas-list');
+    const noPendientes = document.getElementById('no-pendientes');
+
+    function getTodayUTC() {
+        const today = new Date();
+        return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    }
+
+    function formatDate(dateString) {
+        return new Date(dateString).toLocaleDateString('es-CL', { timeZone: 'UTC' });
+    }
+    
+    function getStatusInfo(status) {
+        switch (status) {
+            case 'Pendiente Bienvenida': return { text: 'PENDIENTE BIENVENIDA', color: 'bg-yellow-500', action: 'marcar_bienvenida_enviada', button: 'Marcar Bienvenida Enviada' };
+            case 'Pendiente Cobro': return { text: 'PENDIENTE COBRO', color: 'bg-orange-500', action: 'marcar_cobro_enviado', button: 'Marcar Cobro Enviado' };
+            case 'Pendiente Pago': return { text: 'PENDIENTE PAGO', color: 'bg-red-600', action: 'registrar_pago', button: 'Registrar Pago/Abono' };
+            case 'Pendiente Boleta': return { text: 'PENDIENTE BOLETA', color: 'bg-purple-600', action: 'marcar_boleta_enviada', button: 'Subir Boleta' };
+            default: return { text: status.toUpperCase(), color: 'bg-gray-400', action: null, button: 'Sin Acción' };
+        }
+    }
+
+    function createReservaCard(reserva) {
+        const card = document.createElement('div');
+        card.className = 'p-4 border rounded-lg shadow-sm flex flex-col md:flex-row md:items-center justify-between';
+        
+        const statusInfo = getStatusInfo(reserva.estadoGestion);
+
+        card.innerHTML = `
+            <div class="flex-grow">
+                <div class="flex items-center mb-2 md:mb-0">
+                    <span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>
+                    <p class="ml-4 text-lg font-bold text-gray-800">${reserva.clienteNombre}</p>
+                </div>
+                <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <p><strong>Teléfono:</strong> ${reserva.telefono || 'N/A'}</p>
+                    <p><strong>Cabaña:</strong> ${reserva.alojamiento}</p>
+                    <p><strong>Llegada:</strong> ${formatDate(reserva.fechaLlegada)}</p>
+                    <p><strong>ID Reserva:</strong> ${reserva.reservaIdOriginal}</p>
+                </div>
+            </div>
+            <div class="mt-4 md:mt-0 md:ml-4">
+                <button 
+                    data-id="${reserva.id}" 
+                    data-action="${statusInfo.action}" 
+                    class="action-btn w-full md:w-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 disabled:bg-gray-400">
+                    ${statusInfo.button}
+                </button>
+            </div>
+        `;
+
+        card.querySelector('.action-btn').addEventListener('click', handleActionClick);
+        return card;
+    }
+    
+    async function handleActionClick(event) {
+        const button = event.target;
+        const reservaId = button.dataset.id;
+        const action = button.dataset.action;
+
+        button.disabled = true;
+        button.textContent = 'Procesando...';
+
+        try {
+            // Lógica para acciones futuras (pago, boleta) se añadirá aquí
+            if (action === 'registrar_pago') {
+                 alert('Funcionalidad para registrar pago y subir archivo se implementará aquí.');
+                 // Por ahora, no hacemos nada para esta acción
+            } else if (action === 'marcar_boleta_enviada') {
+                 alert('Funcionalidad para subir boleta se implementará aquí.');
+                 // Por ahora, no hacemos nada para esta acción
+            } else {
+                 await fetchAPI(`/api/gestion/actualizar-estado/${reservaId}`, {
+                    method: 'POST',
+                    body: { accion: action }
+                });
+            }
+           
+            loadGestion(); // Recargar la lista para reflejar el cambio de estado
+        } catch (error) {
+            console.error('Error al ejecutar la acción:', error);
+            alert(`Error: ${error.message}`);
+            button.disabled = false;
+            button.textContent = getStatusInfo(action.replace('marcar_','').replace('_enviada','')).button;
+        }
+    }
+
+    async function loadGestion() {
+        loadingState.classList.remove('hidden');
+        hoyContainer.classList.add('hidden');
+        proximasContainer.classList.add('hidden');
+        noPendientes.classList.add('hidden');
+        hoyList.innerHTML = '';
+        proximasList.innerHTML = '';
+        
+        try {
+            const reservas = await fetchAPI('/api/gestion/pendientes');
+            loadingState.classList.add('hidden');
+
+            if (reservas.length === 0) {
+                noPendientes.classList.remove('hidden');
+                return;
+            }
+
+            const today = getTodayUTC();
+            const llegadasHoy = [];
+            const proximasLlegadas = [];
+
+            reservas.forEach(reserva => {
+                if (new Date(reserva.fechaLlegada).getTime() <= today.getTime()) {
+                    llegadasHoy.push(reserva);
+                } else {
+                    proximasLlegadas.push(reserva);
+                }
+            });
+
+            if (llegadasHoy.length > 0) {
+                llegadasHoy.forEach(res => hoyList.appendChild(createReservaCard(res)));
+                hoyContainer.classList.remove('hidden');
+            }
+
+            if (proximasLlegadas.length > 0) {
+                proximasLlegadas.forEach(res => proximasList.appendChild(createReservaCard(res)));
+                proximasContainer.classList.remove('hidden');
+            }
+
+        } catch (error) {
+            console.error('Error al cargar la gestión:', error);
+            loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar las tareas: ${error.message}</p>`;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContent.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            
+            loadGestion();
+        }
+    });
+</script>
+</body>
+</html>

@@ -38,30 +38,35 @@ const db = admin.firestore();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-//--- Middlewares
+//--- Middlewares Globales ---
 app.use(cors(corsOptions));
 
-//--- Rutas ---
+//--- Creación de Routers Separados ---
+const publicRouter = express.Router();
+const privateRouter = express.Router();
 
-// RUTAS PÚBLICAS (sin protección de token)
-app.use('/auth', authRoutes(db)); // <-- CAMBIO: Rutas de autenticación ahora bajo el prefijo /auth
-
-app.get('/', (req, res) => {
+//--- Configuración de Rutas Públicas ---
+publicRouter.use('/auth', authRoutes(db));
+publicRouter.get('/', (req, res) => {
   res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
 
-// RUTAS PROTEGIDAS (requieren token de Firebase)
-app.use('/api', checkFirebaseToken, reservasRoutes(db));
-app.use('/api', checkFirebaseToken, sincronizarRoutes(db));
-app.use('/api', checkFirebaseToken, consolidarRoutes(db));
-app.use('/api', checkFirebaseToken, dolarRoutes(db));
-app.use('/api/mensajes', checkFirebaseToken, mensajesRoutes(db));
-app.use('/api', checkFirebaseToken, clientesRoutes(db));
-app.use('/api', checkFirebaseToken, importRoutes(db));
-app.use('/api', checkFirebaseToken, tarifasRoutes(db));
-app.use('/api', checkFirebaseToken, kpiRoutes(db));
-app.use('/api', checkFirebaseToken, analisisRoutes(db));
-app.use('/api', checkFirebaseToken, gestionRoutes(db));
+//--- Configuración de Rutas Privadas ---
+privateRouter.use(reservasRoutes(db));
+privateRouter.use(sincronizarRoutes(db));
+privateRouter.use(consolidarRoutes(db));
+privateRouter.use(dolarRoutes(db));
+privateRouter.use('/mensajes', mensajesRoutes(db));
+privateRouter.use(clientesRoutes(db));
+privateRouter.use(importRoutes(db));
+privateRouter.use(tarifasRoutes(db));
+privateRouter.use(kpiRoutes(db));
+privateRouter.use(analisisRoutes(db));
+privateRouter.use(gestionRoutes(db));
+
+//--- Aplicación de los Routers a la App ---
+app.use(publicRouter); // El router público se aplica SIN seguridad
+app.use('/api', checkFirebaseToken, privateRouter); // El router privado se aplica CON el middleware de seguridad
 
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {

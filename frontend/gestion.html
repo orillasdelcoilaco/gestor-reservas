@@ -129,12 +129,26 @@
     
     function getStatusInfo(status) {
         switch (status) {
-            case 'Pendiente Bienvenida': return { text: 'PENDIENTE BIENVENIDA', color: 'bg-yellow-500', action: 'marcar_bienvenida_enviada', button: 'Marcar Bienvenida Enviada' };
-            case 'Pendiente Cobro': return { text: 'PENDIENTE COBRO', color: 'bg-orange-500', action: 'marcar_cobro_enviado', button: 'Marcar Cobro Enviado' };
-            case 'Pendiente Pago': return { text: 'PENDIENTE PAGO', color: 'bg-red-600', action: 'registrar_pago', button: 'Registrar Pago/Abono' };
-            case 'Pendiente Boleta': return { text: 'PENDIENTE BOLETA', color: 'bg-purple-600', action: 'marcar_boleta_enviada', button: 'Subir Boleta' };
-            default: return { text: status.toUpperCase(), color: 'bg-gray-400', action: null, button: 'Sin Acción' };
+            case 'Pendiente Bienvenida': return { text: 'PENDIENTE BIENVENIDA', color: 'bg-yellow-500' };
+            case 'Pendiente Cobro': return { text: 'PENDIENTE COBRO', color: 'bg-orange-500' };
+            case 'Pendiente Pago': return { text: 'PENDIENTE PAGO', color: 'bg-red-600' };
+            case 'Pendiente Boleta': return { text: 'PENDIENTE BOLETA', color: 'bg-purple-600' };
+            default: return { text: status.toUpperCase(), color: 'bg-gray-400' };
         }
+    }
+    
+    function renderActionButtons(reserva) {
+        let buttonsHtml = '';
+        const estado = reserva.estadoGestion;
+
+        if (estado === 'Pendiente Pago') {
+             buttonsHtml = `<button data-id="${reserva.id}" data-action="registrar_pago" class="action-btn w-full md:w-auto px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700">Registrar Pago/Abono</button>`;
+        } else if (estado === 'Pendiente Boleta') {
+            buttonsHtml = `<button data-id="${reserva.id}" data-action="marcar_boleta_enviada" class="action-btn w-full md:w-auto px-4 py-2 bg-purple-600 text-white font-semibold rounded-md hover:bg-purple-700">Subir Boleta</button>`;
+        } else if (estado === 'Pendiente Cobro') {
+             buttonsHtml = `<button data-id="${reserva.id}" data-action="registrar_pago" class="action-btn w-full md:w-auto px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700">Agregar Abono</button>`;
+        }
+        return `<div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0 flex flex-col md:flex-row">${buttonsHtml}</div>`;
     }
 
     function createReservaCard(reserva) {
@@ -142,11 +156,24 @@
         card.className = 'p-4 border rounded-lg shadow-sm flex flex-col md:flex-row md:items-center justify-between';
         
         const statusInfo = getStatusInfo(reserva.estadoGestion);
+        
+        let statusHtml;
+        let actionUrl = `mensajes.html?reservaId=${reserva.reservaIdOriginal}&reservaCompletaId=${reserva.id}`;
 
+        if (reserva.estadoGestion === 'Pendiente Bienvenida') {
+            actionUrl += `&accion=marcar_bienvenida_enviada`;
+            statusHtml = `<a href="${actionUrl}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80 transition-opacity">${statusInfo.text}</a>`;
+        } else if (reserva.estadoGestion === 'Pendiente Cobro') {
+            actionUrl += `&accion=marcar_cobro_enviado`;
+            statusHtml = `<a href="${actionUrl}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80 transition-opacity">${statusInfo.text}</a>`;
+        } else {
+            statusHtml = `<span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>`;
+        }
+        
         card.innerHTML = `
             <div class="flex-grow">
                 <div class="flex items-center mb-2 md:mb-0">
-                    <span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>
+                    ${statusHtml}
                     <p class="ml-4 text-lg font-bold text-gray-800">${reserva.clienteNombre}</p>
                 </div>
                 <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -156,22 +183,14 @@
                     <p><strong>ID Reserva:</strong> ${reserva.reservaIdOriginal}</p>
                 </div>
             </div>
-            <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
-                <button 
-                    data-id="${reserva.id}" 
-                    data-action="${statusInfo.action}" 
-                    class="action-btn w-full md:w-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 disabled:bg-gray-400">
-                    ${statusInfo.button}
-                </button>
-            </div>
+            ${renderActionButtons(reserva)}
         `;
 
-        card.querySelector('.action-btn').addEventListener('click', handleActionClick);
+        card.querySelectorAll('.action-btn').forEach(btn => btn.addEventListener('click', handleActionClick));
         return card;
     }
     
     function setupModalForAction() {
-        // Resetear modal
         modalForm.reset();
         pagoFields.classList.add('hidden');
         documentoField.classList.add('hidden');
@@ -195,30 +214,11 @@
         modal.classList.remove('hidden');
     }
 
-    async function handleActionClick(event) {
+    function handleActionClick(event) {
         const button = event.target;
         currentReservaId = button.dataset.id;
         currentAction = button.dataset.action;
-
-        // Acciones que no necesitan modal
-        if (currentAction === 'marcar_bienvenida_enviada' || currentAction === 'marcar_cobro_enviado') {
-            button.disabled = true;
-            button.textContent = 'Procesando...';
-            try {
-                await fetchAPI(`/api/gestion/actualizar-estado/${currentReservaId}`, {
-                    method: 'POST',
-                    body: { accion: currentAction }
-                });
-                loadGestion();
-            } catch (error) {
-                console.error('Error al ejecutar la acción:', error);
-                alert(`Error: ${error.message}`);
-                button.disabled = false;
-            }
-        } else {
-            // Acciones que sí necesitan modal
-            setupModalForAction();
-        }
+        setupModalForAction();
     }
 
     async function handleModalSave() {
@@ -229,7 +229,6 @@
         const formData = new FormData();
         const detalles = {};
 
-        // Validar y recolectar datos según la acción
         if (currentAction === 'registrar_pago') {
             const monto = document.getElementById('monto-input').value;
             if (!monto || monto <= 0) {
@@ -241,6 +240,7 @@
             detalles.monto = monto;
             detalles.medioDePago = document.getElementById('medio-pago-select').value;
             detalles.esPagoFinal = document.getElementById('pago-final-checkbox').checked;
+            detalles.tipo = detalles.esPagoFinal ? 'Pago Final' : 'Abono';
         }
 
         if (documentoInput.files.length > 0) {
@@ -258,7 +258,7 @@
         try {
             await fetchAPI(`/api/gestion/actualizar-estado/${currentReservaId}`, {
                 method: 'POST',
-                body: formData // fetchAPI maneja FormData automáticamente
+                body: formData
             });
             modal.classList.add('hidden');
             loadGestion();

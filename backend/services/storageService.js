@@ -9,7 +9,9 @@ const { v4: uuidv4 } = require('uuid');
  * @returns {Promise<string>} La URL pública del archivo subido.
  */
 async function uploadFile(fileBuffer, destinationPath, mimeType) {
-    const bucket = admin.storage().bucket();
+    // --- CORRECCIÓN DEFINITIVA APLICADA AQUÍ ---
+    // Obtenemos una referencia explícita al bucket por su nombre exacto.
+    const bucket = admin.storage().bucket('reservas-sodc.firebaseapp.com');
     const file = bucket.file(destinationPath);
     
     // Generamos un token para el acceso público

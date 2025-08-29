@@ -2,14 +2,14 @@ const admin = require('firebase-admin');
 
 /**
  * Sube un archivo a Firebase Storage y devuelve su URL pública.
+ * @param {string} bucketName El nombre del bucket de Storage.
  * @param {Buffer} fileBuffer El buffer del archivo a subir.
  * @param {string} destinationPath La ruta dentro del bucket donde se guardará.
  * @param {string} mimeType El tipo MIME del archivo.
  * @returns {Promise<string>} La URL pública del archivo subido.
  */
-async function uploadFile(fileBuffer, destinationPath, mimeType) {
-    // --- CORRECCIÓN DEFINITIVA APLICADA AQUÍ ---
-    const bucket = admin.storage().bucket('reservas-sodc.appspot.com');
+async function uploadFile(bucketName, fileBuffer, destinationPath, mimeType) {
+    const bucket = admin.storage().bucket(bucketName);
     const file = bucket.file(destinationPath);
 
     try {
@@ -17,7 +17,7 @@ async function uploadFile(fileBuffer, destinationPath, mimeType) {
             metadata: {
                 contentType: mimeType,
             },
-            public: true, // Hacemos el archivo públicamente legible
+            public: true,
             validation: 'md5'
         });
         

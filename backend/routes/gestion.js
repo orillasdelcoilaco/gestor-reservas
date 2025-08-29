@@ -7,7 +7,8 @@ const storageService = require('../services/storageService');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-module.exports = (db) => {
+// Ahora recibimos el nombre del bucket como parámetro
+module.exports = (db, bucketName) => {
 
     router.get('/gestion/pendientes', async (req, res) => {
         try {
@@ -43,12 +44,13 @@ module.exports = (db) => {
             if (req.file) {
                 const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
                 const reservaId = reservaData.reservaIdOriginal;
-                // --- LÓGICA SIMPLIFICADA PARA FIREBASE STORAGE ---
                 const destinationPath = `reservas/${year}/${reservaId}/${req.file.originalname}`;
                 
-                publicUrl = await storageService.uploadFile(req.file.buffer, destinationPath, req.file.mimetype);
+                // Pasamos el nombre del bucket al servicio
+                publicUrl = await storageService.uploadFile(bucketName, req.file.buffer, destinationPath, req.file.mimetype);
             }
 
+            // ... (el resto del switch case no cambia)
             switch (accion) {
                 case 'marcar_bienvenida_enviada':
                     nuevoEstado = 'Pendiente Cobro';

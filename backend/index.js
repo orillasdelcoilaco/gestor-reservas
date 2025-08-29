@@ -28,10 +28,11 @@ const serviceAccount = process.env.RENDER
     ? require('/etc/secrets/serviceAccountKey.json')
     : require('./serviceAccountKey.json');
 
+const BUCKET_NAME = 'reservas-sodc.appspot.com'; // <-- Nombre del bucket definido una sola vez
+
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    // --- CORRECCIÓN DEFINITIVA APLICADA AQUÍ ---
-    storageBucket: 'reservas-sodc.appspot.com', 
+    storageBucket: BUCKET_NAME, 
     projectId: 'reservas-sodc' 
 });
 
@@ -65,7 +66,8 @@ privateRouter.use(importRoutes(db));
 privateRouter.use(tarifasRoutes(db));
 privateRouter.use(kpiRoutes(db));
 privateRouter.use(analisisRoutes(db));
-privateRouter.use(gestionRoutes(db));
+// Pasamos el nombre del bucket a la ruta de gestión
+privateRouter.use(gestionRoutes(db, BUCKET_NAME)); 
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 

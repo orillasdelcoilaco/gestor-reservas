@@ -24,10 +24,10 @@ const corsOptions = {
 };
 
 //--- Inicialización de Firebase Admin SDK ---
-// --- CORRECCIÓN APLICADA AQUÍ ---
-// Se ajusta la ruta para que coincida con el nombre de la variable de entorno en Render.
+// --- CORRECCIÓN FINAL ---
+// Esta lógica lee el archivo secreto en Render y el archivo local en desarrollo.
 const serviceAccount = process.env.RENDER 
-    ? require('/etc/secrets/FIREBASE_SERVICE_ACCOUNT')
+    ? require('/etc/secrets/serviceAccountKey.json')
     : require('./serviceAccountKey.json');
 
 admin.initializeApp({
@@ -35,7 +35,7 @@ admin.initializeApp({
     storageBucket: 'reservas-sodc.firebaseapp.com' 
 });
 
-console.log(process.env.RENDER ? "Firebase Admin SDK inicializado en modo Producción." : "Firebase Admin SDK inicializado en modo Desarrollo.");
+console.log(process.env.RENDER ? "Firebase Admin SDK inicializado desde Secret File (Producción)." : "Firebase Admin SDK inicializado desde archivo local (Desarrollo).");
 
 const db = admin.firestore();
 const app = express();

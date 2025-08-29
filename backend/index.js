@@ -24,7 +24,7 @@ const corsOptions = {
 };
 
 //--- Inicialización de Firebase Admin SDK ---
-// --- CORRECCIÓN FINAL ---
+// --- CORRECCIÓN DEFINITIVA ---
 // Esta lógica lee el archivo secreto en Render y el archivo local en desarrollo.
 const serviceAccount = process.env.RENDER 
     ? require('/etc/secrets/serviceAccountKey.json')

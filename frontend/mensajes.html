@@ -147,7 +147,6 @@
                         mensajeCobroText.value = '';
                         mensajeBienvenidaText.value = '';
 
-                        // Auto-generar el mensaje correspondiente a la acción
                         if (accionFromUrl === 'marcar_bienvenida_enviada') {
                             generarMensajeBienvenida();
                         } else if (accionFromUrl === 'marcar_cobro_enviado') {
@@ -417,10 +416,15 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
                 if (!reservaCompletaIdFromUrl || !accionFromUrl) return;
                 btnMarcarEnviado.disabled = true;
                 btnMarcarEnviado.textContent = 'Procesando...';
+
+                // --- CORRECCIÓN APLICADA AQUÍ ---
+                const formData = new FormData();
+                formData.append('accion', accionFromUrl);
+
                 try {
                     await fetchAPI(`/api/gestion/actualizar-estado/${reservaCompletaIdFromUrl}`, {
                         method: 'POST',
-                        body: { accion: accionFromUrl }
+                        body: formData // Se envía como FormData, aunque no tenga archivos
                     });
                     window.location.href = 'gestion.html';
                 } catch (error) {

@@ -11,7 +11,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 module.exports = (db) => {
 
-    // Endpoint para obtener todas las reservas pendientes, ya priorizadas por el servicio
     router.get('/gestion/pendientes', async (req, res) => {
         try {
             const reservasPendientes = await getReservasPendientes(db);
@@ -22,10 +21,9 @@ module.exports = (db) => {
         }
     });
 
-    // Endpoint para actualizar el estado de gestión de una reserva (incluye subida de archivos)
     router.post('/gestion/actualizar-estado/:id', upload.single('documento'), async (req, res) => {
         const { id } = req.params;
-        const { accion, detalles } = req.body; // detalles es un JSON stringificado
+        const { accion, detalles } = req.body;
 
         if (!accion) {
             return res.status(400).json({ error: 'La acción es requerida.' });
@@ -43,19 +41,18 @@ module.exports = (db) => {
             let nuevoEstado = '';
             const detallesParseados = detalles ? JSON.parse(detalles) : {};
 
-            // --- Lógica de subida de archivos a Drive ---
             let archivoSubido = null;
             if (req.file) {
                 const drive = driveService.getDriveClient();
                 const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
                 const reservaId = reservaData.reservaIdOriginal;
-
-                const anioFolderId = await driveService.findOrCreateFolder(drive, year, config.DRIVE_FOLDER_ID);
+                
+                const parentFolderId = config.DOCUMENTS_PARENT_FOLDER_ID;
+                const anioFolderId = await driveService.findOrCreateFolder(drive, year, parentFolderId);
                 const reservaFolderId = await driveService.findOrCreateFolder(drive, reservaId, anioFolderId);
                 
                 archivoSubido = await driveService.uploadFile(drive, req.file.originalname, req.file.mimetype, req.file.buffer, reservaFolderId);
             }
-            // --- Fin lógica de subida ---
 
             switch (accion) {
                 case 'marcar_bienvenida_enviada':

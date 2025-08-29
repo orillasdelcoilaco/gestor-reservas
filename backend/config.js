@@ -4,6 +4,9 @@ const config = {
   // ID de la carpeta en Google Drive donde se almacenan los reportes.
   DRIVE_FOLDER_ID: '1ED6xW0Ti_nBgRr_EzbYJ9XG1AxvfiUrx', // <-- Asegúrate de que este ID sea el correcto
 
+    // ID de la carpeta compartida en "Mi Unidad" para guardar los documentos de reservas.
+  DOCUMENTS_PARENT_FOLDER_ID: '1xAZcGboZeYEf9hvYnmAy8jjUjK8X6PwE',
+
   // Patrones para identificar los archivos de reporte.
   SODC_FILE_PATTERN: 'mphb-bookings',
   BOOKING_FILE_PATTERN: 'Check-in con datos de contacto', // <-- ACTUALIZADO

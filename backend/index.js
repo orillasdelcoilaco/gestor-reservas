@@ -24,13 +24,14 @@ const corsOptions = {
 };
 
 //--- Inicialización de Firebase Admin SDK ---
+// --- CORRECCIÓN APLICADA AQUÍ ---
+// Se ajusta la ruta para que coincida con el nombre de la variable de entorno en Render.
 const serviceAccount = process.env.RENDER 
-    ? require('/etc/secrets/serviceAccountKey.json')
+    ? require('/etc/secrets/FIREBASE_SERVICE_ACCOUNT')
     : require('./serviceAccountKey.json');
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    // --- CORRECCIÓN FINAL APLICADA AQUÍ ---
     storageBucket: 'reservas-sodc.firebaseapp.com' 
 });
 

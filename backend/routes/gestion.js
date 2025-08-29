@@ -1,11 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
-const jsonParser = express.json();
 const multer = require('multer');
 const { getReservasPendientes } = require('../services/gestionService');
-const driveService = require('../services/driveService');
-const config = require('../config');
+const storageService = require('../services/storageService'); // <-- CAMBIO: Usamos el nuevo servicio
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -41,17 +39,13 @@ module.exports = (db) => {
             let nuevoEstado = '';
             const detallesParseados = detalles ? JSON.parse(detalles) : {};
 
-            let archivoSubido = null;
+            let publicUrl = null;
             if (req.file) {
-                const drive = driveService.getDriveClient();
                 const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
                 const reservaId = reservaData.reservaIdOriginal;
+                const destinationPath = `reservas/${year}/${reservaId}/${req.file.originalname}`;
                 
-                const parentFolderId = config.DOCUMENTS_PARENT_FOLDER_ID;
-                const anioFolderId = await driveService.findOrCreateFolder(drive, year, parentFolderId);
-                const reservaFolderId = await driveService.findOrCreateFolder(drive, reservaId, anioFolderId);
-                
-                archivoSubido = await driveService.uploadFile(drive, req.file.originalname, req.file.mimetype, req.file.buffer, reservaFolderId);
+                publicUrl = await storageService.uploadFile(req.file.buffer, destinationPath, req.file.mimetype);
             }
 
             switch (accion) {
@@ -73,7 +67,7 @@ module.exports = (db) => {
                         medioDePago: detallesParseados.medioDePago,
                         tipo: detallesParseados.tipo || 'Abono',
                         fecha: admin.firestore.FieldValue.serverTimestamp(),
-                        enlaceComprobante: archivoSubido ? archivoSubido.webViewLink : null
+                        enlaceComprobante: publicUrl
                     });
                     
                     if (detallesParseados.esPagoFinal) {
@@ -85,13 +79,13 @@ module.exports = (db) => {
                     nuevoEstado = 'Facturado';
                     dataToUpdate.fechaBoletaEnviada = admin.firestore.FieldValue.serverTimestamp();
                     dataToUpdate.boleta = true;
-                    if (archivoSubido) {
-                        dataToUpdate['documentos.enlaceBoleta'] = archivoSubido.webViewLink;
+                    if (publicUrl) {
+                        dataToUpdate['documentos.enlaceBoleta'] = publicUrl;
                     }
                     break;
                  case 'subir_documento_reserva':
-                    if (archivoSubido) {
-                         dataToUpdate['documentos.enlaceReserva'] = archivoSubido.webViewLink;
+                    if (publicUrl) {
+                         dataToUpdate['documentos.enlaceReserva'] = publicUrl;
                     }
                     break;
                 default:

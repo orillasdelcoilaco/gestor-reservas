@@ -24,17 +24,18 @@ const corsOptions = {
 };
 
 //--- Inicialización de Firebase Admin SDK ---
-if (process.env.RENDER) {
-  const serviceAccount = require('/etc/secrets/serviceAccountKey.json');
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-  console.log("Firebase Admin SDK inicializado en modo Producción (Render).");
-} else {
-  const serviceAccount = require('./serviceAccountKey.json');
-  admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-  console.log("Firebase Admin SDK inicializado en modo Desarrollo (Local).");
-}
-const db = admin.firestore();
+const serviceAccount = process.env.RENDER 
+    ? require('/etc/secrets/serviceAccountKey.json')
+    : require('./serviceAccountKey.json');
 
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: 'reservas-sodc.firebaseapp.com' // <-- AÑADIDO: Conexión a Storage
+});
+
+console.log(process.env.RENDER ? "Firebase Admin SDK inicializado en modo Producción." : "Firebase Admin SDK inicializado en modo Desarrollo.");
+
+const db = admin.firestore();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -46,8 +47,7 @@ const publicRouter = express.Router();
 const privateRouter = express.Router();
 
 //--- Configuración de Rutas Públicas ---
-// Las rutas dentro de authRoutes (ej. /google) se combinarán con /auth
-app.use('/auth', authRoutes(db)); 
+publicRouter.use('/auth', authRoutes(db)); 
 publicRouter.get('/', (req, res) => {
   res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
@@ -66,8 +66,8 @@ privateRouter.use(analisisRoutes(db));
 privateRouter.use(gestionRoutes(db));
 
 //--- Aplicación de los Routers a la App ---
-app.use(publicRouter); // Router público sin seguridad
-app.use('/api', checkFirebaseToken, privateRouter); // Router privado con el middleware de seguridad
+app.use(publicRouter); 
+app.use('/api', checkFirebaseToken, privateRouter); 
 
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {

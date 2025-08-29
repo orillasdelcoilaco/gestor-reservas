@@ -16,7 +16,6 @@ const tarifasRoutes = require('./routes/tarifas');
 const kpiRoutes = require('./routes/kpi');
 const analisisRoutes = require('./routes/analisis');
 const gestionRoutes = require('./routes/gestion');
-const testRoutes = require('./routes/test'); // <-- AÑADIR RUTA DE PRUEBA
 
 //--- Configuración de CORS ---
 const corsOptions = {
@@ -31,7 +30,9 @@ const serviceAccount = process.env.RENDER
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    storageBucket: 'reservas-sodc.firebaseapp.com' 
+    storageBucket: 'reservas-sodc.firebaseapp.com',
+    // --- CORRECCIÓN FINAL Y DEFINITIVA AÑADIDA AQUÍ ---
+    projectId: 'reservas-sodc' 
 });
 
 console.log(process.env.RENDER ? "Firebase Admin SDK inicializado desde Secret File (Producción)." : "Firebase Admin SDK inicializado desde archivo local (Desarrollo).");
@@ -65,7 +66,6 @@ privateRouter.use(tarifasRoutes(db));
 privateRouter.use(kpiRoutes(db));
 privateRouter.use(analisisRoutes(db));
 privateRouter.use(gestionRoutes(db));
-privateRouter.use(testRoutes(db)); // <-- AÑADIR RUTA DE PRUEBA
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 

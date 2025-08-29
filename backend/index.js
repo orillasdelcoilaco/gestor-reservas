@@ -16,6 +16,7 @@ const tarifasRoutes = require('./routes/tarifas');
 const kpiRoutes = require('./routes/kpi');
 const analisisRoutes = require('./routes/analisis');
 const gestionRoutes = require('./routes/gestion');
+const testRoutes = require('./routes/test'); // <-- AÑADIR RUTA DE PRUEBA
 
 //--- Configuración de CORS ---
 const corsOptions = {
@@ -24,8 +25,6 @@ const corsOptions = {
 };
 
 //--- Inicialización de Firebase Admin SDK ---
-// --- CORRECCIÓN DEFINITIVA ---
-// Esta lógica lee el archivo secreto en Render y el archivo local en desarrollo.
 const serviceAccount = process.env.RENDER 
     ? require('/etc/secrets/serviceAccountKey.json')
     : require('./serviceAccountKey.json');
@@ -66,6 +65,7 @@ privateRouter.use(tarifasRoutes(db));
 privateRouter.use(kpiRoutes(db));
 privateRouter.use(analisisRoutes(db));
 privateRouter.use(gestionRoutes(db));
+privateRouter.use(testRoutes(db)); // <-- AÑADIR RUTA DE PRUEBA
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 

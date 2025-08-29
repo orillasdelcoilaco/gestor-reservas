@@ -30,8 +30,8 @@ const serviceAccount = process.env.RENDER
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    storageBucket: 'reservas-sodc.firebaseapp.com',
-    // --- CORRECCIÓN FINAL Y DEFINITIVA AÑADIDA AQUÍ ---
+    // --- CORRECCIÓN DEFINITIVA APLICADA AQUÍ ---
+    storageBucket: 'reservas-sodc.appspot.com', 
     projectId: 'reservas-sodc' 
 });
 

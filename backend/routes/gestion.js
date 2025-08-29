@@ -3,7 +3,7 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const multer = require('multer');
 const { getReservasPendientes } = require('../services/gestionService');
-const storageService = require('../services/storageService'); // <-- CAMBIO: Usamos el nuevo servicio
+const storageService = require('../services/storageService');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -43,6 +43,7 @@ module.exports = (db) => {
             if (req.file) {
                 const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
                 const reservaId = reservaData.reservaIdOriginal;
+                // --- LÓGICA SIMPLIFICADA PARA FIREBASE STORAGE ---
                 const destinationPath = `reservas/${year}/${reservaId}/${req.file.originalname}`;
                 
                 publicUrl = await storageService.uploadFile(req.file.buffer, destinationPath, req.file.mimetype);

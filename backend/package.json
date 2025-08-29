@@ -20,7 +20,6 @@
     "google-auth-library": "^10.2.1",
     "googleapis": "^156.0.0",
     "multer": "^2.0.2",
-    "uuid": "^11.1.0",
     "xlsx": "^0.18.5"
   }
 }

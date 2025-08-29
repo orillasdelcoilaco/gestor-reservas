@@ -30,8 +30,8 @@ const serviceAccount = process.env.RENDER
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    // --- CORRECCIÓN APLICADA AQUÍ ---
-    storageBucket: 'reservas-sodc.appspot.com' 
+    // --- CORRECCIÓN FINAL APLICADA AQUÍ ---
+    storageBucket: 'reservas-sodc.firebaseapp.com' 
 });
 
 console.log(process.env.RENDER ? "Firebase Admin SDK inicializado en modo Producción." : "Firebase Admin SDK inicializado en modo Desarrollo.");

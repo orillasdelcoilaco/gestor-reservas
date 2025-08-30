@@ -103,7 +103,7 @@
                 <div id="modal-status" class="mt-2 text-sm text-red-600"></div>
                 <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                     <button type="submit" id="modal-save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-indigo-700">Guardar</button>
-                    <button type="button" id="modal-cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50 sm:mt-0">Cancelar</button>
+                    <button type="button" id="modal-cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0">Cancelar</button>
                 </div>
             </form>
         </div>
@@ -144,6 +144,7 @@
     }
 
     function renderTable(cabanas) {
+        console.log('[DEBUG] Iniciando renderTable. Cabañas recibidas:', cabanas);
         cabanasTableBody.innerHTML = '';
         if (cabanas.length === 0) {
             loadingState.innerHTML = '<p class="text-gray-500">No hay cabañas registradas. ¡Añade la primera!</p>';
@@ -170,15 +171,18 @@
         
         document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', handleEditClick));
         document.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', handleDeleteClick));
+        console.log('[DEBUG] renderTable finalizado.');
     }
 
     async function loadCabanas() {
+        console.log('[DEBUG] Iniciando loadCabanas...');
         loadingState.style.display = 'block';
         try {
             allCabanas = await fetchAPI('/api/cabanas');
+            console.log('[DEBUG] Datos de cabañas recibidos del API:', allCabanas);
             renderTable(allCabanas);
         } catch (error) {
-            console.error('Error al cargar las cabañas:', error);
+            console.error('[DEBUG] Error al cargar las cabañas:', error);
             loadingState.innerHTML = `<p class="text-red-500 font-semibold">No se pudieron cargar las cabañas: ${error.message}</p>`;
         }
     }
@@ -263,9 +267,14 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        console.log('[DEBUG] DOMContentLoaded - La página ha cargado.');
+        const loader = document.getElementById('loader');
+        const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
         const session = checkSession();
 
         if (session) {
+            console.log('[DEBUG] Sesión válida encontrada.');
             loader.style.display = 'none';
             appContent.classList.remove('hidden');
             authInfo.innerHTML = `
@@ -280,6 +289,8 @@
             addNewBtn.addEventListener('click', openModalForCreate);
             modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             cabanaForm.addEventListener('submit', handleFormSubmit);
+        } else {
+            console.log('[DEBUG] No se encontró sesión válida.');
         }
     });
 </script>

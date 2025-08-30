@@ -17,18 +17,29 @@ const kpiRoutes = require('./routes/kpi');
 const analisisRoutes = require('./routes/analisis');
 const gestionRoutes = require('./routes/gestion');
 
-//--- Configuración de CORS ---
+//--- INICIO DE LA CORRECCIÓN ---
+// Lista de dominios permitidos
+const allowedOrigins = ['https://www.orillasdelcoilaco.cl', 'https://orillasdelcoilaco.cl'];
+
 const corsOptions = {
-  origin: 'https://www.orillasdelcoilaco.cl',
+  origin: function (origin, callback) {
+    // Permite solicitudes sin origen (como las de Postman o apps móviles) y las de la lista
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   optionsSuccessStatus: 200
 };
+//--- FIN DE LA CORRECCIÓN ---
+
 
 //--- Inicialización de Firebase Admin SDK ---
 const serviceAccount = process.env.RENDER 
     ? require('/etc/secrets/serviceAccountKey.json')
     : require('./serviceAccountKey.json');
 
-// --- NOMBRE CORRECTO Y DEFINITIVO DEL BUCKET ---
 const BUCKET_NAME = 'reservas-sodc.firebasestorage.app'; 
 
 admin.initializeApp({
@@ -67,8 +78,6 @@ privateRouter.use(importRoutes(db));
 privateRouter.use(tarifasRoutes(db));
 privateRouter.use(kpiRoutes(db));
 privateRouter.use(analisisRoutes(db));
-// --- CORRECCIÓN CLAVE ---
-// Ya no pasamos el nombre del bucket a la ruta de gestión
 privateRouter.use(gestionRoutes(db)); 
 
 //--- Aplicación de los Routers a la App ---

@@ -21,6 +21,28 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor al obtener clientes.' });
         }
     });
+
+    // --- NUEVA RUTA OPTIMIZADA PARA PRESUPUESTOS ---
+    router.get('/clientes/simplificado', async (req, res) => {
+        try {
+            const snapshot = await db.collection('clientes').get();
+            if (snapshot.empty) {
+                return res.status(200).json([]);
+            }
+            const clientes = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    nombre: `${data.firstname || ''} ${data.lastname || ''}`.trim(),
+                    telefono: data.phone || ''
+                };
+            });
+            res.status(200).json(clientes);
+        } catch (error) {
+             console.error('Error al obtener la lista simplificada de clientes:', error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
     
     // --- ESTA RUTA AHORA USA LA FUNCIÓN MAESTRA ---
     router.put('/clientes/:id', jsonParser, async (req, res) => {

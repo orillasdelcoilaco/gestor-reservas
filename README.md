@@ -19,83 +19,56 @@ Sincronización con Google Contacts: La lógica para crear y actualizar contacto
 Próximos Pasos: Plan de Acción
 A continuación se detalla el plan para las próximas funcionalidades.
 
-Etapa 1: Implementar el Historial de Tarifas por Canal (✅ Completada)
-Objetivo: Construir el sistema que permite registrar y gestionar las tarifas de las cabañas a lo largo del tiempo, detalladas por canal de venta. Esta es la base para el análisis de negocio.
+Etapa 1: Historial de Tarifas por Canal (✅ Completada)
+Objetivo: Construir el sistema que permite registrar y gestionar las tarifas de las cabañas a lo largo del tiempo, detalladas por canal de venta.
 
-Paso 1.1 (Backend - Modelo de Datos): Se creó la colección tarifas en Firestore con una estructura que guarda nombreCabaña, fechaInicio, fechaTermino, temporada y un objeto tarifasPorCanal.
-
-Paso 1.2 (Backend & Frontend - Gestión de Tarifas): Se crearon la API (/api/tarifas) y la página (tarifas.html) que permiten Crear, Leer, Actualizar y Eliminar (CRUD) el historial de precios.
-
-Etapa 2: Construir el Dashboard de KPIs con Análisis de Descuentos (✅ Completada)
-Objetivo: Crear el dashboard dinámico para analizar el rendimiento del negocio en cualquier rango de fechas, distinguiendo claramente entre el análisis de descuentos y el ingreso potencial total.
-
-Paso 2.1 (Backend - El Cerebro kpiService.js):
-
-Acción: Se desarrolló el servicio que contiene la lógica de cálculo.
-
-Lógica Clave:
-
-Análisis de Descuentos (Por Cabaña y Canal): Se calcula sobre las noches realmente vendidas, comparando el Ingreso Real con el Ingreso Potencial de cada noche según el historial de tarifas.
-
-KPIs Generales: Se calculan sobre todas las noches disponibles (ocupadas o no) para obtener métricas como Tasa de Ocupación, ADR, RevPAR, Ingreso Total Real y Ingreso Potencial Total.
-
-Paso 2.2 (Backend & Frontend - Interfaz del Dashboard):
-
-Acción: Se modificó dashboard.html para añadir selectores de fecha y un botón "Calcular", conectado a la API (/api/kpi).
-
-Resultado: Un dashboard funcional para el análisis financiero y de ocupación.
+Etapa 2: Dashboard de KPIs (✅ Completada)
+Objetivo: Crear el dashboard dinámico para analizar el rendimiento del negocio en cualquier rango de fechas.
 
 Etapa 3: Panel de Gestión Diaria (✅ Completada)
-Objetivo: Crear el centro de operaciones para gestionar el ciclo de vida completo de cada reserva, desde el primer contacto hasta la facturación final. Esta interfaz guía al usuario, priorizando tareas y centralizando la información y la documentación.
+Objetivo: Crear el centro de operaciones para gestionar el ciclo de vida completo de cada reserva, desde el primer contacto hasta la facturación final.
 
-Paso 3.1 (Backend - Modelo de Datos Evolucionado): Se ha modificado la colección reservas para soportar el flujo de gestión detallado, añadiendo el campo estadoGestion, la subcolección transacciones y el objeto documentos.
+Etapa 4: Gestión de Cabañas y Base de Presupuestos (✅ Completada)
+Objetivo: Centralizar la información de las cabañas y crear la lógica inicial para la generación de presupuestos.
 
-Paso 3.2 (Backend - API de Gestión y Servicios): Se han construido los servicios y la ruta gestion.js para obtener las reservas pendientes con su priorización y para manejar las acciones del flujo (registrar pagos, subir documentos, etc.).
+Paso 4.1 (Backend - Modelo de Datos): Se ha creado la colección cabanas y el documento complejo para almacenar la información de manera dinámica.
 
-Paso 3.3 (Frontend - Interfaz de Gestión Diaria): Se ha creado la página gestion.html con las tarjetas de gestión dinámicas, modales contextuales para cada acción (pagos, documentos, boletas), un buscador integrado y navegación mejorada. La lógica está completa y funcional.
+Paso 4.2 (Backend - API y Servicios): Se han implementado las rutas y servicios para el CRUD de cabañas y la lógica inicial de cálculo de presupuestos (disponibilidad, combinación de cabañas y precios).
 
-Etapa 4: Gestión de Cabañas y Generador de Presupuestos (Próximo Desarrollo)
-Objetivo: Centralizar la información de las cabañas para que sea dinámica y utilizar estos datos para crear una herramienta de generación y seguimiento de presupuestos.
+Paso 4.3 (Frontend - Interfaz): Se han creado las páginas gestion-cabanas.html para administrar las cabañas y presupuestos.html para generar propuestas automáticas y permitir la modificación manual.
 
-Paso 4.1 (Backend - Modelo de Datos):
+Etapa 5: Generador de Presupuestos Avanzado (Próximo Desarrollo)
+Objetivo: Evolucionar la herramienta de presupuestos para que sea un sistema completo de cotización y seguimiento, integrando la gestión de clientes y generando un resultado profesional.
 
-Nueva Colección cabanas: Se creará una colección para almacenar los detalles de cada cabaña (capacidad, baños, piezas, tipo de camas, descripción, equipamiento como tinaja, parrilla, etc.) y un enlace a su página de fotos.
+Paso 5.1 (Integración con Clientes):
 
-Nuevo Documento complejo: Se creará un documento único en una colección config (o similar) para guardar los servicios generales del complejo (piscina, quincho, gimnasio, etc.).
+Backend: Se ampliará la API de presupuestos.js para que pueda recibir un clienteId o los datos para crear un nuevo cliente junto con la solicitud de presupuesto.
 
-Nueva Colección presupuestos: Almacenará los presupuestos generados. Guardará datos del cliente, fechas, cabañas cotizadas, valor total, fecha de envío y un estado (ej: 'Enviado', 'Aceptado', 'Rechazado').
+Frontend (presupuestos.html): Se añadirá una sección para buscar un cliente existente por nombre o teléfono, o para ingresar los datos de un cliente nuevo directamente en la interfaz del presupuesto.
 
-Paso 4.2 (Backend - API y Servicios):
+Paso 5.2 (Formato de Presupuesto Profesional):
 
-CRUD para Cabañas: Se creará una nueva ruta y servicio (cabanas.js) para administrar la información de las cabañas (Crear, Leer, Actualizar, Eliminar).
+Backend: El servicio de presupuestos se mejorará para obtener datos adicionales del complejo (ej: servicios, políticas de cancelación, ubicación) desde el documento de configuración.
 
-Servicio de Presupuestos: Se desarrollará la lógica para:
+Frontend (presupuestos.html): La función generatePresupuestoText será reescrita por completo para generar un texto con el formato profesional solicitado, incluyendo:
 
-Consultar la disponibilidad de cabañas cruzando con la colección reservas.
+Encabezado con logo y datos de contacto.
 
-Proponer Combinación Óptima: Implementar un algoritmo que, dado un número de personas, sugiera la combinación de cabañas disponibles más eficiente para alojarlas sin exceder la capacidad individual de cada una.
+Detalles del cliente.
 
-Calcular el valor de la estadía consultando la colección tarifas para las fechas seleccionadas.
+Desglose detallado por cabaña con descripción, capacidad, valor por noche y total.
 
-Consolidar toda la información (detalles de cabañas, servicios del complejo, precios) en un solo objeto.
+Resumen del presupuesto.
 
-CRUD para Presupuestos: Se creará una nueva ruta (presupuestos.js) para guardar, leer y actualizar el estado de los presupuestos generados.
+Inclusiones y condiciones de la reserva.
 
-Paso 4.3 (Frontend - Interfaz):
+Pie de página con información de contacto.
 
-Nueva Página gestion-cabanas.html: Una interfaz para administrar los detalles de cada cabaña (añadir nuevas, editar existentes).
+Paso 5.3 (Guardado y Seguimiento de Presupuestos):
 
-Nueva Página presupuestos.html: Será el centro de esta nueva funcionalidad. Permitirá:
+Backend: Se implementará la lógica para guardar el presupuesto generado en la nueva colección presupuestos, almacenando el cliente, fechas, cabañas, valor total, fecha de envío y un estado inicial ("Enviado").
 
-Seleccionar fechas y cantidad de personas.
-
-El sistema mostrará una propuesta automática de cabañas.
-
-El usuario tendrá la opción de modificar la selección, añadiendo o quitando cabañas de la lista de disponibles para ajustar la cotización a necesidades específicas (ej: clientes que no quieren camarotes). El precio total se recalculará dinámicamente.
-
-Generar un texto detallado y formateado listo para copiar, que incluirá: descripción de las cabañas seleccionadas, servicios del complejo, desglose de valores y total.
-
-Guardar el presupuesto en la base de datos, asociándolo a un cliente nuevo o existente.
+Frontend (presupuestos.html): Se activará el botón "Guardar Presupuesto" para que, una vez generado el texto, se pueda enviar la cotización a la base de datos con un solo clic.
 
 Funcionalidades Futuras (Plan Original - Pendientes)
 Actualización de Contactos (Generación de CSV).

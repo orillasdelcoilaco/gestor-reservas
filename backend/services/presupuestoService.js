@@ -1,12 +1,16 @@
 const admin = require('firebase-admin');
 
 /**
- * Obtiene todas las cabañas y reservas para un rango de fechas.
+ * Obtiene todos los datos necesarios para un presupuesto.
  */
 async function getAvailabilityData(db, startDate, endDate) {
     // Obtener todas las cabañas
     const cabanasSnapshot = await db.collection('cabanas').get();
     const allCabanas = cabanasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    // Obtener detalles del complejo
+    const complexDoc = await db.collection('config').doc('complejo').get();
+    const complexDetails = complexDoc.exists ? complexDoc.data() : {};
 
     // Obtener reservas que se superponen con el rango de fechas
     const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
@@ -23,24 +27,16 @@ async function getAvailabilityData(db, startDate, endDate) {
         }
     });
 
-    // Determinar cabañas ocupadas
-    const occupiedCabanaNames = new Set();
-    overlappingReservations.forEach(reserva => {
-        occupiedCabanaNames.add(reserva.alojamiento);
-    });
-
-    // Filtrar para obtener solo las cabañas disponibles
+    const occupiedCabanaNames = new Set(overlappingReservations.map(reserva => reserva.alojamiento));
     const availableCabanas = allCabanas.filter(cabana => !occupiedCabanaNames.has(cabana.nombre));
     
-    return { availableCabanas, allCabanas };
+    return { availableCabanas, allCabanas, complexDetails };
 }
-
 
 /**
  * Encuentra la combinación óptima de cabañas para un número de personas.
  */
 function findBestCombination(availableCabanas, requiredCapacity) {
-    // Ordenar cabañas por capacidad descendente para un enfoque "greedy"
     const sortedCabanas = [...availableCabanas].sort((a, b) => b.capacidad - a.capacidad);
     
     let combination = [];
@@ -51,12 +47,12 @@ function findBestCombination(availableCabanas, requiredCapacity) {
             combination.push(cabana);
             currentCapacity += cabana.capacidad;
         } else {
-            break; // Ya hemos alcanzado la capacidad necesaria
+            break;
         }
     }
 
     if (currentCapacity < requiredCapacity) {
-        return { combination: [], capacity: 0 }; // No se encontró combinación suficiente
+        return { combination: [], capacity: 0 };
     }
 
     return { combination, capacity: currentCapacity };
@@ -66,15 +62,12 @@ function findBestCombination(availableCabanas, requiredCapacity) {
  * Calcula el precio total para una selección de cabañas en un rango de fechas.
  */
 async function calculatePrice(db, cabanas, startDate, endDate) {
-    const nights = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
-    if (nights <= 0) return { totalPrice: 0, nights: 0, details: [] };
-
+    const nights = Math.max(1, Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)));
     let totalPrice = 0;
     const priceDetails = [];
 
     for (const cabana of cabanas) {
         let cabanaPrice = 0;
-        // Buscamos la tarifa que aplique para la fecha de llegada
         const q = db.collection('tarifas')
             .where('nombreCabaña', '==', cabana.nombre)
             .where('fechaInicio', '<=', admin.firestore.Timestamp.fromDate(startDate))
@@ -85,9 +78,7 @@ async function calculatePrice(db, cabanas, startDate, endDate) {
 
         if (!snapshot.empty) {
             const tarifa = snapshot.docs[0].data();
-            // Verificamos si la fecha de término de la tarifa cubre la fecha de llegada
             if (tarifa.fechaTermino.toDate() >= startDate) {
-                // Usamos la tarifa SODC como base para el presupuesto
                 if (tarifa.tarifasPorCanal && tarifa.tarifasPorCanal.SODC) {
                     cabanaPrice = tarifa.tarifasPorCanal.SODC.valor * nights;
                 }

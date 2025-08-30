@@ -106,281 +106,14 @@
     }
 
     function renderSelectionUI() {
+        console.log('[DEBUG] Iniciando renderSelectionUI. Datos completos:', fullData);
         suggestionList.innerHTML = '';
         availableList.innerHTML = '';
 
-        const suggestedIds = new Set(fullData.suggestion.cabanas.map(c => c.id));
-        selectedCabanas = [...fullData.suggestion.cabanas];
-
-        // Renderizar propuesta automática
-        fullData.suggestion.cabanas.forEach(c => {
-            suggestionList.appendChild(createCabanaCheckbox(c, true));
-        });
-
-        // Renderizar el resto de cabañas disponibles
-        fullData.availableCabanas.forEach(c => {
-            if (!suggestedIds.has(c.id)) {
-                availableList.appendChild(createCabanaCheckbox(c, false));
-            }
-        });
-        
-        document.querySelectorAll('.cabana-checkbox').forEach(cb => {
-            cb.addEventListener('change', handleSelectionChange);
-        });
-
-        generatePresupuestoText();
-    }
-
-    async function handleSelectionChange() {
-        const selectedIds = new Set();
-        document.querySelectorAll('.cabana-checkbox:checked').forEach(cb => {
-            selectedIds.add(cb.dataset.id);
-        });
-
-        selectedCabanas = fullData.allCabanas.filter(c => selectedIds.has(c.id));
-        await generatePresupuestoText();
-    }
-    
-    async function generatePresupuestoText() {
-        const fechaLlegada = new Date(document.getElementById('fecha-llegada').value + 'T00:00:00Z');
-        const fechaSalida = new Date(document.getElementById('fecha-salida').value + 'T00:00:00Z');
-
-        const pricing = await calculatePrice(selectedCabanas, fechaLlegada, fechaSalida);
-
-        let texto = `¡Hola!\n\nGracias por tu interés en Cabañas Orillas del Coilaco. Adjunto el presupuesto para tu estadía:\n\n`;
-        texto += `Fechas: ${fechaLlegada.toLocaleDateString('es-CL')} al ${fechaSalida.toLocaleDateString('es-CL')} (${pricing.nights} noches)\n`;
-        texto += `Personas: ${document.getElementById('personas').value}\n\n`;
-        
-        texto += "--------------------------------------\n";
-        texto += "CABAÑAS COTIZADAS:\n";
-        texto += "--------------------------------------\n";
-
-        pricing.details.forEach(detail => {
-            const cabanaInfo = fullData.allCabanas.find(c => c.nombre === detail.nombre);
-            texto += `\n* ${cabanaInfo.nombre.toUpperCase()} (Capacidad: ${cabanaInfo.capacidad} personas) *\n`;
-            texto += `Precio por ${pricing.nights} noches: ${formatCurrency(detail.precioTotal)}\n`;
-            if (cabanaInfo.descripcion) texto += `Descripción: ${cabanaInfo.descripcion}\n`;
-            if (cabanaInfo.camas) texto += `Camas: ${cabanaInfo.camas}\n`;
-            if (cabanaInfo.equipamiento && cabanaInfo.equipamiento.length > 0) {
-                 texto += `Equipamiento: ${cabanaInfo.equipamiento.join(', ')}\n`;
-            }
-            if(cabanaInfo.linkFotos) texto += `Ver fotos: ${cabanaInfo.linkFotos}\n`;
-        });
-        
-        texto += "\n--------------------------------------\n";
-        texto += `VALOR TOTAL ESTADÍA: ${formatCurrency(pricing.totalPrice)}\n`;
-        texto += "--------------------------------------\n\n";
-
-        // Aquí podríamos añadir la info del complejo desde un documento 'config'
-        texto += "Nuestras instalaciones cuentan con piscina, quincho, gimnasio, áreas verdes y acceso al río.\n\n";
-        texto += "Quedamos atentos a tus comentarios.\n\nSaludos,\nEquipo Orillas del Coilaco";
-
-        presupuestoTexto.value = texto;
-    }
-    
-    // Función para recalcular el precio en el frontend (simula lo que hace el backend)
-    async function calculatePrice(cabanas, startDate, endDate) {
-        const nights = Math.max(1, Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)));
-        let totalPrice = 0;
-        const details = [];
-
-        // Para este cálculo rápido, necesitamos las tarifas. Por ahora, simularemos un precio.
-        // La versión final debería obtener las tarifas o pasarlas desde la primera llamada.
-        for (const cabana of cabanas) {
-            // Simulación simple. La lógica real requeriría las tarifas.
-            // Esto es un placeholder.
-            const precioPorNocheSimulado = 100000; // PRECIO SIMULADO
-            const cabanaPrice = precioPorNocheSimulado * nights;
-            totalPrice += cabanaPrice;
-            details.push({
-                nombre: cabana.nombre,
-                precioTotal: cabanaPrice,
-                precioPorNoche: precioPorNocheSimulado,
-            });
+        if (!fullData.suggestion) {
+            console.log('[DEBUG] No hay sugerencia, no se renderiza UI de selección.');
+            return;
         }
-
-        // Lógica real (requiere llamada a API o tener tarifas en frontend)
-        // Por ahora, devolvemos el precio simulado para que la UI funcione.
-        return { totalPrice, nights, details };
-    }
-
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const session = checkSession();
-        if (session) {
-            loader.style.display = 'none';
-            appContent.classList.remove('hidden');
-            authInfo.innerHTML = `
-                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
-                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-            `;
-            document.getElementById('logout-btn').addEventListener('click', logout);
-
-            generarBtn.addEventListener('click', async () => {
-                const payload = {
-                    fechaLlegada: document.getElementById('fecha-llegada').value,
-                    fechaSalida: document.getElementById('fecha-salida').value,
-                    personas: document.getElementById('personas').value,
-                };
-
-                if (!payload.fechaLlegada || !payload.fechaSalida || !payload.personas) {
-                    alert('Por favor, completa todos los campos.');
-                    return;
-                }
-
-                generarBtn.disabled = true;
-                generarBtn.textContent = 'Generando...';
-                statusContainer.textContent = 'Buscando disponibilidad y calculando...';
-                statusContainer.classList.remove('hidden');
-                resultsContainer.classList.add('hidden');
-
-                try {
-                    fullData = await fetchAPI('/api/presupuestos/generar', { method: 'POST', body: payload });
-                    
-                    if (fullData.suggestion) {
-                        statusContainer.classList.add('hidden');
-                        resultsContainer.classList.remove('hidden');
-                        renderSelectionUI();
-                    } else {
-                        statusContainer.textContent = fullData.message || 'No se pudo generar una propuesta.';
-                    }
-
-                } catch (error) {
-                    statusContainer.textContent = `Error: ${error.message}`;
-                } finally {
-                    generarBtn.disabled = false;
-                    generarBtn.textContent = 'Generar Propuesta';
-                }
-            });
-
-            copyBtn.addEventListener('click', () => {
-                navigator.clipboard.writeText(presupuestoTexto.value).then(() => {
-                    const originalText = copyBtn.textContent;
-                    copyBtn.textContent = '¡Copiado!';
-                    setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
-                });
-            });
-            
-            saveBtn.addEventListener('click', () => {
-                // Lógica para guardar el presupuesto (próximo paso)
-                alert('La funcionalidad para guardar presupuestos se implementará en el siguiente paso.');
-            });
-        }
-    });
-</script>
-</body>
-</html><!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generar Presupuesto - Gestor de Reservas</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <style> body { font-family: 'Inter', sans-serif; } </style>
-</head>
-<body class="bg-gray-100">
-    <div id="loader" class="text-center p-8">
-        <p class="text-gray-500">Verificando sesión...</p>
-    </div>
-
-    <div id="app-content" class="min-h-screen hidden">
-        <nav class="bg-white shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16">
-                    <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
-                    <div id="auth-info" class="flex items-center space-x-4"></div>
-                </div>
-            </div>
-        </nav>
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div class="bg-white p-8 rounded-lg shadow space-y-8">
-                <div>
-                    <h2 class="text-2xl font-semibold text-gray-900 mb-4">Generador de Presupuestos</h2>
-                    <div class="flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4 pb-6 border-b">
-                        <div>
-                            <label for="fecha-llegada" class="block text-sm font-medium text-gray-700">Fecha de Llegada</label>
-                            <input type="date" id="fecha-llegada" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        </div>
-                        <div>
-                            <label for="fecha-salida" class="block text-sm font-medium text-gray-700">Fecha de Salida</label>
-                            <input type="date" id="fecha-salida" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        </div>
-                        <div>
-                            <label for="personas" class="block text-sm font-medium text-gray-700">N° de Personas</label>
-                            <input type="number" id="personas" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        </div>
-                        <button id="generar-btn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">
-                            Generar Propuesta
-                        </button>
-                    </div>
-                </div>
-
-                <div id="status-container" class="text-center text-gray-500 hidden p-4"></div>
-
-                <div id="results-container" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div class="space-y-6">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-800">Propuesta Automática</h3>
-                            <div id="suggestion-list" class="mt-2 space-y-2"></div>
-                        </div>
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-800">Modificar Selección (Cabañas Disponibles)</h3>
-                            <div id="available-list" class="mt-2 space-y-2"></div>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-semibold text-gray-800">Presupuesto Detallado</h3>
-                        <textarea id="presupuesto-texto" rows="20" class="w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50" readonly></textarea>
-                        <div class="flex space-x-2">
-                           <button id="copy-btn" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar Texto</button>
-                           <button id="save-btn" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700">Guardar Presupuesto</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-<script type="module">
-    import { checkSession, logout, fetchAPI } from './api.js';
-
-    // --- Referencias a Elementos ---
-    const generarBtn = document.getElementById('generar-btn');
-    const statusContainer = document.getElementById('status-container');
-    const resultsContainer = document.getElementById('results-container');
-    const suggestionList = document.getElementById('suggestion-list');
-    const availableList = document.getElementById('available-list');
-    const presupuestoTexto = document.getElementById('presupuesto-texto');
-    const copyBtn = document.getElementById('copy-btn');
-    const saveBtn = document.getElementById('save-btn');
-    
-    let fullData = {};
-    let selectedCabanas = [];
-
-    function formatCurrency(value) {
-        return `$${(value || 0).toLocaleString('es-CL')}`;
-    }
-
-    function createCabanaCheckbox(cabana, isSuggested) {
-        const div = document.createElement('div');
-        div.className = 'p-2 border rounded-md flex items-center justify-between';
-        div.innerHTML = `
-            <div>
-                <input type="checkbox" id="cb-${cabana.id}" data-id="${cabana.id}" class="cabana-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded" ${isSuggested ? 'checked' : ''}>
-                <label for="cb-${cabana.id}" class="ml-2 font-medium">${cabana.nombre}</label>
-                <span class="ml-2 text-sm text-gray-500">(Cap: ${cabana.capacidad})</span>
-            </div>
-        `;
-        return div;
-    }
-
-    function renderSelectionUI() {
-        suggestionList.innerHTML = '';
-        availableList.innerHTML = '';
-
-        if (!fullData.suggestion) return;
 
         const suggestedIds = new Set(fullData.suggestion.cabanas.map(c => c.id));
         selectedCabanas = [...fullData.suggestion.cabanas];
@@ -400,14 +133,17 @@
         });
 
         generatePresupuestoText(fullData.suggestion.pricing);
+        console.log('[DEBUG] renderSelectionUI finalizado.');
     }
 
     async function handleSelectionChange() {
+        console.log('[DEBUG] handleSelectionChange triggered.');
         const selectedIds = new Set();
         document.querySelectorAll('.cabana-checkbox:checked').forEach(cb => {
             selectedIds.add(cb.dataset.id);
         });
         selectedCabanas = fullData.allCabanas.filter(c => selectedIds.has(c.id));
+        console.log('[DEBUG] Cabañas seleccionadas actualizadas:', selectedCabanas);
 
         if (selectedCabanas.length === 0) {
             generatePresupuestoText({ totalPrice: 0, nights: 0, details: [] });
@@ -420,14 +156,18 @@
                 fechaSalida: document.getElementById('fecha-salida').value,
                 cabanas: selectedCabanas
             };
+            console.log('[DEBUG] Enviando a recalcular con payload:', payload);
             const newPricing = await fetchAPI('/api/presupuestos/recalcular', { method: 'POST', body: payload });
+            console.log('[DEBUG] Nuevo precio recibido:', newPricing);
             generatePresupuestoText(newPricing);
         } catch (error) {
+            console.error('[DEBUG] Error en handleSelectionChange:', error);
             presupuestoTexto.value = `Error al recalcular el precio: ${error.message}`;
         }
     }
     
     function generatePresupuestoText(pricing) {
+        console.log('[DEBUG] Iniciando generatePresupuestoText con datos de precios:', pricing);
         const fechaLlegada = new Date(document.getElementById('fecha-llegada').value + 'T00:00:00Z');
         const fechaSalida = new Date(document.getElementById('fecha-salida').value + 'T00:00:00Z');
 
@@ -463,11 +203,18 @@
         texto += "Quedamos atentos a tus comentarios.\n\nSaludos,\nEquipo Orillas del Coilaco";
 
         presupuestoTexto.value = texto;
+        console.log('[DEBUG] generatePresupuestoText finalizado.');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
+        console.log('[DEBUG] DOMContentLoaded - La página ha cargado.');
+        const loader = document.getElementById('loader');
+        const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
         const session = checkSession();
+
         if (session) {
+            console.log('[DEBUG] Sesión válida encontrada.');
             loader.style.display = 'none';
             appContent.classList.remove('hidden');
             authInfo.innerHTML = `
@@ -477,6 +224,7 @@
             document.getElementById('logout-btn').addEventListener('click', logout);
 
             generarBtn.addEventListener('click', async () => {
+                console.log('[DEBUG] Botón "Generar Propuesta" clickeado.');
                 const payload = {
                     fechaLlegada: document.getElementById('fecha-llegada').value,
                     fechaSalida: document.getElementById('fecha-salida').value,
@@ -493,9 +241,11 @@
                 statusContainer.textContent = 'Buscando disponibilidad y calculando...';
                 statusContainer.classList.remove('hidden');
                 resultsContainer.classList.add('hidden');
-
+                
+                console.log('[DEBUG] Enviando payload para generar presupuesto:', payload);
                 try {
                     fullData = await fetchAPI('/api/presupuestos/generar', { method: 'POST', body: payload });
+                    console.log('[DEBUG] Datos recibidos del API:', fullData);
                     
                     if (fullData.suggestion) {
                         statusContainer.classList.add('hidden');
@@ -506,6 +256,7 @@
                     }
 
                 } catch (error) {
+                    console.error('[DEBUG] Error al generar presupuesto:', error);
                     statusContainer.textContent = `Error: ${error.message}`;
                 } finally {
                     generarBtn.disabled = false;
@@ -524,6 +275,8 @@
             saveBtn.addEventListener('click', () => {
                 alert('La funcionalidad para guardar presupuestos se implementará en el siguiente paso.');
             });
+        } else {
+            console.log('[DEBUG] No se encontró sesión válida.');
         }
     });
 </script>

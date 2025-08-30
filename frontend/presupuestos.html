@@ -96,16 +96,15 @@
     </div>
 
 <script type="module">
-    console.log('[DEBUG] Módulo de script de presupuestos cargado.');
     import { checkSession, logout, fetchAPI } from './api.js';
 
     document.addEventListener('DOMContentLoaded', () => {
-        console.log('[DEBUG] DOM completamente cargado. Iniciando script de presupuestos.');
-
-        // --- Referencias a Elementos ---
+        
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
         const authInfo = document.getElementById('auth-info');
+        const fechaLlegadaInput = document.getElementById('fecha-llegada');
+        const fechaSalidaInput = document.getElementById('fecha-salida');
         const generarBtn = document.getElementById('generar-btn');
         const statusContainer = document.getElementById('status-container');
         const resultsContainer = document.getElementById('results-container');
@@ -145,44 +144,28 @@
         }
 
         function renderSelectionUI() {
-            console.log('[DEBUG] Iniciando renderSelectionUI. Datos completos:', fullData);
             suggestionList.innerHTML = '';
             availableList.innerHTML = '';
-
-            if (!fullData.suggestion) {
-                console.log('[DEBUG] No hay sugerencia, no se renderiza UI de selección.');
-                return;
-            }
+            if (!fullData.suggestion) return;
 
             const suggestedIds = new Set(fullData.suggestion.cabanas.map(c => c.id));
             selectedCabanas = [...fullData.suggestion.cabanas];
 
-            fullData.suggestion.cabanas.forEach(c => {
-                suggestionList.appendChild(createCabanaCheckbox(c, true));
-            });
-
+            fullData.suggestion.cabanas.forEach(c => suggestionList.appendChild(createCabanaCheckbox(c, true)));
             fullData.availableCabanas.forEach(c => {
                 if (!suggestedIds.has(c.id)) {
                     availableList.appendChild(createCabanaCheckbox(c, false));
                 }
             });
             
-            document.querySelectorAll('.cabana-checkbox').forEach(cb => {
-                cb.addEventListener('change', handleSelectionChange);
-            });
-
+            document.querySelectorAll('.cabana-checkbox').forEach(cb => cb.addEventListener('change', handleSelectionChange));
             generatePresupuestoText(fullData.suggestion.pricing);
-            console.log('[DEBUG] renderSelectionUI finalizado.');
         }
 
         async function handleSelectionChange() {
-            console.log('[DEBUG] handleSelectionChange triggered.');
             const selectedIds = new Set();
-            document.querySelectorAll('.cabana-checkbox:checked').forEach(cb => {
-                selectedIds.add(cb.dataset.id);
-            });
+            document.querySelectorAll('.cabana-checkbox:checked').forEach(cb => selectedIds.add(cb.dataset.id));
             selectedCabanas = fullData.allCabanas.filter(c => selectedIds.has(c.id));
-            console.log('[DEBUG] Cabañas seleccionadas actualizadas:', selectedCabanas);
 
             if (selectedCabanas.length === 0) {
                 generatePresupuestoText({ totalPrice: 0, nights: 0, details: [] });
@@ -191,25 +174,21 @@
 
             try {
                 const payload = {
-                    fechaLlegada: document.getElementById('fecha-llegada').value,
-                    fechaSalida: document.getElementById('fecha-salida').value,
+                    fechaLlegada: fechaLlegadaInput.value,
+                    fechaSalida: fechaSalidaInput.value,
                     cabanas: selectedCabanas
                 };
-                console.log('[DEBUG] Enviando a recalcular con payload:', payload);
                 const newPricing = await fetchAPI('/api/presupuestos/recalcular', { method: 'POST', body: payload });
-                console.log('[DEBUG] Nuevo precio recibido:', newPricing);
                 generatePresupuestoText(newPricing);
             } catch (error) {
-                console.error('[DEBUG] Error en handleSelectionChange:', error);
                 presupuestoTexto.value = `Error al recalcular el precio: ${error.message}`;
             }
         }
         
         function generatePresupuestoText(pricing) {
-            console.log('[DEBUG] Iniciando generatePresupuestoText con datos de precios:', pricing);
             currentPricing = pricing;
-            const fechaLlegada = new Date(document.getElementById('fecha-llegada').value + 'T00:00:00Z');
-            const fechaSalida = new Date(document.getElementById('fecha-salida').value + 'T00:00:00Z');
+            const fechaLlegada = new Date(fechaLlegadaInput.value + 'T00:00:00Z');
+            const fechaSalida = new Date(fechaSalidaInput.value + 'T00:00:00Z');
             const hoy = new Date();
             
             let clientName = selectedClient ? selectedClient.nombre : newClientNameInput.value.trim();
@@ -224,7 +203,6 @@
             texto += `Fecha: ${hoy.toLocaleDateString('es-CL')}\n`;
             texto += `Solicitado para: ${document.getElementById('personas').value} personas\n`;
             texto += `Estadía: ${fechaLlegada.toLocaleDateString('es-CL', {timeZone:'UTC'})} al ${fechaSalida.toLocaleDateString('es-CL', {timeZone:'UTC'})} (${pricing.nights} noches)\n\n`;
-
             texto += `🏡 Detalle de las Cabañas Asignadas\n`;
             
             if (pricing.details && pricing.details.length > 0) {
@@ -233,9 +211,7 @@
                     texto += `\n🔹 ${cabanaInfo.nombre} (Capacidad: ${cabanaInfo.capacidad} personas)\n`;
                     if (cabanaInfo.descripcion) texto += `${cabanaInfo.descripcion}\n`;
                     if (cabanaInfo.camas) texto += `Camas: ${cabanaInfo.camas}\n`;
-                    if (cabanaInfo.equipamiento && cabanaInfo.equipamiento.length > 0) {
-                         texto += `Equipamiento: ${cabanaInfo.equipamiento.join(', ')}\n`;
-                    }
+                    if (cabanaInfo.equipamiento && cabanaInfo.equipamiento.length > 0) texto += `Equipamiento: ${cabanaInfo.equipamiento.join(', ')}\n`;
                     if(cabanaInfo.linkFotos) texto += `📷 Ver fotos: ${cabanaInfo.linkFotos}\n`;
                     texto += `Valor por noche: ${formatCurrency(detail.precioPorNoche)}\n`;
                     texto += `Total por ${pricing.nights} noches: ${formatCurrency(detail.precioTotal)}\n`;
@@ -249,27 +225,20 @@
             texto += `Capacidad total: ${selectedCabanas.reduce((acc, c) => acc + c.capacidad, 0)} personas\n`;
             texto += `Duración estadía: ${pricing.nights} noches\n`;
             texto += `Valor total: ${formatCurrency(pricing.totalPrice)}\n\n`;
-
             texto += `Incluye:\n✅ Estacionamiento privado\n✅ Ropa de cama y toallas\n✅ Acceso a orillas del río Coilaco\n✅ Terraza techada en cada cabaña\n\n`;
-            
             texto += `💵 Condiciones de Reserva\n`;
             texto += `Para confirmar se solicita un 50% de abono.\n`;
             texto += `El saldo (50%) debe estar cancelado 48 horas antes del check-in.\n`;
             texto += `Check-in: 15:00 hrs – Check-out: 11:00 hrs.\n\n`;
-            
-            texto += `📍 Ubicación: http://googleusercontent.com/maps/google.com/4`;
-
-            texto += `\n\n✍️ Atentamente,\nPablo Meza\nOrillas del Coilaco\n`;
+            texto += `📍 Ubicación: https://maps.app.goo.gl/TuLocation\n\n`; // Reemplazar con link real
+            texto += `✍️ Atentamente,\nPablo Meza\nOrillas del Coilaco\n`;
             texto += `📧 reservas@orillasdelcoilaco.cl\n📱 +56 9 7518 0855\n🌐 www.orillasdelcoilaco.cl`;
-
             presupuestoTexto.value = texto;
-            console.log('[DEBUG] generatePresupuestoText finalizado.');
         }
 
         async function loadClients() {
             try {
                 allClients = await fetchAPI('/api/clientes/simplificado');
-                console.log('[DEBUG] Lista de clientes cargada:', allClients.length);
             } catch (error) {
                 console.error("No se pudieron cargar los clientes:", error);
             }
@@ -279,9 +248,7 @@
             const searchTerm = clientSearchInput.value.toLowerCase();
             clientResultsList.innerHTML = '';
             if (!searchTerm) return;
-
             const filtered = allClients.filter(c => c.nombre.toLowerCase().includes(searchTerm) || c.telefono.includes(searchTerm));
-            
             filtered.slice(0, 5).forEach(client => {
                 const div = document.createElement('div');
                 div.className = 'p-2 cursor-pointer';
@@ -292,15 +259,13 @@
         }
         
         function selectClient(client) {
-            console.log('[DEBUG] Cliente seleccionado:', client);
             selectedClient = client;
             clientSearchInput.value = client.nombre;
             clientResultsList.innerHTML = '';
-            newClientNameInput.value = '';
-            newClientCompanyInput.value = '';
-            newClientPhoneInput.value = '';
-            newClientEmailInput.value = '';
-            [newClientNameInput, newClientCompanyInput, newClientPhoneInput, newClientEmailInput].forEach(el => el.disabled = true);
+            [newClientNameInput, newClientCompanyInput, newClientPhoneInput, newClientEmailInput].forEach(el => {
+                el.value = '';
+                el.disabled = true;
+            });
         }
         
         function clearClientSelection() {
@@ -309,9 +274,9 @@
             [newClientNameInput, newClientCompanyInput, newClientPhoneInput, newClientEmailInput].forEach(el => el.disabled = false);
         }
 
+        // --- LÓGICA PRINCIPAL ---
         const session = checkSession();
         if (session) {
-            console.log('[DEBUG] Sesión válida encontrada. Inicializando la página.');
             loader.style.display = 'none';
             appContent.classList.remove('hidden');
             authInfo.innerHTML = `
@@ -321,14 +286,27 @@
             document.getElementById('logout-btn').addEventListener('click', logout);
             
             loadClients();
+
+            // --- INICIO DE LA CORRECCIÓN DE FECHAS ---
+            fechaLlegadaInput.addEventListener('change', () => {
+                if (fechaLlegadaInput.value) {
+                    fechaSalidaInput.min = fechaLlegadaInput.value;
+                    if (fechaSalidaInput.value && fechaSalidaInput.value <= fechaLlegadaInput.value) {
+                        const nextDay = new Date(fechaLlegadaInput.value);
+                        nextDay.setDate(nextDay.getDate() + 2);
+                        fechaSalidaInput.value = nextDay.toISOString().split('T')[0];
+                    }
+                }
+            });
+            // --- FIN DE LA CORRECCIÓN DE FECHAS ---
+
             clientSearchInput.addEventListener('input', filterClients);
             newClientNameInput.addEventListener('input', clearClientSelection);
 
             generarBtn.addEventListener('click', async () => {
-                console.log('[DEBUG] Botón "Generar Propuesta" clickeado.');
                 const payload = {
-                    fechaLlegada: document.getElementById('fecha-llegada').value,
-                    fechaSalida: document.getElementById('fecha-salida').value,
+                    fechaLlegada: fechaLlegadaInput.value,
+                    fechaSalida: fechaSalidaInput.value,
                     personas: document.getElementById('personas').value,
                 };
 
@@ -344,10 +322,7 @@
                 resultsContainer.classList.add('hidden');
 
                 try {
-                    console.log('[DEBUG] Enviando payload para generar presupuesto:', payload);
                     fullData = await fetchAPI('/api/presupuestos/generar', { method: 'POST', body: payload });
-                    console.log('[DEBUG] Datos recibidos del API:', fullData);
-                    
                     if (fullData.suggestion) {
                         statusContainer.classList.add('hidden');
                         resultsContainer.classList.remove('hidden');
@@ -355,9 +330,7 @@
                     } else {
                         statusContainer.textContent = fullData.message || 'No se pudo generar una propuesta.';
                     }
-
                 } catch (error) {
-                    console.error('[DEBUG] Error al generar presupuesto:', error);
                     statusContainer.textContent = `Error: ${error.message}`;
                 } finally {
                     generarBtn.disabled = false;
@@ -375,7 +348,6 @@
             
             saveBtn.addEventListener('click', async () => {
                 let clienteParaGuardar;
-
                 if (selectedClient) {
                     clienteParaGuardar = { id: selectedClient.id, nombre: selectedClient.nombre };
                 } else if (newClientNameInput.value.trim()) {
@@ -391,8 +363,8 @@
                 }
 
                 const presupuestoParaGuardar = {
-                    fechaLlegada: document.getElementById('fecha-llegada').value,
-                    fechaSalida: document.getElementById('fecha-salida').value,
+                    fechaLlegada: fechaLlegadaInput.value,
+                    fechaSalida: fechaSalidaInput.value,
                     personas: parseInt(document.getElementById('personas').value),
                     cabanasSeleccionadas: selectedCabanas,
                     valorTotal: currentPricing.totalPrice
@@ -414,8 +386,6 @@
                     saveBtn.textContent = 'Guardar Presupuesto';
                 }
             });
-        } else {
-            console.log('[DEBUG] No se encontró sesión válida. Redirigiendo a login.');
         }
     });
 </script>

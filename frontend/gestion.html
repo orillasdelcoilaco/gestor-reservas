@@ -178,11 +178,6 @@
     let currentAction = null;
     let currentManagementType = null;
 
-    function getTodayUTC() {
-        const today = new Date();
-        return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    }
-
     function formatDate(dateString) {
         if (!dateString) return 'N/A';
         return new Date(dateString).toLocaleDateString('es-CL', { timeZone: 'UTC' });
@@ -252,14 +247,15 @@
         previewContainer.classList.remove('hidden');
     }
 
-    function setupFormForAction() {
+    function setupFormForAction(action) {
+        currentAction = action;
         formAccion.reset();
         [pagoFields, documentoField, previewContainer].forEach(el => el.classList.add('hidden'));
         modalStatus.textContent = '';
         sinDocumentoCheckbox.checked = false;
         pasteZone.style.display = 'block';
         documentoInput.disabled = false;
-        switch (currentAction) {
+        switch (action) {
             case 'registrar_pago':
                 pagoFields.classList.remove('hidden');
                 documentoField.classList.remove('hidden');
@@ -268,12 +264,12 @@
             case 'subir_documento_reserva':
             case 'marcar_boleta_enviada':
                 documentoField.classList.remove('hidden');
-                documentoLabel.textContent = currentAction.includes('boleta') ? 'Archivo de la Boleta' : 'Imagen de la Reserva';
+                documentoLabel.textContent = action.includes('boleta') ? 'Archivo de la Boleta' : 'Imagen de la Reserva';
                 break;
         }
     }
 
-    async function openManagementModal(type, reserva) {
+    function openManagementModal(type, reserva) {
         currentReserva = reserva;
         currentManagementType = type;
         modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
@@ -282,7 +278,9 @@
 
         if (type === 'reserva' || type === 'boleta') {
             const docType = type === 'reserva' ? 'enlaceReserva' : 'enlaceBoleta';
+            const action = type === 'reserva' ? 'subir_documento_reserva' : 'marcar_boleta_enviada';
             const docUrl = reserva.documentos?.[docType];
+
             viewDocumento.classList.remove('hidden');
             if (docUrl) {
                 docExistente.classList.remove('hidden');
@@ -290,15 +288,15 @@
                 const isImage = docUrl && docUrl !== 'SIN_DOCUMENTO' && (docUrl.toLowerCase().includes('.png') || docUrl.toLowerCase().includes('.jpg') || docUrl.toLowerCase().includes('.jpeg'));
                 docPreviewImg.classList.toggle('hidden', !isImage);
                 if (isImage) docPreviewImg.src = docUrl;
-                btnReemplazarDoc.onclick = () => showActionForm(type === 'reserva' ? 'subir_documento_reserva' : 'marcar_boleta_enviada');
+                btnReemplazarDoc.onclick = () => showActionForm(action);
                 btnEliminarDoc.onclick = () => deleteDocument(docType);
             } else {
                 docExistente.classList.add('hidden');
-                showActionForm(type === 'reserva' ? 'subir_documento_reserva' : 'marcar_boleta_enviada');
+                showActionForm(action);
             }
         } else if (type === 'pagos') {
             viewPagos.classList.remove('hidden');
-            await renderPagosList();
+            renderPagosList();
             btnRegistrarNuevoPago.onclick = () => showActionForm('registrar_pago');
         }
         modal.classList.remove('hidden');
@@ -369,7 +367,7 @@
         formAccion.classList.remove('hidden');
         modalCancelBtn.classList.add('hidden');
         modalBackBtn.classList.remove('hidden');
-        setupFormForAction();
+        setupFormForAction(action);
     }
     
     async function handleFormSubmit(event) {
@@ -439,7 +437,7 @@
                 noPendientes.classList.remove('hidden');
                 return;
             }
-            const today = getTodayUTC();
+            const today = new Date(new Date().setUTCHours(0,0,0,0));
             const llegadasHoy = [];
             const proximasLlegadas = [];
             reservas.forEach(reserva => {

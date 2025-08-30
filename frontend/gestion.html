@@ -70,8 +70,8 @@
                 
                 <div id="modal-view-documento" class="hidden">
                     <div id="documento-existente" class="text-center hidden">
-                        <img id="documento-preview-img" src="" class="max-h-60 w-auto mx-auto rounded-md mb-4"/>
-                        <p id="documento-sin-doc-msg" class="text-gray-500 mb-4">Se marcó como "Sin Documento".</p>
+                        <img id="documento-preview-img" src="" class="max-h-60 w-auto mx-auto rounded-md mb-4 hidden"/>
+                        <p id="documento-sin-doc-msg" class="text-gray-500 mb-4 hidden">Se marcó como "Sin Documento".</p>
                         <div class="flex justify-center space-x-2">
                            <button id="btn-reemplazar-doc" class="bg-blue-600 text-white px-4 py-2 text-sm rounded-md hover:bg-blue-700">Reemplazar</button>
                            <button id="btn-eliminar-doc" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">Eliminar</button>
@@ -139,7 +139,6 @@
 <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
-    // --- Referencias a Elementos ---
     const loader = document.getElementById('loader');
     const appContent = document.getElementById('app-content');
     const authInfo = document.getElementById('auth-info');
@@ -151,7 +150,6 @@
     const noPendientes = document.getElementById('no-pendientes');
     const modal = document.getElementById('gestion-modal');
     const modalTitle = document.getElementById('modal-title');
-    const modalContent = document.getElementById('modal-content-container');
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
     const modalSaveBtn = document.getElementById('modal-save-btn');
     const modalBackBtn = document.getElementById('modal-back-btn');
@@ -289,7 +287,7 @@
             if (docUrl) {
                 docExistente.classList.remove('hidden');
                 docSinDocMsg.classList.toggle('hidden', docUrl !== 'SIN_DOCUMENTO');
-                const isImage = docUrl && docUrl !== 'SIN_DOCUMENTO' && (docUrl.includes('.png') || docUrl.includes('.jpg') || docUrl.includes('.jpeg'));
+                const isImage = docUrl && docUrl !== 'SIN_DOCUMENTO' && (docUrl.toLowerCase().includes('.png') || docUrl.toLowerCase().includes('.jpg') || docUrl.toLowerCase().includes('.jpeg'));
                 docPreviewImg.classList.toggle('hidden', !isImage);
                 if (isImage) docPreviewImg.src = docUrl;
                 btnReemplazarDoc.onclick = () => showActionForm(type === 'reserva' ? 'subir_documento_reserva' : 'marcar_boleta_enviada');
@@ -353,8 +351,8 @@
                 method: 'POST',
                 body: { reservaId: currentReserva.id, transaccionId, nuevoMonto }
             });
-            await renderPagosList(); // Recargar la lista de pagos en el modal
-            loadGestion(); // Recargar el panel principal para actualizar el total
+            await renderPagosList();
+            loadGestion();
         } catch (error) {
             alert(`Error al editar pago: ${error.message}`);
         }

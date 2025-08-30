@@ -16,6 +16,8 @@ const tarifasRoutes = require('./routes/tarifas');
 const kpiRoutes = require('./routes/kpi');
 const analisisRoutes = require('./routes/analisis');
 const gestionRoutes = require('./routes/gestion');
+const cabanasRoutes = require('./routes/cabanas');
+const presupuestosRoutes = require('./routes/presupuestos');
 
 //--- INICIO DE LA CORRECCIÓN ---
 // Lista de dominios permitidos
@@ -79,6 +81,8 @@ privateRouter.use(tarifasRoutes(db));
 privateRouter.use(kpiRoutes(db));
 privateRouter.use(analisisRoutes(db));
 privateRouter.use(gestionRoutes(db)); 
+privateRouter.use(cabanasRoutes(db));
+privateRouter.use(presupuestosRoutes(db));
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 

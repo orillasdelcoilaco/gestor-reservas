@@ -1,15 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { getAvailabilityData, findBestCombination, calculatePrice } = require('../services/presupuestoService');
+const { findOrCreateClient } = require('../services/clienteService');
+const admin = require('firebase-admin');
 
-// Middleware para parsear el body de las peticiones a JSON
 const jsonParser = express.json();
 
 module.exports = (db) => {
-    /**
-     * POST /api/presupuestos/generar
-     * Genera una propuesta de presupuesto basada en fechas y número de personas.
-     */
+    
     router.post('/presupuestos/generar', jsonParser, async (req, res) => {
         const { fechaLlegada, fechaSalida, personas } = req.body;
 
@@ -17,14 +15,17 @@ module.exports = (db) => {
             return res.status(400).json({ error: 'Se requieren fechas y cantidad de personas.' });
         }
 
+        const startDate = new Date(fechaLlegada + 'T00:00:00Z');
+        const endDate = new Date(fechaSalida + 'T00:00:00Z');
+        
+        // --- INICIO DE LA CORRECCIÓN DE FECHAS ---
+        if (startDate >= endDate) {
+            return res.status(400).json({ error: 'La fecha de salida debe ser posterior a la fecha de llegada.' });
+        }
+        // --- FIN DE LA CORRECCIÓN DE FECHAS ---
+
         try {
-            const startDate = new Date(fechaLlegada + 'T00:00:00Z');
-            const endDate = new Date(fechaSalida + 'T00:00:00Z');
-
-            // 1. Obtener disponibilidad
-            const { availableCabanas, allCabanas } = await getAvailabilityData(db, startDate, endDate);
-
-            // 2. Encontrar la mejor combinación
+            const { availableCabanas, allCabanas, complexDetails } = await getAvailabilityData(db, startDate, endDate);
             const { combination, capacity } = findBestCombination(availableCabanas, parseInt(personas));
 
             if (combination.length === 0) {
@@ -32,11 +33,11 @@ module.exports = (db) => {
                     message: 'No hay suficientes cabañas disponibles para la cantidad de personas solicitada.',
                     suggestion: null,
                     availableCabanas,
-                    allCabanas
+                    allCabanas,
+                    complexDetails
                 });
             }
 
-            // 3. Calcular el precio
             const pricing = await calculatePrice(db, combination, startDate, endDate);
 
             res.status(200).json({
@@ -46,7 +47,8 @@ module.exports = (db) => {
                     pricing: pricing
                 },
                 availableCabanas,
-                allCabanas
+                allCabanas,
+                complexDetails
             });
 
         } catch (error) {
@@ -55,10 +57,6 @@ module.exports = (db) => {
         }
     });
 
-    /**
-     * POST /api/presupuestos/recalcular
-     * Recalcula el precio para una selección manual de cabañas.
-     */
     router.post('/presupuestos/recalcular', jsonParser, async (req, res) => {
         const { fechaLlegada, fechaSalida, cabanas } = req.body;
         if (!fechaLlegada || !fechaSalida || !cabanas) {
@@ -68,15 +66,49 @@ module.exports = (db) => {
         try {
             const startDate = new Date(fechaLlegada + 'T00:00:00Z');
             const endDate = new Date(fechaSalida + 'T00:00:00Z');
-
             const pricing = await calculatePrice(db, cabanas, startDate, endDate);
             res.status(200).json(pricing);
-
         } catch (error) {
             console.error("Error al recalcular el precio:", error);
             res.status(500).json({ error: 'Error interno del servidor al recalcular.' });
         }
     });
+
+    // --- INICIO DE LA NUEVA RUTA PARA GUARDAR ---
+    router.post('/presupuestos/guardar', jsonParser, async (req, res) => {
+        const { cliente, presupuesto } = req.body;
+        if (!cliente || !presupuesto) {
+            return res.status(400).json({ error: 'Faltan datos del cliente o del presupuesto.' });
+        }
+        
+        try {
+            // 1. Encuentra o crea el cliente y obtiene su ID
+            const clienteId = await findOrCreateClient(db, cliente);
+            
+            // 2. Prepara el objeto de presupuesto para guardarlo
+            const presupuestoData = {
+                clienteId: clienteId,
+                clienteNombre: cliente.nombre,
+                fechaEnvio: admin.firestore.FieldValue.serverTimestamp(),
+                fechaLlegada: admin.firestore.Timestamp.fromDate(new Date(presupuesto.fechaLlegada)),
+                fechaSalida: admin.firestore.Timestamp.fromDate(new Date(presupuesto.fechaSalida)),
+                personas: presupuesto.personas,
+                cabanas: presupuesto.cabanasSeleccionadas.map(c => c.nombre),
+                valorTotal: presupuesto.valorTotal,
+                estado: 'Enviado'
+            };
+
+            // 3. Guarda el presupuesto en la colección 'presupuestos'
+            const docRef = await db.collection('presupuestos').add(presupuestoData);
+
+            res.status(201).json({ message: 'Presupuesto guardado exitosamente', id: docRef.id });
+
+        } catch (error) {
+            console.error("Error al guardar el presupuesto:", error);
+            res.status(500).json({ error: 'Error interno del servidor al guardar el presupuesto.' });
+        }
+    });
+     // --- FIN DE LA NUEVA RUTA PARA GUARDAR ---
 
     return router;
 };

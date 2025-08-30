@@ -43,6 +43,7 @@
                                 <input type="text" id="new-client-name" placeholder="Nombre completo" class="block w-full rounded-md border-gray-300 shadow-sm">
                                 <input type="text" id="new-client-company" placeholder="Empresa (Opcional)" class="block w-full rounded-md border-gray-300 shadow-sm">
                                 <input type="tel" id="new-client-phone" placeholder="Teléfono (Opcional)" class="block w-full rounded-md border-gray-300 shadow-sm">
+                                <input type="email" id="new-client-email" placeholder="Email (Opcional)" class="block w-full rounded-md border-gray-300 shadow-sm">
                             </div>
                         </div>
                     </div>
@@ -110,11 +111,14 @@
     const clientResultsList = document.getElementById('client-results-list');
     const newClientNameInput = document.getElementById('new-client-name');
     const newClientCompanyInput = document.getElementById('new-client-company');
+    const newClientPhoneInput = document.getElementById('new-client-phone');
+    const newClientEmailInput = document.getElementById('new-client-email');
     
     let allClients = [];
     let selectedClient = null;
     let fullData = {};
     let selectedCabanas = [];
+    let currentPricing = {};
 
     function formatCurrency(value) {
         return `$${(value || 0).toLocaleString('es-CL')}`;
@@ -185,11 +189,11 @@
     }
     
     function generatePresupuestoText(pricing) {
+        currentPricing = pricing; // Guardamos los precios actuales
         const fechaLlegada = new Date(document.getElementById('fecha-llegada').value + 'T00:00:00Z');
         const fechaSalida = new Date(document.getElementById('fecha-salida').value + 'T00:00:00Z');
         const hoy = new Date();
         
-        // Cliente
         let clientName = selectedClient ? selectedClient.nombre : newClientNameInput.value.trim();
         let clientCompany = selectedClient ? '' : newClientCompanyInput.value.trim();
         const dirigidoA = clientCompany ? `${clientName} – ${clientCompany}` : clientName;
@@ -235,9 +239,9 @@
         texto += `El saldo (50%) debe estar cancelado 48 horas antes del check-in.\n`;
         texto += `Check-in: 15:00 hrs – Check-out: 11:00 hrs.\n\n`;
         
-        texto += `📍 Ubicación: https://maps.app.goo.gl/TUHh82f254f5fJSo7\n\n`;
+        texto += `📍 Ubicación: http://googleusercontent.com/maps/google.com/3`;
 
-        texto += `✍️ Atentamente,\nPablo Meza\nOrillas del Coilaco\n`;
+        texto += `\n\n✍️ Atentamente,\nPablo Meza\nOrillas del Coilaco\n`;
         texto += `📧 reservas@orillasdelcoilaco.cl\n📱 +56 9 7518 0855\n🌐 www.orillasdelcoilaco.cl`;
 
         presupuestoTexto.value = texto;
@@ -273,8 +277,21 @@
         clientResultsList.innerHTML = '';
         newClientNameInput.value = '';
         newClientCompanyInput.value = '';
+        newClientPhoneInput.value = '';
+        newClientEmailInput.value = '';
         newClientNameInput.disabled = true;
         newClientCompanyInput.disabled = true;
+        newClientPhoneInput.disabled = true;
+        newClientEmailInput.disabled = true;
+    }
+    
+    function clearClientSelection() {
+        selectedClient = null;
+        clientSearchInput.value = '';
+        newClientNameInput.disabled = false;
+        newClientCompanyInput.disabled = false;
+        newClientPhoneInput.disabled = false;
+        newClientEmailInput.disabled = false;
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -290,10 +307,7 @@
             
             loadClients();
             clientSearchInput.addEventListener('input', filterClients);
-            newClientNameInput.addEventListener('input', () => {
-                selectedClient = null;
-                clientSearchInput.value = '';
-            });
+            newClientNameInput.addEventListener('input', clearClientSelection);
 
             generarBtn.addEventListener('click', async () => {
                 const payload = {
@@ -340,8 +354,47 @@
                 });
             });
             
-            saveBtn.addEventListener('click', () => {
-                alert('La funcionalidad para guardar presupuestos se implementará en el siguiente paso.');
+            saveBtn.addEventListener('click', async () => {
+                let clienteParaGuardar;
+
+                if (selectedClient) {
+                    clienteParaGuardar = { id: selectedClient.id, nombre: selectedClient.nombre };
+                } else if (newClientNameInput.value.trim()) {
+                    clienteParaGuardar = {
+                        nombre: newClientNameInput.value.trim(),
+                        empresa: newClientCompanyInput.value.trim(),
+                        telefono: newClientPhoneInput.value.trim(),
+                        email: newClientEmailInput.value.trim(),
+                    };
+                } else {
+                    alert('Debes seleccionar o ingresar un cliente para guardar el presupuesto.');
+                    return;
+                }
+
+                const presupuestoParaGuardar = {
+                    fechaLlegada: document.getElementById('fecha-llegada').value,
+                    fechaSalida: document.getElementById('fecha-salida').value,
+                    personas: parseInt(document.getElementById('personas').value),
+                    cabanasSeleccionadas: selectedCabanas,
+                    valorTotal: currentPricing.totalPrice
+                };
+
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Guardando...';
+
+                try {
+                    const result = await fetchAPI('/api/presupuestos/guardar', {
+                        method: 'POST',
+                        body: { cliente: clienteParaGuardar, presupuesto: presupuestoParaGuardar }
+                    });
+                    alert(`Presupuesto guardado con éxito. ID: ${result.id}`);
+                    // Opcional: limpiar formulario o redirigir
+                } catch (error) {
+                    alert(`Error al guardar el presupuesto: ${error.message}`);
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Guardar Presupuesto';
+                }
             });
         }
     });

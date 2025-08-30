@@ -5,6 +5,50 @@ const stream = require('stream');
 const { cleanPhoneNumber } = require('../utils/helpers');
 const { createGoogleContact, findContactByName, updateContact } = require('./googleContactsService');
 
+// --- INICIO DE LA NUEVA FUNCIÓN ---
+/**
+ * Busca un cliente por teléfono o email. Si no existe, lo crea.
+ * Devuelve el ID del cliente.
+ */
+async function findOrCreateClient(db, clientData) {
+    const { nombre, telefono, email, empresa } = clientData;
+    const cleanedPhone = telefono ? cleanPhoneNumber(telefono) : null;
+
+    // Buscar por teléfono si existe
+    if (cleanedPhone) {
+        const query = db.collection('clientes').where('phone', '==', cleanedPhone).limit(1);
+        const snapshot = await query.get();
+        if (!snapshot.empty) {
+            return snapshot.docs[0].id;
+        }
+    }
+
+    // Buscar por email si existe y no se encontró por teléfono
+    if (email) {
+        const query = db.collection('clientes').where('email', '==', email).limit(1);
+        const snapshot = await query.get();
+        if (!snapshot.empty) {
+            return snapshot.docs[0].id;
+        }
+    }
+
+    // Si no se encuentra, se crea un nuevo cliente
+    const nameParts = nombre.split(' ');
+    const newClientRef = db.collection('clientes').doc();
+    const newClientPayload = {
+        firstname: nameParts[0] || '',
+        lastname: nameParts.slice(1).join(' ') || '',
+        phone: cleanedPhone,
+        email: email || null,
+        fuente: empresa || 'Presupuesto Directo',
+        googleContactSynced: false
+    };
+    
+    await newClientRef.set(newClientPayload);
+    return newClientRef.id;
+}
+// --- FIN DE LA NUEVA FUNCIÓN ---
+
 function parseCsvBuffer(buffer) {
     return new Promise((resolve, reject) => {
         const results = [];
@@ -251,5 +295,6 @@ module.exports = {
     importClientsFromCsv,
     getAllClientsWithStats,
     syncClientToGoogle,
-    updateClientMaster
+    updateClientMaster,
+    findOrCreateClient // <-- Exportamos la nueva función
 };

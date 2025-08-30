@@ -77,8 +77,6 @@
                            <button id="btn-eliminar-doc" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">Eliminar</button>
                         </div>
                     </div>
-                    <div id="documento-nuevo" class="hidden">
-                         </div>
                 </div>
 
                 <div id="modal-view-pagos" class="hidden">
@@ -151,32 +149,22 @@
     const proximasContainer = document.getElementById('proximas-container');
     const proximasList = document.getElementById('proximas-list');
     const noPendientes = document.getElementById('no-pendientes');
-    
-    // --- Referencias a Elementos del Modal ---
     const modal = document.getElementById('gestion-modal');
     const modalTitle = document.getElementById('modal-title');
     const modalContent = document.getElementById('modal-content-container');
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
     const modalSaveBtn = document.getElementById('modal-save-btn');
     const modalBackBtn = document.getElementById('modal-back-btn');
-
-    // Vistas del modal
     const viewDocumento = document.getElementById('modal-view-documento');
     const viewPagos = document.getElementById('modal-view-pagos');
     const formAccion = document.getElementById('modal-form-accion');
-    
-    // Elementos de la vista de Documento
     const docExistente = document.getElementById('documento-existente');
     const docPreviewImg = document.getElementById('documento-preview-img');
     const docSinDocMsg = document.getElementById('documento-sin-doc-msg');
     const btnReemplazarDoc = document.getElementById('btn-reemplazar-doc');
     const btnEliminarDoc = document.getElementById('btn-eliminar-doc');
-
-    // Elementos de la vista de Pagos
     const listaPagos = document.getElementById('lista-pagos');
     const btnRegistrarNuevoPago = document.getElementById('btn-registrar-nuevo-pago');
-
-    // Elementos del formulario de acción
     const pagoFields = document.getElementById('pago-fields');
     const documentoField = document.getElementById('documento-field');
     const documentoLabel = document.getElementById('documento-label');
@@ -190,8 +178,7 @@
 
     let currentReserva = null;
     let currentAction = null;
-    let currentTransaccionId = null;
-    let currentManagementType = null; // <-- Variable para "recordar" la vista
+    let currentManagementType = null;
 
     function getTodayUTC() {
         const today = new Date();
@@ -220,19 +207,15 @@
     function createReservaCard(reserva) {
         const card = document.createElement('div');
         card.className = 'p-4 border rounded-lg shadow-sm flex flex-col';
-        
         const statusInfo = getStatusInfo(reserva.estadoGestion);
         const saldo = reserva.valorCLP - reserva.abono;
-        
         const isGestionPagosActive = statusInfo.level >= 3;
         const isGestionBoletaActive = statusInfo.level >= 4;
-
         let statusHtml;
         let actionUrl = `mensajes.html?reservaId=${reserva.reservaIdOriginal}&reservaCompletaId=${reserva.id}`;
         if (reserva.estadoGestion === 'Pendiente Bienvenida') actionUrl += `&accion=marcar_bienvenida_enviada`;
         else if (reserva.estadoGestion === 'Pendiente Cobro') actionUrl += `&accion=marcar_cobro_enviado`;
         statusHtml = `<a href="${actionUrl}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80 transition-opacity">${statusInfo.text}</a>`;
-        
         card.innerHTML = `
             <div class="flex flex-col md:flex-row md:items-center justify-between w-full">
                 <div class="flex-grow">
@@ -261,33 +244,23 @@
                 </div>
             </div>
         `;
-
         card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, reserva)));
         return card;
     }
 
     function showPreview(file) {
         fileNameEl.textContent = file.name;
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => { thumbnail.src = e.target.result; };
-            reader.readAsDataURL(file);
-        } else {
-            thumbnail.src = ''; 
-        }
+        thumbnail.src = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
         previewContainer.classList.remove('hidden');
     }
 
     function setupFormForAction() {
         formAccion.reset();
-        pagoFields.classList.add('hidden');
-        documentoField.classList.add('hidden');
-        previewContainer.classList.add('hidden');
+        [pagoFields, documentoField, previewContainer].forEach(el => el.classList.add('hidden'));
         modalStatus.textContent = '';
         sinDocumentoCheckbox.checked = false;
         pasteZone.style.display = 'block';
         documentoInput.disabled = false;
-
         switch (currentAction) {
             case 'registrar_pago':
                 pagoFields.classList.remove('hidden');
@@ -302,30 +275,23 @@
         }
     }
 
-    // --- Lógica del Modal Dinámico ---
-
-    function openManagementModal(type, reserva) {
+    async function openManagementModal(type, reserva) {
         currentReserva = reserva;
-        currentManagementType = type; // <-- Guarda el tipo de vista actual
+        currentManagementType = type;
         modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
-        
-        viewDocumento.classList.add('hidden');
-        viewPagos.classList.add('hidden');
-        formAccion.classList.add('hidden');
-        modalBackBtn.classList.add('hidden');
+        [viewDocumento, viewPagos, formAccion, modalBackBtn].forEach(el => el.classList.add('hidden'));
         modalCancelBtn.classList.remove('hidden');
 
         if (type === 'reserva' || type === 'boleta') {
             const docType = type === 'reserva' ? 'enlaceReserva' : 'enlaceBoleta';
             const docUrl = reserva.documentos?.[docType];
-
             viewDocumento.classList.remove('hidden');
             if (docUrl) {
                 docExistente.classList.remove('hidden');
                 docSinDocMsg.classList.toggle('hidden', docUrl !== 'SIN_DOCUMENTO');
-                docPreviewImg.classList.toggle('hidden', docUrl === 'SIN_DOCUMENTO' || !docUrl);
-                if(docUrl !== 'SIN_DOCUMENTO' && docUrl) docPreviewImg.src = docUrl;
-
+                const isImage = docUrl && docUrl !== 'SIN_DOCUMENTO' && (docUrl.includes('.png') || docUrl.includes('.jpg') || docUrl.includes('.jpeg'));
+                docPreviewImg.classList.toggle('hidden', !isImage);
+                if (isImage) docPreviewImg.src = docUrl;
                 btnReemplazarDoc.onclick = () => showActionForm(type === 'reserva' ? 'subir_documento_reserva' : 'marcar_boleta_enviada');
                 btnEliminarDoc.onclick = () => deleteDocument(docType);
             } else {
@@ -334,16 +300,68 @@
             }
         } else if (type === 'pagos') {
             viewPagos.classList.remove('hidden');
-            renderPagosList();
+            await renderPagosList();
             btnRegistrarNuevoPago.onclick = () => showActionForm('registrar_pago');
         }
-
         modal.classList.remove('hidden');
     }
     
     async function renderPagosList() {
-        listaPagos.innerHTML = `<p class="text-sm text-gray-500">Funcionalidad de listar/editar pagos aún no implementada.</p>
-        <p class="text-sm text-gray-500">Total abonado conocido: ${formatCurrency(currentReserva.abono)}</p>`;
+        listaPagos.innerHTML = '<p class="text-sm text-gray-500">Cargando pagos...</p>';
+        try {
+            const transacciones = await fetchAPI(`/api/gestion/transacciones/${currentReserva.id}`);
+            if (transacciones.length === 0) {
+                listaPagos.innerHTML = '<p class="text-sm text-center text-gray-500 p-4">No hay pagos registrados para esta reserva.</p>';
+                return;
+            }
+            listaPagos.innerHTML = '';
+            transacciones.forEach(t => {
+                const pagoEl = document.createElement('div');
+                pagoEl.className = 'p-2 border rounded-md flex justify-between items-center';
+                pagoEl.innerHTML = `
+                    <div>
+                        <p class="font-semibold">${formatCurrency(t.monto)} - <span class="font-normal text-gray-600">${t.tipo} (${t.medioDePago})</span></p>
+                        <p class="text-xs text-gray-500">Fecha: ${formatDate(t.fecha)}</p>
+                    </div>
+                    <div class="space-x-2">
+                        <button data-id="${t.id}" class="edit-pago-btn text-blue-600 hover:text-blue-800 text-xs font-bold">Editar</button>
+                        <button data-id="${t.id}" class="delete-pago-btn text-red-600 hover:text-red-800 text-xs font-bold">Eliminar</button>
+                    </div>
+                `;
+                listaPagos.appendChild(pagoEl);
+            });
+            listaPagos.querySelectorAll('.edit-pago-btn').forEach(b => b.addEventListener('click', handleEditPago));
+            listaPagos.querySelectorAll('.delete-pago-btn').forEach(b => b.addEventListener('click', handleDeletePago));
+        } catch (error) {
+            listaPagos.innerHTML = `<p class="text-sm text-red-500">Error al cargar pagos: ${error.message}</p>`;
+        }
+    }
+    
+    function handleEditPago(e) {
+        const transaccionId = e.target.dataset.id;
+        const nuevoMonto = prompt('Ingresa el nuevo monto para este pago:');
+        if (nuevoMonto && !isNaN(parseFloat(nuevoMonto))) {
+            editTransaccion(transaccionId, parseFloat(nuevoMonto));
+        } else if (nuevoMonto !== null) {
+            alert('Por favor, ingresa un número válido.');
+        }
+    }
+
+    async function editTransaccion(transaccionId, nuevoMonto) {
+        try {
+            await fetchAPI('/api/gestion/transaccion/editar', {
+                method: 'POST',
+                body: { reservaId: currentReserva.id, transaccionId, nuevoMonto }
+            });
+            await renderPagosList(); // Recargar la lista de pagos en el modal
+            loadGestion(); // Recargar el panel principal para actualizar el total
+        } catch (error) {
+            alert(`Error al editar pago: ${error.message}`);
+        }
+    }
+
+    function handleDeletePago(e) {
+        deleteDocument('transaccion', e.target.dataset.id);
     }
 
     function showActionForm(action) {
@@ -361,19 +379,15 @@
         modalSaveBtn.disabled = true;
         modalSaveBtn.textContent = 'Guardando...';
         modalStatus.textContent = '';
-
         const formData = new FormData();
         const detalles = {};
-
         if (currentAction === 'registrar_pago') {
             detalles.monto = document.getElementById('monto-input').value;
             detalles.medioDePago = document.getElementById('medio-pago-select').value;
             detalles.esPagoFinal = document.getElementById('pago-final-checkbox').checked;
             detalles.tipo = detalles.esPagoFinal ? 'Pago Final' : 'Abono';
         }
-
         detalles.sinDocumento = sinDocumentoCheckbox.checked;
-
         if (documentoInput.files.length > 0 && !detalles.sinDocumento) {
             formData.append('documento', documentoInput.files[0]);
         } else if (!detalles.sinDocumento && (currentAction === 'subir_documento_reserva' || currentAction === 'marcar_boleta_enviada')) {
@@ -382,10 +396,8 @@
             modalSaveBtn.textContent = 'Guardar';
             return;
         }
-
         formData.append('accion', currentAction);
         formData.append('detalles', JSON.stringify(detalles));
-
         try {
             await fetchAPI(`/api/gestion/actualizar-estado/${currentReserva.id}`, { method: 'POST', body: formData });
             modal.classList.add('hidden');
@@ -400,14 +412,18 @@
 
     async function deleteDocument(tipoDoc, transaccionId = null) {
         if (!confirm('¿Estás seguro de que quieres eliminar este elemento? Esta acción no se puede deshacer.')) return;
-        
         try {
             await fetchAPI('/api/gestion/documento/eliminar', {
                 method: 'POST',
                 body: { reservaId: currentReserva.id, tipoDoc, transaccionId }
             });
-            modal.classList.add('hidden');
-            loadGestion();
+            if (tipoDoc === 'transaccion') {
+                await renderPagosList();
+                loadGestion();
+            } else {
+                modal.classList.add('hidden');
+                loadGestion();
+            }
         } catch(error) {
             alert(`Error al eliminar: ${error.message}`);
         }
@@ -418,24 +434,19 @@
         [hoyContainer, proximasContainer, noPendientes].forEach(el => el.classList.add('hidden'));
         hoyList.innerHTML = '';
         proximasList.innerHTML = '';
-        
         try {
             const reservas = await fetchAPI('/api/gestion/pendientes');
             loadingState.classList.add('hidden');
-
             if (reservas.length === 0) {
                 noPendientes.classList.remove('hidden');
                 return;
             }
-
             const today = getTodayUTC();
             const llegadasHoy = [];
             const proximasLlegadas = [];
-
             reservas.forEach(reserva => {
                 (new Date(reserva.fechaLlegada).getTime() <= today.getTime() ? llegadasHoy : proximasLlegadas).push(reserva);
             });
-
             if (llegadasHoy.length > 0) {
                 llegadasHoy.forEach(res => hoyList.appendChild(createReservaCard(res)));
                 hoyContainer.classList.remove('hidden');
@@ -459,23 +470,15 @@
                 <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
-            
             modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            // --- CORRECCIÓN BOTÓN VOLVER ---
             modalBackBtn.addEventListener('click', () => openManagementModal(currentManagementType, currentReserva));
             formAccion.addEventListener('submit', handleFormSubmit);
-
-            // --- Lógica para Pegar y Seleccionar Archivo ---
             pasteZone.addEventListener('click', () => documentoInput.click());
             documentoInput.addEventListener('change', () => {
                 if (documentoInput.files.length > 0) showPreview(documentoInput.files[0]);
             });
-
-            // --- CORRECCIÓN FLUJO DE PEGADO ---
             document.addEventListener('paste', (e) => {
-                // Solo actuar si el modal está abierto y el campo de documento está visible
                 if (modal.classList.contains('hidden') || formAccion.classList.contains('hidden') || documentoField.classList.contains('hidden')) return;
-                
                 const items = (e.clipboardData || window.clipboardData).items;
                 for (const item of items) {
                     if (item.type.indexOf('image') !== -1) {
@@ -490,14 +493,12 @@
                     }
                 }
             });
-            
             sinDocumentoCheckbox.addEventListener('change', (e) => {
                 const isDisabled = e.target.checked;
                 pasteZone.style.display = isDisabled ? 'none' : 'block';
                 documentoInput.disabled = isDisabled;
                 if(isDisabled) previewContainer.classList.add('hidden');
             });
-
             loadGestion();
         }
     });

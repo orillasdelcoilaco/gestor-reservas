@@ -276,10 +276,8 @@
         viewDocumento.classList.add('hidden');
         viewPagos.classList.add('hidden');
         formAccion.classList.remove('hidden');
-
         modalCancelBtn.classList.toggle('hidden', hasPreviousView);
         modalBackBtn.classList.toggle('hidden', !hasPreviousView);
-        
         setupFormForAction(action);
     }
 
@@ -289,7 +287,6 @@
         currentManagementType = type;
         modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
         [viewDocumento, viewPagos, formAccion].forEach(el => el.classList.add('hidden'));
-        
         modalCancelBtn.classList.remove('hidden');
         modalBackBtn.classList.add('hidden');
 
@@ -400,17 +397,23 @@
         
         console.log('[DEBUG] Current Action:', currentAction);
         console.log('[DEBUG] Detalles object:', detalles);
+        
+        // --- INICIO DE LA CORRECCIÓN ---
+        const requiresDocument = ['subir_documento_reserva', 'marcar_boleta_enviada'].includes(currentAction);
 
-        if (documentoInput.files.length > 0 && !detalles.sinDocumento) {
-            formData.append('documento', documentoInput.files[0]);
-            console.log('[DEBUG] Appending file to FormData:', documentoInput.files[0].name);
-        } else if (!detalles.sinDocumento && (currentAction === 'subir_documento_reserva' || currentAction === 'marcar_boleta_enviada')) {
+        if (requiresDocument && !detalles.sinDocumento && documentoInput.files.length === 0) {
             modalStatus.textContent = 'Debes seleccionar un archivo o marcar "Sin Documento".';
             console.log('[DEBUG] Validation failed: No file selected for required action.');
             modalSaveBtn.disabled = false;
             modalSaveBtn.textContent = 'Guardar';
             return;
         }
+
+        if (documentoInput.files.length > 0 && !detalles.sinDocumento) {
+            formData.append('documento', documentoInput.files[0]);
+            console.log('[DEBUG] Appending file to FormData:', documentoInput.files[0].name);
+        }
+        // --- FIN DE LA CORRECCIÓN ---
 
         formData.append('accion', currentAction);
         formData.append('detalles', JSON.stringify(detalles));

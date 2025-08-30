@@ -270,12 +270,23 @@
         }
     }
 
+    function showActionForm(action, hasPreviousView = false) {
+        currentAction = action;
+        viewDocumento.classList.add('hidden');
+        viewPagos.classList.add('hidden');
+        formAccion.classList.remove('hidden');
+        modalCancelBtn.classList.toggle('hidden', hasPreviousView);
+        modalBackBtn.classList.toggle('hidden', !hasPreviousView);
+        setupFormForAction(action);
+    }
+
     function openManagementModal(type, reserva) {
         currentReserva = reserva;
         currentManagementType = type;
         modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
-        [viewDocumento, viewPagos, formAccion, modalBackBtn].forEach(el => el.classList.add('hidden'));
+        [viewDocumento, viewPagos, formAccion].forEach(el => el.classList.add('hidden'));
         modalCancelBtn.classList.remove('hidden');
+        modalBackBtn.classList.add('hidden');
 
         if (type === 'reserva' || type === 'boleta') {
             const docType = type === 'reserva' ? 'enlaceReserva' : 'enlaceBoleta';
@@ -289,16 +300,16 @@
                 const isImage = docUrl && docUrl !== 'SIN_DOCUMENTO' && (docUrl.toLowerCase().includes('.png') || docUrl.toLowerCase().includes('.jpg') || docUrl.toLowerCase().includes('.jpeg'));
                 docPreviewImg.classList.toggle('hidden', !isImage);
                 if (isImage) docPreviewImg.src = docUrl;
-                btnReemplazarDoc.onclick = () => showActionForm(action);
+                btnReemplazarDoc.onclick = () => showActionForm(action, true);
                 btnEliminarDoc.onclick = () => deleteDocument(docType);
             } else {
                 docExistente.classList.add('hidden');
-                showActionForm(action);
+                showActionForm(action, false);
             }
         } else if (type === 'pagos') {
             viewPagos.classList.remove('hidden');
             renderPagosList();
-            btnRegistrarNuevoPago.onclick = () => showActionForm('registrar_pago');
+            btnRegistrarNuevoPago.onclick = () => showActionForm('registrar_pago', true);
         }
         modal.classList.remove('hidden');
     }
@@ -359,16 +370,6 @@
 
     function handleDeletePago(e) {
         deleteDocument('transaccion', e.target.dataset.id);
-    }
-
-    function showActionForm(action) {
-        currentAction = action;
-        viewDocumento.classList.add('hidden');
-        viewPagos.classList.add('hidden');
-        formAccion.classList.remove('hidden');
-        modalCancelBtn.classList.add('hidden');
-        modalBackBtn.classList.remove('hidden');
-        setupFormForAction(action);
     }
     
     async function handleFormSubmit(event) {

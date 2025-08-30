@@ -1,28 +1,58 @@
 const express = require('express');
 const router = express.Router();
+const { getAvailabilityData, findBestCombination, calculatePrice } = require('../services/presupuestoService');
 
 // Middleware para parsear el body de las peticiones a JSON
 const jsonParser = express.json();
 
 module.exports = (db) => {
     /**
-     * GET /api/presupuestos
-     * Ruta de ejemplo para obtener presupuestos.
-     * La implementaremos completamente en la siguiente fase.
+     * POST /api/presupuestos/generar
+     * Genera una propuesta de presupuesto basada en fechas y número de personas.
      */
-    router.get('/presupuestos', async (req, res) => {
-        // Por ahora, solo devuelve un array vacío.
-        res.status(200).json([]);
-    });
+    router.post('/presupuestos/generar', jsonParser, async (req, res) => {
+        const { fechaLlegada, fechaSalida, personas } = req.body;
 
-    /**
-     * POST /api/presupuestos
-     * Ruta de ejemplo para crear un presupuesto.
-     * La implementaremos completamente en la siguiente fase.
-     */
-    router.post('/presupuestos', jsonParser, async (req, res) => {
-        // Por ahora, solo devuelve un mensaje de éxito.
-        res.status(201).json({ message: 'Ruta de presupuestos creada. Implementación pendiente.' });
+        if (!fechaLlegada || !fechaSalida || !personas) {
+            return res.status(400).json({ error: 'Se requieren fechas y cantidad de personas.' });
+        }
+
+        try {
+            const startDate = new Date(fechaLlegada + 'T00:00:00Z');
+            const endDate = new Date(fechaSalida + 'T00:00:00Z');
+
+            // 1. Obtener disponibilidad
+            const { availableCabanas, allCabanas } = await getAvailabilityData(db, startDate, endDate);
+
+            // 2. Encontrar la mejor combinación
+            const { combination, capacity } = findBestCombination(availableCabanas, parseInt(personas));
+
+            if (combination.length === 0) {
+                return res.status(200).json({
+                    message: 'No hay suficientes cabañas disponibles para la cantidad de personas solicitada.',
+                    suggestion: null,
+                    availableCabanas,
+                    allCabanas
+                });
+            }
+
+            // 3. Calcular el precio
+            const pricing = await calculatePrice(db, combination, startDate, endDate);
+
+            res.status(200).json({
+                suggestion: {
+                    cabanas: combination,
+                    totalCapacity: capacity,
+                    pricing: pricing
+                },
+                availableCabanas,
+                allCabanas
+            });
+
+        } catch (error) {
+            console.error("Error al generar el presupuesto:", error);
+            res.status(500).json({ error: 'Error interno del servidor al generar el presupuesto.' });
+        }
     });
 
     return router;

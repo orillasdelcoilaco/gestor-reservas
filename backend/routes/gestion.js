@@ -2,12 +2,12 @@ const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
 const multer = require('multer');
+const path = require('path');
 const { getReservasPendientes } = require('../services/gestionService');
 const storageService = require('../services/storageService');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Ya no necesitamos recibir el bucketName como parámetro
 module.exports = (db) => {
 
     router.get('/gestion/pendientes', async (req, res) => {
@@ -35,23 +35,40 @@ module.exports = (db) => {
                 return res.status(404).json({ error: 'Reserva no encontrada.' });
             }
             const reservaData = reservaDoc.data();
+            const transaccionesRef = reservaRef.collection('transacciones');
 
             const dataToUpdate = {};
             let nuevoEstado = '';
             const detallesParseados = detalles ? JSON.parse(detalles) : {};
-
             let publicUrl = null;
+
             if (req.file) {
                 const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
                 const reservaId = reservaData.reservaIdOriginal;
-                const destinationPath = `reservas/${year}/${reservaId}/${req.file.originalname}`;
-                
-                // --- CORRECCIÓN CLAVE ---
-                // Llamamos a uploadFile sin pasarle el nombre del bucket.
+                const fileExtension = path.extname(req.file.originalname);
+                let fileName = '';
+
+                switch(accion) {
+                    case 'registrar_pago':
+                        const transaccionesSnapshot = await transaccionesRef.get();
+                        const abonoIndex = transaccionesSnapshot.docs.filter(doc => doc.data().tipo === 'Abono').length + 1;
+                        const tipoPago = detallesParseados.esPagoFinal ? 'pago_final' : `abono_${abonoIndex}`;
+                        fileName = `${reservaId}_${tipoPago}${fileExtension}`;
+                        break;
+                    case 'marcar_boleta_enviada':
+                        fileName = `${reservaId}_boleta${fileExtension}`;
+                        break;
+                    case 'subir_documento_reserva':
+                        fileName = `${reservaId}_reserva_comprobante${fileExtension}`;
+                        break;
+                    default:
+                        fileName = `${reservaId}_documento_${Date.now()}${fileExtension}`;
+                }
+
+                const destinationPath = `reservas/${year}/${reservaId}/${fileName}`;
                 publicUrl = await storageService.uploadFile(req.file.buffer, destinationPath, req.file.mimetype);
             }
 
-            // ... (el resto del switch case no cambia)
             switch (accion) {
                 case 'marcar_bienvenida_enviada':
                     nuevoEstado = 'Pendiente Cobro';
@@ -65,8 +82,8 @@ module.exports = (db) => {
                     if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {
                         return res.status(400).json({ error: 'Monto y medio de pago son requeridos.' });
                     }
-                    const transaccionRef = reservaRef.collection('transacciones').doc();
-                    await transaccionRef.set({
+                    const newTransactionRef = transaccionesRef.doc();
+                    await newTransactionRef.set({
                         monto: parseFloat(detallesParseados.monto),
                         medioDePago: detallesParseados.medioDePago,
                         tipo: detallesParseados.tipo || 'Abono',
@@ -78,6 +95,12 @@ module.exports = (db) => {
                         nuevoEstado = 'Pendiente Boleta';
                         dataToUpdate.pagado = true;
                     }
+
+                    // Recalcular el total abonado
+                    const allTransactions = await transaccionesRef.get();
+                    const totalAbonado = allTransactions.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
+                    dataToUpdate.abono = totalAbonado;
+
                     break;
                 case 'marcar_boleta_enviada':
                     nuevoEstado = 'Facturado';
@@ -87,10 +110,11 @@ module.exports = (db) => {
                         dataToUpdate['documentos.enlaceBoleta'] = publicUrl;
                     }
                     break;
-                 case 'subir_documento_reserva':
+                case 'subir_documento_reserva':
                     if (publicUrl) {
-                         dataToUpdate['documentos.enlaceReserva'] = publicUrl;
+                        dataToUpdate['documentos.enlaceReserva'] = publicUrl;
                     }
+                    // No cambia de estado, solo sube el archivo
                     break;
                 default:
                     return res.status(400).json({ error: 'Acción no válida.' });

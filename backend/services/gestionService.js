@@ -21,13 +21,17 @@ async function getReservasPendientes(db) {
     const reservas = snapshot.docs.map(doc => {
         const data = doc.data();
         // --- CORRECCIÓN APLICADA AQUÍ ---
-        // Se añade una validación para asegurar que las fechas existan antes de convertirlas.
+        // Se asegura que las fechas existan y se añaden los nuevos campos para la interfaz.
         return {
             id: doc.id,
             ...data,
             fechaLlegada: data.fechaLlegada ? data.fechaLlegada.toDate() : null,
             fechaSalida: data.fechaSalida ? data.fechaSalida.toDate() : null,
-            fechaReserva: data.fechaReserva ? data.fechaReserva.toDate() : null
+            fechaReserva: data.fechaReserva ? data.fechaReserva.toDate() : null,
+            // --- NUEVOS CAMPOS AÑADIDOS ---
+            valorCLP: data.valorCLP || 0,
+            abono: data.abono || 0,
+            documentos: data.documentos || {} // Devuelve un objeto vacío si no hay documentos
         };
     }).filter(reserva => reserva.fechaLlegada); // Filtramos cualquier reserva que no tenga fecha de llegada
 

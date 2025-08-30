@@ -191,6 +191,7 @@
     let currentReserva = null;
     let currentAction = null;
     let currentTransaccionId = null;
+    let currentManagementType = null; // <-- Variable para "recordar" la vista
 
     function getTodayUTC() {
         const today = new Date();
@@ -284,7 +285,7 @@
         previewContainer.classList.add('hidden');
         modalStatus.textContent = '';
         sinDocumentoCheckbox.checked = false;
-        pasteZone.classList.remove('hidden');
+        pasteZone.style.display = 'block';
         documentoInput.disabled = false;
 
         switch (currentAction) {
@@ -294,7 +295,7 @@
                 documentoLabel.textContent = 'Comprobante de Pago (Opcional)';
                 break;
             case 'subir_documento_reserva':
-            case 'subir_documento_boleta':
+            case 'marcar_boleta_enviada':
                 documentoField.classList.remove('hidden');
                 documentoLabel.textContent = currentAction.includes('boleta') ? 'Archivo de la Boleta' : 'Imagen de la Reserva';
                 break;
@@ -305,6 +306,7 @@
 
     function openManagementModal(type, reserva) {
         currentReserva = reserva;
+        currentManagementType = type; // <-- Guarda el tipo de vista actual
         modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
         
         viewDocumento.classList.add('hidden');
@@ -321,11 +323,11 @@
             if (docUrl) {
                 docExistente.classList.remove('hidden');
                 docSinDocMsg.classList.toggle('hidden', docUrl !== 'SIN_DOCUMENTO');
-                docPreviewImg.classList.toggle('hidden', docUrl === 'SIN_DOCUMENTO');
-                if(docUrl !== 'SIN_DOCUMENTO') docPreviewImg.src = docUrl;
+                docPreviewImg.classList.toggle('hidden', docUrl === 'SIN_DOCUMENTO' || !docUrl);
+                if(docUrl !== 'SIN_DOCUMENTO' && docUrl) docPreviewImg.src = docUrl;
 
                 btnReemplazarDoc.onclick = () => showActionForm(type === 'reserva' ? 'subir_documento_reserva' : 'marcar_boleta_enviada');
-                btnEliminarDoc.onclick = () => deleteDocument(type === 'reserva' ? 'enlaceReserva' : 'enlaceBoleta');
+                btnEliminarDoc.onclick = () => deleteDocument(docType);
             } else {
                 docExistente.classList.add('hidden');
                 showActionForm(type === 'reserva' ? 'subir_documento_reserva' : 'marcar_boleta_enviada');
@@ -340,10 +342,7 @@
     }
     
     async function renderPagosList() {
-        // Esta función necesitaría una llamada a un nuevo endpoint para obtener transacciones
-        // Por ahora, simularemos que la info ya está en el objeto `reserva`.
-        // Para una versión final, se debería crear `GET /api/gestion/transacciones/:reservaId`
-        listaPagos.innerHTML = `<p class="text-sm text-gray-500">Funcionalidad de listar pagos aún no implementada.</p>
+        listaPagos.innerHTML = `<p class="text-sm text-gray-500">Funcionalidad de listar/editar pagos aún no implementada.</p>
         <p class="text-sm text-gray-500">Total abonado conocido: ${formatCurrency(currentReserva.abono)}</p>`;
     }
 
@@ -352,7 +351,7 @@
         viewDocumento.classList.add('hidden');
         viewPagos.classList.add('hidden');
         formAccion.classList.remove('hidden');
-        modalCancelBtn.classList.add('hidden'); // Ocultar cerrar, forzar a guardar o volver
+        modalCancelBtn.classList.add('hidden');
         modalBackBtn.classList.remove('hidden');
         setupFormForAction();
     }
@@ -462,7 +461,8 @@
             document.getElementById('logout-btn').addEventListener('click', logout);
             
             modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            modalBackBtn.addEventListener('click', () => openManagementModal(currentAction.includes('reserva') ? 'reserva' : 'boleta', currentReserva));
+            // --- CORRECCIÓN BOTÓN VOLVER ---
+            modalBackBtn.addEventListener('click', () => openManagementModal(currentManagementType, currentReserva));
             formAccion.addEventListener('submit', handleFormSubmit);
 
             // --- Lógica para Pegar y Seleccionar Archivo ---
@@ -473,19 +473,20 @@
 
             // --- CORRECCIÓN FLUJO DE PEGADO ---
             document.addEventListener('paste', (e) => {
-                if (modal.classList.contains('hidden') || documentoField.classList.contains('hidden')) return;
+                // Solo actuar si el modal está abierto y el campo de documento está visible
+                if (modal.classList.contains('hidden') || formAccion.classList.contains('hidden') || documentoField.classList.contains('hidden')) return;
                 
-                const items = e.clipboardData.items;
+                const items = (e.clipboardData || window.clipboardData).items;
                 for (const item of items) {
                     if (item.type.indexOf('image') !== -1) {
-                        e.preventDefault(); // Evitar que el navegador pegue la imagen en otro lado
+                        e.preventDefault();
                         const blob = item.getAsFile();
                         const file = new File([blob], "captura-pegada.png", { type: blob.type });
                         const dataTransfer = new DataTransfer();
                         dataTransfer.items.add(file);
                         documentoInput.files = dataTransfer.files;
                         showPreview(file);
-                        break;
+                        break; 
                     }
                 }
             });

@@ -226,11 +226,14 @@
             texto += `Duración estadía: ${pricing.nights} noches\n`;
             texto += `Valor total: ${formatCurrency(pricing.totalPrice)}\n\n`;
             texto += `Incluye:\n✅ Estacionamiento privado\n✅ Ropa de cama y toallas\n✅ Acceso a orillas del río Coilaco\n✅ Terraza techada en cada cabaña\n\n`;
+            
+            // --- INICIO DE LA CORRECCIÓN DE TEXTO ---
             texto += `💵 Condiciones de Reserva\n`;
-            texto += `Para confirmar se solicita un 50% de abono.\n`;
-            texto += `El saldo (50%) debe estar cancelado 48 horas antes del check-in.\n`;
-            texto += `Check-in: 15:00 hrs – Check-out: 11:00 hrs.\n\n`;
-            texto += `📍 Ubicación: https://maps.app.goo.gl/TuLocation\n\n`; // Reemplazar con link real
+            texto += `Para confirmar la reserva se solicita un 10% de abono antes de 72 horas de recibida la reserva.\n`;
+            texto += `El saldo restante se paga en el check-in.\n\n`;
+            // --- FIN DE LA CORRECCIÓN DE TEXTO ---
+            
+            texto += `📍 Ubicación: https://maps.app.goo.gl/TuLocation\n\n\n\n`; // Reemplazar con link real
             texto += `✍️ Atentamente,\nPablo Meza\nOrillas del Coilaco\n`;
             texto += `📧 reservas@orillasdelcoilaco.cl\n📱 +56 9 7518 0855\n🌐 www.orillasdelcoilaco.cl`;
             presupuestoTexto.value = texto;
@@ -274,7 +277,6 @@
             [newClientNameInput, newClientCompanyInput, newClientPhoneInput, newClientEmailInput].forEach(el => el.disabled = false);
         }
 
-        // --- LÓGICA PRINCIPAL ---
         const session = checkSession();
         if (session) {
             loader.style.display = 'none';
@@ -287,7 +289,6 @@
             
             loadClients();
 
-            // --- INICIO DE LA CORRECCIÓN DE FECHAS ---
             fechaLlegadaInput.addEventListener('change', () => {
                 if (fechaLlegadaInput.value) {
                     fechaSalidaInput.min = fechaLlegadaInput.value;
@@ -298,7 +299,6 @@
                     }
                 }
             });
-            // --- FIN DE LA CORRECCIÓN DE FECHAS ---
 
             clientSearchInput.addEventListener('input', filterClients);
             newClientNameInput.addEventListener('input', clearClientSelection);

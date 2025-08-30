@@ -36,12 +36,7 @@
                     <div>
                         <label for="nombreCabaña" class="block text-sm font-medium text-gray-700">Cabaña</label>
                         <select id="nombreCabaña" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                            <option value="Cabaña 1">Cabaña 1</option>
-                            <option value="Cabaña 2">Cabaña 2</option>
-                            <option value="Cabaña 3">Cabaña 3</option>
-                            <option value="Cabaña 9">Cabaña 9</option>
-                            <option value="Cabaña 10">Cabaña 10</option>
-                        </select>
+                            </select>
                     </div>
                     <div>
                         <label for="temporada" class="block text-sm font-medium text-gray-700">Temporada</label>
@@ -114,12 +109,7 @@
                  <div>
                     <label for="edit-nombreCabaña" class="block text-sm font-medium text-gray-700">Cabaña</label>
                     <select id="edit-nombreCabaña" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        <option value="Cabaña 1">Cabaña 1</option>
-                        <option value="Cabaña 2">Cabaña 2</option>
-                        <option value="Cabaña 3">Cabaña 3</option>
-                        <option value="Cabaña 9">Cabaña 9</option>
-                        <option value="Cabaña 10">Cabaña 10</option>
-                    </select>
+                        </select>
                 </div>
                 <div>
                     <label for="edit-temporada" class="block text-sm font-medium text-gray-700">Temporada</label>
@@ -170,9 +160,36 @@
         const editSaveBtn = document.getElementById('edit-save-btn');
         const editCancelBtn = document.getElementById('edit-cancel-btn');
         const editModalStatus = document.getElementById('edit-modal-status');
-
+        
+        // --- INICIO DE LA CORRECCIÓN ---
+        const cabanaSelect = document.getElementById('nombreCabaña');
+        const editCabanaSelect = document.getElementById('edit-nombreCabaña');
+        // --- FIN DE LA CORRECCIÓN ---
+        
         let allTarifas = [];
         let editingTarifaId = null;
+
+        // --- INICIO DE LA NUEVA FUNCIÓN ---
+        async function loadCabanasAndPopulateDropdowns() {
+            try {
+                const cabanas = await fetchAPI('/api/cabanas');
+                cabanaSelect.innerHTML = '';
+                editCabanaSelect.innerHTML = ''; // Limpiar también el del modal
+
+                cabanas.forEach(cabana => {
+                    const option = document.createElement('option');
+                    option.value = cabana.nombre;
+                    option.textContent = cabana.nombre;
+                    cabanaSelect.appendChild(option);
+                    editCabanaSelect.appendChild(option.cloneNode(true)); // Clonar para el modal de edición
+                });
+            } catch (error) {
+                console.error('Error al cargar las cabañas en el dropdown:', error);
+                cabanaSelect.innerHTML = '<option>Error al cargar cabañas</option>';
+                editCabanaSelect.innerHTML = '<option>Error al cargar cabañas</option>';
+            }
+        }
+        // --- FIN DE LA NUEVA FUNCIÓN ---
         
         function sortTarifas(tarifas) {
             return tarifas.sort((a, b) => {
@@ -261,10 +278,8 @@
             document.getElementById('booking-valor').value = tarifa.tarifasPorCanal.Booking?.valor || '';
             document.getElementById('airbnb-valor').value = tarifa.tarifasPorCanal.Airbnb?.valor || '';
             
-            // --- INICIO DE LA CORRECCIÓN ---
             document.getElementById('fechaInicio').value = tarifa.fechaInicio;
             document.getElementById('fechaTermino').value = tarifa.fechaTermino;
-            // --- FIN DE LA CORRECCIÓN ---
             
             window.scrollTo(0, 0);
             document.getElementById('temporada').focus();
@@ -396,6 +411,7 @@
                 `;
                 document.getElementById('logout-btn').addEventListener('click', logout);
 
+                loadCabanasAndPopulateDropdowns(); // <-- Se llama a la nueva función aquí
                 loadTarifas();
                 tarifaForm.addEventListener('submit', handleFormSubmit);
                 editSaveBtn.addEventListener('click', handleSaveEdit);

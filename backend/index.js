@@ -28,7 +28,8 @@ const serviceAccount = process.env.RENDER
     ? require('/etc/secrets/serviceAccountKey.json')
     : require('./serviceAccountKey.json');
 
-const BUCKET_NAME = 'reservas-sodc.appspot.com'; // <-- Nombre del bucket definido una sola vez
+// --- NOMBRE CORRECTO Y DEFINITIVO DEL BUCKET ---
+const BUCKET_NAME = 'reservas-sodc.firebasestorage.app'; 
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
@@ -66,8 +67,9 @@ privateRouter.use(importRoutes(db));
 privateRouter.use(tarifasRoutes(db));
 privateRouter.use(kpiRoutes(db));
 privateRouter.use(analisisRoutes(db));
-// Pasamos el nombre del bucket a la ruta de gestión
-privateRouter.use(gestionRoutes(db, BUCKET_NAME)); 
+// --- CORRECCIÓN CLAVE ---
+// Ya no pasamos el nombre del bucket a la ruta de gestión
+privateRouter.use(gestionRoutes(db)); 
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 

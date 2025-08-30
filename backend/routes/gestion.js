@@ -7,8 +7,8 @@ const storageService = require('../services/storageService');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// Ahora recibimos el nombre del bucket como parámetro
-module.exports = (db, bucketName) => {
+// Ya no necesitamos recibir el bucketName como parámetro
+module.exports = (db) => {
 
     router.get('/gestion/pendientes', async (req, res) => {
         try {
@@ -46,8 +46,9 @@ module.exports = (db, bucketName) => {
                 const reservaId = reservaData.reservaIdOriginal;
                 const destinationPath = `reservas/${year}/${reservaId}/${req.file.originalname}`;
                 
-                // Pasamos el nombre del bucket al servicio
-                publicUrl = await storageService.uploadFile(bucketName, req.file.buffer, destinationPath, req.file.mimetype);
+                // --- CORRECCIÓN CLAVE ---
+                // Llamamos a uploadFile sin pasarle el nombre del bucket.
+                publicUrl = await storageService.uploadFile(req.file.buffer, destinationPath, req.file.mimetype);
             }
 
             // ... (el resto del switch case no cambia)

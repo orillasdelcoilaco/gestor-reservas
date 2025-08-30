@@ -2,14 +2,17 @@ const admin = require('firebase-admin');
 
 /**
  * Sube un archivo a Firebase Storage y devuelve su URL pública.
- * @param {string} bucketName El nombre del bucket de Storage.
+ * No necesita el nombre del bucket porque lo toma de la inicialización de Firebase Admin.
  * @param {Buffer} fileBuffer El buffer del archivo a subir.
  * @param {string} destinationPath La ruta dentro del bucket donde se guardará.
  * @param {string} mimeType El tipo MIME del archivo.
  * @returns {Promise<string>} La URL pública del archivo subido.
  */
-async function uploadFile(bucketName, fileBuffer, destinationPath, mimeType) {
-    const bucket = admin.storage().bucket(bucketName);
+async function uploadFile(fileBuffer, destinationPath, mimeType) {
+    // --- CORRECCIÓN CLAVE ---
+    // Simplemente llamamos a admin.storage().bucket() sin argumentos.
+    // Esto usará el bucket configurado en admin.initializeApp() en index.js.
+    const bucket = admin.storage().bucket();
     const file = bucket.file(destinationPath);
 
     try {

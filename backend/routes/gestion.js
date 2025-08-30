@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
-const multer = require('multer');
+const multer = 'multer';
 const path = require('path');
 const { getReservasPendientes } = require('../services/gestionService');
 const storageService = require('../services/storageService');
 
-const upload = multer({ storage: multer.memoryStorage() });
+// NOTA: Requerimos el parser de JSON explícitamente para las nuevas rutas
+const jsonParser = express.json();
+const upload = require('multer')({ storage: require('multer').memoryStorage() });
 
 module.exports = (db) => {
 
@@ -42,8 +44,11 @@ module.exports = (db) => {
             const detallesParseados = detalles ? JSON.parse(detalles) : {};
             let publicUrl = null;
 
-            if (req.file) {
-                const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
+            // --- Lógica para "Sin Documento" ---
+            if (detallesParseados.sinDocumento) {
+                publicUrl = 'SIN_DOCUMENTO';
+            } else if (req.file) {
+                 const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
                 const reservaId = reservaData.reservaIdOriginal;
                 const fileExtension = path.extname(req.file.originalname);
                 let fileName = '';
@@ -79,7 +84,7 @@ module.exports = (db) => {
                     dataToUpdate.fechaMensajeCobro = admin.firestore.FieldValue.serverTimestamp();
                     break;
                 case 'registrar_pago':
-                    if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {
+                     if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {
                         return res.status(400).json({ error: 'Monto y medio de pago son requeridos.' });
                     }
                     const newTransactionRef = transaccionesRef.doc();
@@ -96,42 +101,96 @@ module.exports = (db) => {
                         dataToUpdate.pagado = true;
                     }
 
-                    // Recalcular el total abonado
                     const allTransactions = await transaccionesRef.get();
                     const totalAbonado = allTransactions.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
                     dataToUpdate.abono = totalAbonado;
-
                     break;
                 case 'marcar_boleta_enviada':
                     nuevoEstado = 'Facturado';
                     dataToUpdate.fechaBoletaEnviada = admin.firestore.FieldValue.serverTimestamp();
                     dataToUpdate.boleta = true;
-                    if (publicUrl) {
-                        dataToUpdate['documentos.enlaceBoleta'] = publicUrl;
-                    }
+                    if (publicUrl) dataToUpdate['documentos.enlaceBoleta'] = publicUrl;
                     break;
                 case 'subir_documento_reserva':
-                    if (publicUrl) {
-                        dataToUpdate['documentos.enlaceReserva'] = publicUrl;
-                    }
-                    // No cambia de estado, solo sube el archivo
+                    if (publicUrl) dataToUpdate['documentos.enlaceReserva'] = publicUrl;
                     break;
                 default:
                     return res.status(400).json({ error: 'Acción no válida.' });
             }
 
-            if (nuevoEstado) {
-                dataToUpdate.estadoGestion = nuevoEstado;
-            }
-
-            if (Object.keys(dataToUpdate).length > 0) {
-                 await reservaRef.update(dataToUpdate);
-            }
+            if (nuevoEstado) dataToUpdate.estadoGestion = nuevoEstado;
+            if (Object.keys(dataToUpdate).length > 0) await reservaRef.update(dataToUpdate);
            
             res.status(200).json({ message: `Acción '${accion}' registrada exitosamente.` });
 
         } catch (error) {
             console.error(`Error al actualizar estado de reserva ${id}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    // --- NUEVA RUTA PARA EDITAR TRANSACCIONES ---
+    router.post('/gestion/transaccion/editar', jsonParser, async (req, res) => {
+        const { reservaId, transaccionId, nuevoMonto } = req.body;
+        if (!reservaId || !transaccionId || nuevoMonto === undefined) {
+            return res.status(400).json({ error: 'Faltan datos para editar la transacción.' });
+        }
+        try {
+            const transaccionRef = db.collection('reservas').doc(reservaId).collection('transacciones').doc(transaccionId);
+            await transaccionRef.update({ monto: parseFloat(nuevoMonto) });
+
+            const reservaRef = db.collection('reservas').doc(reservaId);
+            const transaccionesSnapshot = await reservaRef.collection('transacciones').get();
+            const totalAbonado = transaccionesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
+            await reservaRef.update({ abono: totalAbonado });
+
+            res.status(200).json({ message: 'Transacción actualizada y total recalculado.' });
+        } catch (error) {
+            console.error('Error al editar transacción:', error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    // --- NUEVA RUTA PARA ELIMINAR DOCUMENTOS Y TRANSACCIONES ---
+    router.post('/gestion/documento/eliminar', jsonParser, async (req, res) => {
+        const { reservaId, tipoDoc, transaccionId } = req.body;
+        if (!reservaId || !tipoDoc) {
+            return res.status(400).json({ error: 'Faltan datos para eliminar el documento.' });
+        }
+        try {
+            const reservaRef = db.collection('reservas').doc(reservaId);
+            const reservaDoc = await reservaRef.get();
+            const reservaData = reservaDoc.data();
+            let filePath = null;
+
+            if (tipoDoc === 'transaccion') {
+                if (!transaccionId) return res.status(400).json({ error: 'Falta ID de transacción.' });
+                const transaccionRef = reservaRef.collection('transacciones').doc(transaccionId);
+                const transaccionDoc = await transaccionRef.get();
+                if (transaccionDoc.exists && transaccionDoc.data().enlaceComprobante && transaccionDoc.data().enlaceComprobante !== 'SIN_DOCUMENTO') {
+                    filePath = new URL(transaccionDoc.data().enlaceComprobante).pathname.split('/').slice(3).join('/');
+                }
+                await transaccionRef.delete();
+                const transaccionesSnapshot = await reservaRef.collection('transacciones').get();
+                const totalAbonado = transaccionesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
+                await reservaRef.update({ abono: totalAbonado });
+
+            } else { // Para 'enlaceReserva' o 'enlaceBoleta'
+                if (reservaData.documentos && reservaData.documentos[tipoDoc] && reservaData.documentos[tipoDoc] !== 'SIN_DOCUMENTO') {
+                    filePath = new URL(reservaData.documentos[tipoDoc]).pathname.split('/').slice(3).join('/');
+                }
+                await reservaRef.update({ [`documentos.${tipoDoc}`]: admin.firestore.FieldValue.delete() });
+            }
+
+            if (filePath) {
+                const bucket = admin.storage().bucket();
+                const file = bucket.file(decodeURIComponent(filePath));
+                await file.delete().catch(err => console.error(`No se pudo borrar el archivo ${filePath} de Storage, puede que ya no exista.`, err.message));
+            }
+            
+            res.status(200).json({ message: 'Elemento eliminado correctamente.' });
+        } catch (error) {
+            console.error('Error al eliminar documento:', error);
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });

@@ -55,5 +55,28 @@ module.exports = (db) => {
         }
     });
 
+    /**
+     * POST /api/presupuestos/recalcular
+     * Recalcula el precio para una selección manual de cabañas.
+     */
+    router.post('/presupuestos/recalcular', jsonParser, async (req, res) => {
+        const { fechaLlegada, fechaSalida, cabanas } = req.body;
+        if (!fechaLlegada || !fechaSalida || !cabanas) {
+            return res.status(400).json({ error: 'Faltan datos para recalcular el precio.' });
+        }
+
+        try {
+            const startDate = new Date(fechaLlegada + 'T00:00:00Z');
+            const endDate = new Date(fechaSalida + 'T00:00:00Z');
+
+            const pricing = await calculatePrice(db, cabanas, startDate, endDate);
+            res.status(200).json(pricing);
+
+        } catch (error) {
+            console.error("Error al recalcular el precio:", error);
+            res.status(500).json({ error: 'Error interno del servidor al recalcular.' });
+        }
+    });
+
     return router;
 };

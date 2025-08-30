@@ -271,20 +271,25 @@
     }
 
     function showActionForm(action, hasPreviousView = false) {
+        console.log(`[DEBUG] showActionForm called. Action: ${action}, HasPreviousView: ${hasPreviousView}`);
         currentAction = action;
         viewDocumento.classList.add('hidden');
         viewPagos.classList.add('hidden');
         formAccion.classList.remove('hidden');
+
         modalCancelBtn.classList.toggle('hidden', hasPreviousView);
         modalBackBtn.classList.toggle('hidden', !hasPreviousView);
+        
         setupFormForAction(action);
     }
 
     function openManagementModal(type, reserva) {
+        console.log(`[DEBUG] openManagementModal called. Type: ${type}`);
         currentReserva = reserva;
         currentManagementType = type;
         modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
         [viewDocumento, viewPagos, formAccion].forEach(el => el.classList.add('hidden'));
+        
         modalCancelBtn.classList.remove('hidden');
         modalBackBtn.classList.add('hidden');
 
@@ -295,6 +300,7 @@
 
             viewDocumento.classList.remove('hidden');
             if (docUrl) {
+                console.log(`[DEBUG] Document found for type ${type}. URL: ${docUrl}`);
                 docExistente.classList.remove('hidden');
                 docSinDocMsg.classList.toggle('hidden', docUrl !== 'SIN_DOCUMENTO');
                 const isImage = docUrl && docUrl !== 'SIN_DOCUMENTO' && (docUrl.toLowerCase().includes('.png') || docUrl.toLowerCase().includes('.jpg') || docUrl.toLowerCase().includes('.jpeg'));
@@ -303,6 +309,7 @@
                 btnReemplazarDoc.onclick = () => showActionForm(action, true);
                 btnEliminarDoc.onclick = () => deleteDocument(docType);
             } else {
+                console.log(`[DEBUG] No document found for type ${type}. Showing form directly.`);
                 docExistente.classList.add('hidden');
                 showActionForm(action, false);
             }
@@ -374,35 +381,51 @@
     
     async function handleFormSubmit(event) {
         event.preventDefault();
+        console.log('[DEBUG] handleFormSubmit triggered!');
         modalSaveBtn.disabled = true;
         modalSaveBtn.textContent = 'Guardando...';
         modalStatus.textContent = '';
+        
         const formData = new FormData();
         const detalles = {};
+
         if (currentAction === 'registrar_pago') {
             detalles.monto = document.getElementById('monto-input').value;
             detalles.medioDePago = document.getElementById('medio-pago-select').value;
             detalles.esPagoFinal = document.getElementById('pago-final-checkbox').checked;
             detalles.tipo = detalles.esPagoFinal ? 'Pago Final' : 'Abono';
         }
+
         detalles.sinDocumento = sinDocumentoCheckbox.checked;
+        
+        console.log('[DEBUG] Current Action:', currentAction);
+        console.log('[DEBUG] Detalles object:', detalles);
+
         if (documentoInput.files.length > 0 && !detalles.sinDocumento) {
             formData.append('documento', documentoInput.files[0]);
+            console.log('[DEBUG] Appending file to FormData:', documentoInput.files[0].name);
         } else if (!detalles.sinDocumento && (currentAction === 'subir_documento_reserva' || currentAction === 'marcar_boleta_enviada')) {
             modalStatus.textContent = 'Debes seleccionar un archivo o marcar "Sin Documento".';
+            console.log('[DEBUG] Validation failed: No file selected for required action.');
             modalSaveBtn.disabled = false;
             modalSaveBtn.textContent = 'Guardar';
             return;
         }
+
         formData.append('accion', currentAction);
         formData.append('detalles', JSON.stringify(detalles));
+        
+        console.log('[DEBUG] FormData prepared. Calling fetchAPI...');
         try {
-            await fetchAPI(`/api/gestion/actualizar-estado/${currentReserva.id}`, { method: 'POST', body: formData });
+            const result = await fetchAPI(`/api/gestion/actualizar-estado/${currentReserva.id}`, { method: 'POST', body: formData });
+            console.log('[DEBUG] API call successful:', result);
             modal.classList.add('hidden');
             loadGestion();
         } catch (error) {
+            console.error('[DEBUG] API call failed:', error);
             modalStatus.textContent = `Error: ${error.message}`;
         } finally {
+            console.log('[DEBUG] Finally block executed.');
             modalSaveBtn.disabled = false;
             modalSaveBtn.textContent = 'Guardar';
         }

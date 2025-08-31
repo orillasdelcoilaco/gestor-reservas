@@ -93,15 +93,25 @@ module.exports = (db) => {
                         enlaceComprobante: publicUrl
                     });
                     
-                    if (detallesParseados.esPagoFinal) {
-                        nuevoEstado = 'Pendiente Boleta';
-                        dataToUpdate.pagado = true;
-                    }
-
                     const allTransactions = await transaccionesRef.get();
                     const totalAbonado = allTransactions.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
                     dataToUpdate.abono = totalAbonado;
+                    
+                    // --- INICIO DE LA NUEVA LÓGICA DE AJUSTE ---
+                    if (detallesParseados.esPagoFinal) {
+                        nuevoEstado = 'Pendiente Boleta';
+                        dataToUpdate.pagado = true;
+                        
+                        // Si el total pagado es mayor que el valor actual de la reserva, lo corregimos.
+                        if (totalAbonado > reservaData.valorCLP) {
+                            console.log(`Ajuste automático de valor para reserva ${id}. Valor anterior: ${reservaData.valorCLP}, Nuevo valor (total pagado): ${totalAbonado}.`);
+                            dataToUpdate.valorCLP = totalAbonado;
+                            dataToUpdate.valorManual = true; // Se marca para protegerlo de futuras sincronizaciones.
+                        }
+                    }
+                    // --- FIN DE LA NUEVA LÓGICA DE AJUSTE ---
                     break;
+
                 case 'marcar_boleta_enviada':
                     nuevoEstado = 'Facturado';
                     dataToUpdate.fechaBoletaEnviada = admin.firestore.FieldValue.serverTimestamp();

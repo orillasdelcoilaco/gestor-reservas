@@ -3,7 +3,6 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-// Importamos la nueva función maestra y removemos la antigua 'updateClient'
 const { importClientsFromCsv, getAllClientsWithStats, syncClientToGoogle, updateClientMaster } = require('../services/clienteService');
 
 const upload = multer({ storage: multer.memoryStorage() }).array('clientsFiles', 10);
@@ -12,7 +11,6 @@ const jsonParser = express.json();
 module.exports = (db) => {
     
     router.get('/clientes', async (req, res) => {
-        console.log('Solicitud recibida para obtener todos los clientes.');
         try {
             const clientes = await getAllClientsWithStats(db);
             res.status(200).json(clientes);
@@ -22,7 +20,7 @@ module.exports = (db) => {
         }
     });
 
-    // --- NUEVA RUTA OPTIMIZADA PARA PRESUPUESTOS ---
+    // --- RUTA OPTIMIZADA ACTUALIZADA PARA PRESUPUESTOS ---
     router.get('/clientes/simplificado', async (req, res) => {
         try {
             const snapshot = await db.collection('clientes').get();
@@ -34,7 +32,9 @@ module.exports = (db) => {
                 return {
                     id: doc.id,
                     nombre: `${data.firstname || ''} ${data.lastname || ''}`.trim(),
-                    telefono: data.phone || ''
+                    telefono: data.phone || '',
+                    email: data.email || '',
+                    empresa: data.fuente || '' // Se añade el campo empresa/fuente
                 };
             });
             res.status(200).json(clientes);
@@ -44,19 +44,13 @@ module.exports = (db) => {
         }
     });
     
-    // --- ESTA RUTA AHORA USA LA FUNCIÓN MAESTRA ---
     router.put('/clientes/:id', jsonParser, async (req, res) => {
         const { id } = req.params;
         const clientData = req.body;
-
-        console.log(`Solicitud RECIBIDA para actualizar cliente con ID: ${id}`);
-
         if (!id || !clientData) {
             return res.status(400).json({ error: 'Faltan el ID del cliente o los datos a actualizar.' });
         }
-
         try {
-            // Llamamos a la función maestra centralizada
             const result = await updateClientMaster(db, id, clientData);
             res.status(200).json({ message: result.message });
         } catch (error) {
@@ -66,12 +60,9 @@ module.exports = (db) => {
     });
 
     router.post('/clientes/importar-csv', upload, async (req, res) => {
-        console.log('Solicitud recibida para importar clientes desde CSV.');
-
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: 'No se han subido archivos.' });
         }
-
         try {
             const summary = await importClientsFromCsv(db, req.files);
             res.status(200).json({
@@ -86,8 +77,6 @@ module.exports = (db) => {
 
     router.post('/clientes/:id/sincronizar-google', async (req, res) => {
         const { id } = req.params;
-        console.log(`Solicitud recibida para sincronizar cliente ${id} con Google Contacts.`);
-
         try {
             const result = await syncClientToGoogle(db, id);
             res.status(200).json(result);

@@ -39,7 +39,7 @@
                                 <div id="client-results-list" class="mt-1 border rounded-md max-h-32 overflow-y-auto bg-white"></div>
                             </div>
                             <div id="new-client-fields" class="space-y-2">
-                                <p class="text-sm font-medium text-gray-700">... o añade un cliente nuevo</p>
+                                <p id="client-form-title" class="text-sm font-medium text-gray-700">... o añade un cliente nuevo</p>
                                 <input type="text" id="new-client-name" placeholder="Nombre completo" class="block w-full rounded-md border-gray-300 shadow-sm">
                                 <input type="text" id="new-client-company" placeholder="Empresa (Opcional)" class="block w-full rounded-md border-gray-300 shadow-sm">
                                 <input type="tel" id="new-client-phone" placeholder="Teléfono (Opcional)" class="block w-full rounded-md border-gray-300 shadow-sm">
@@ -104,6 +104,7 @@
     import { checkSession, logout, fetchAPI } from './api.js';
 
     document.addEventListener('DOMContentLoaded', () => {
+        
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
         const authInfo = document.getElementById('auth-info');
@@ -124,6 +125,7 @@
         const newClientCompanyInput = document.getElementById('new-client-company');
         const newClientPhoneInput = document.getElementById('new-client-phone');
         const newClientEmailInput = document.getElementById('new-client-email');
+        const clientFormTitle = document.getElementById('client-form-title');
         const sinCamarotesCheckbox = document.getElementById('sin-camarotes-checkbox');
         
         let allClients = [];
@@ -195,10 +197,8 @@
             const fechaSalida = new Date(fechaSalidaInput.value + 'T00:00:00Z');
             const hoy = new Date();
             let clientName = selectedClient ? selectedClient.nombre : newClientNameInput.value.trim();
-            let clientCompany = selectedClient ? '' : newClientCompanyInput.value.trim();
-            const dirigidoA = clientCompany ? `${clientName} – ${clientCompany}` : clientName;
-
-            // --- INICIO DE CORRECCIÓN DE TEXTO ---
+            let clientCompany = selectedClient ? selectedClient.empresa : newClientCompanyInput.value.trim();
+            const dirigidoA = clientCompany ? `*${clientName} – ${clientCompany}*` : `*${clientName}*`;
             const noches = pricing.nights || 0;
             const dias = noches + 1;
 
@@ -206,50 +206,49 @@
             texto += `Orillas del Coilaco - Turismo & Naturaleza\n`;
             texto += `www.orillasdelcoilaco.cl – reservas@orillasdelcoilaco.cl – 📞 +56 9 7518 0855\n`;
             texto += `--------------------------------------------------------------------------\n`;
-            texto += `📌 Presupuesto de Alojamiento\n`;
+            texto += `📌 *Presupuesto de Alojamiento*\n`;
             texto += `Dirigido a: ${dirigidoA}\n`;
-            texto += `Fecha: ${hoy.toLocaleDateString('es-CL')}\n`;
-            texto += `Solicitado para: ${document.getElementById('personas').value} personas\n`;
-            texto += `Estadía: ${fechaLlegada.toLocaleDateString('es-CL', {timeZone:'UTC'})} al ${fechaSalida.toLocaleDateString('es-CL', {timeZone:'UTC'})} (${dias} días - ${noches} noches)\n\n`;
+            texto += `Fecha: *${hoy.toLocaleDateString('es-CL')}*\n`;
+            texto += `Solicitado para: *${document.getElementById('personas').value} personas*\n`;
+            texto += `Estadía: *${fechaLlegada.toLocaleDateString('es-CL', {timeZone:'UTC'})}* al *${fechaSalida.toLocaleDateString('es-CL', {timeZone:'UTC'})}* (${dias} días - ${noches} noches)\n\n`;
             
             if (sinCamarotesCheckbox.checked) {
-                texto += `NOTA: La selección de cabañas se ha ajustado para no utilizar las literas superiores de los camarotes, considerando solo una persona por camarote.\n\n`;
+                texto += `*NOTA*: La selección de cabañas se ha ajustado para no utilizar las literas superiores de los camarotes, considerando solo una persona por camarote.\n\n`;
             }
 
-            texto += `🏡 Detalle de las Cabañas Asignadas\n`;
+            texto += `🏡 *Detalle de las Cabañas Asignadas*\n`;
             if (pricing.details && pricing.details.length > 0) {
                 pricing.details.forEach(detail => {
                     const cabanaInfo = fullData.allCabanas.find(c => c.nombre === detail.nombre);
                     const capacidadTexto = sinCamarotesCheckbox.checked ? `(Capacidad ajustada: ${(cabanaInfo.camas?.matrimoniales || 0) * 2 + (cabanaInfo.camas?.plazaYMedia || 0) + (cabanaInfo.camas?.camarotes || 0)})` : `(Capacidad: ${cabanaInfo.capacidad})`;
-                    texto += `\n🔹 ${cabanaInfo.nombre} ${capacidadTexto}\n`;
+                    texto += `\n🔹 *${cabanaInfo.nombre}* ${capacidadTexto}\n`;
                     if (cabanaInfo.descripcion) texto += `${cabanaInfo.descripcion}\n`;
                     if (cabanaInfo.camas) texto += `Camas: Matrimoniales(${cabanaInfo.camas.matrimoniales || 0}), 1.5 Plazas(${cabanaInfo.camas.plazaYMedia || 0}), Camarotes(${cabanaInfo.camas.camarotes || 0})\n`;
                     if (cabanaInfo.equipamiento && cabanaInfo.equipamiento.length > 0) texto += `Equipamiento: ${cabanaInfo.equipamiento.join(', ')}\n`;
                     if(cabanaInfo.linkFotos) texto += `📷 Ver fotos: ${cabanaInfo.linkFotos}\n`;
-                    texto += `Valor por noche: ${formatCurrency(detail.precioPorNoche)}\n`;
-                    texto += `Total por ${noches} noches: ${formatCurrency(detail.precioTotal)}\n`;
+                    texto += `Valor por noche: *${formatCurrency(detail.precioPorNoche)}*\n`;
+                    texto += `Total por ${noches} noches: *${formatCurrency(detail.precioTotal)}*\n`;
                 });
             } else {
                 texto += `\nNinguna cabaña seleccionada.\n`;
             }
 
-            texto += `\n📊 Resumen del Presupuesto\n`;
-            texto += `Cantidad de cabañas: ${selectedCabanas.length}\n`;
+            texto += `\n📊 *Resumen del Presupuesto*\n`;
+            texto += `Cantidad de cabañas: *${selectedCabanas.length}*\n`;
             const capacidadTotalCalculada = sinCamarotesCheckbox.checked 
                 ? selectedCabanas.reduce((acc, c) => acc + ((c.camas?.matrimoniales || 0) * 2) + (c.camas?.plazaYMedia || 0) + (c.camas?.camarotes || 0), 0)
                 : selectedCabanas.reduce((acc, c) => acc + c.capacidad, 0);
-            texto += `Capacidad total: ${capacidadTotalCalculada} personas\n`;
-            texto += `Duración estadía: ${dias} días - ${noches} noches\n`;
-            texto += `Valor total: ${formatCurrency(pricing.totalPrice)}\n\n`;
-            texto += `Incluye:\n✅ Estacionamiento privado\n✅ Ropa de cama y toallas\n✅ Acceso a orillas del río Coilaco\n✅ Terraza techada en cada cabaña\n\n`;
-            texto += `💵 Condiciones de Reserva\n`;
+            texto += `Capacidad total: *${capacidadTotalCalculada} personas*\n`;
+            texto += `Duración estadía: *${dias} días - ${noches} noches*\n`;
+            texto += `Valor total: *${formatCurrency(pricing.totalPrice)}* (IVA Incluido)\n\n`;
+            texto += `*Incluye*:\n✅ Estacionamiento privado\n✅ Ropa de cama y toallas\n✅ Acceso a orillas del río Coilaco\n✅ Terraza techada en cada cabaña\n\n`;
+            texto += `💵 *Condiciones de Reserva*\n`;
             texto += `Para confirmar la reserva se solicita un 10% de abono antes de 72 horas de recibida la reserva.\n`;
             texto += `El saldo restante se paga en el check-in.\n\n`;
-            texto += `📍 Ubicación: https://maps.app.goo.gl/m9M5xL8Q4F6gS2Vp8`;
-            texto += `\n\n✍️ Atentamente,\nPablo Meza\nOrillas del Coilaco\n`;
+            texto += `📍 *Ubicación*: https://maps.app.goo.gl/9b9fG5l5j5k8j9H67`;
+            texto += `\n\n✍️ *Atentamente*,\nPablo Meza\nOrillas del Coilaco\n`;
             texto += `📧 reservas@orillasdelcoilaco.cl\n📱 +56 9 7518 0855\n🌐 www.orillasdelcoilaco.cl`;
             presupuestoTexto.value = texto;
-            // --- FIN DE CORRECCIÓN DE TEXTO ---
         }
 
         async function loadClients() {
@@ -261,7 +260,10 @@
         function filterClients() {
             const searchTerm = clientSearchInput.value.toLowerCase();
             clientResultsList.innerHTML = '';
-            if (!searchTerm) return;
+            if (!searchTerm) {
+                clearClientSelection();
+                return;
+            };
             const filtered = allClients.filter(c => c.nombre.toLowerCase().includes(searchTerm) || c.telefono.includes(searchTerm));
             filtered.slice(0, 5).forEach(client => {
                 const div = document.createElement('div');
@@ -274,18 +276,25 @@
         
         function selectClient(client) {
             selectedClient = client;
+            clientFormTitle.textContent = '... o actualiza los datos del cliente';
             clientSearchInput.value = client.nombre;
             clientResultsList.innerHTML = '';
-            [newClientNameInput, newClientCompanyInput, newClientPhoneInput, newClientEmailInput].forEach(el => {
-                el.value = '';
-                el.disabled = true;
-            });
+            
+            // Llenar y habilitar campos
+            newClientNameInput.value = client.nombre || '';
+            newClientCompanyInput.value = client.empresa || '';
+            newClientPhoneInput.value = client.telefono || '';
+            newClientEmailInput.value = client.email || '';
+            [newClientNameInput, newClientCompanyInput, newClientPhoneInput, newClientEmailInput].forEach(el => el.disabled = false);
         }
         
         function clearClientSelection() {
             selectedClient = null;
-            clientSearchInput.value = '';
-            [newClientNameInput, newClientCompanyInput, newClientPhoneInput, newClientEmailInput].forEach(el => el.disabled = false);
+            clientFormTitle.textContent = '... o añade un cliente nuevo';
+            [newClientNameInput, newClientCompanyInput, newClientPhoneInput, newClientEmailInput].forEach(el => {
+                el.value = '';
+                el.disabled = false;
+            });
         }
 
         const session = checkSession();
@@ -300,17 +309,17 @@
             loadClients();
             fechaLlegadaInput.addEventListener('change', () => {
                 if (fechaLlegadaInput.value) {
-                    fechaSalidaInput.min = fechaLlegadaInput.value;
+                    const llegada = new Date(fechaLlegadaInput.value + "T00:00:00Z");
+                    llegada.setDate(llegada.getDate() + 1);
+                    fechaSalidaInput.min = llegada.toISOString().split('T')[0];
                     if (fechaSalidaInput.value && fechaSalidaInput.value <= fechaLlegadaInput.value) {
-                        const nextDay = new Date(fechaLlegadaInput.value);
-                        nextDay.setDate(nextDay.getDate() + 2);
-                        fechaSalidaInput.value = nextDay.toISOString().split('T')[0];
+                        llegada.setDate(llegada.getDate() + 1);
+                        fechaSalidaInput.value = llegada.toISOString().split('T')[0];
                     }
                 }
             });
             clientSearchInput.addEventListener('input', filterClients);
-            newClientNameInput.addEventListener('input', clearClientSelection);
-
+            
             generarBtn.addEventListener('click', async () => {
                 const payload = {
                     fechaLlegada: fechaLlegadaInput.value,
@@ -354,10 +363,9 @@
             
             saveBtn.addEventListener('click', async () => {
                 let clienteParaGuardar;
-                if (selectedClient) {
-                    clienteParaGuardar = { id: selectedClient.id, nombre: selectedClient.nombre };
-                } else if (newClientNameInput.value.trim()) {
-                    clienteParaGuardar = {
+                if (selectedClient || newClientNameInput.value.trim()) {
+                     clienteParaGuardar = {
+                        id: selectedClient ? selectedClient.id : null, // Enviar ID si existe
                         nombre: newClientNameInput.value.trim(),
                         empresa: newClientCompanyInput.value.trim(),
                         telefono: newClientPhoneInput.value.trim(),
@@ -392,14 +400,12 @@
 
             emailBtn.addEventListener('click', () => {
                 const emails = newClientEmailInput.value.trim().replace(/;/g, ',');
-                if (!emails && !selectedClient) { // Asumimos que el cliente seleccionado puede tener email
-                    alert('Por favor, ingresa al menos una dirección de correo electrónico.');
+                if (!emails) {
+                    alert('Por favor, ingresa al menos una dirección de correo electrónico en el campo de email.');
                     return;
                 }
-                
                 const subject = encodeURIComponent(`Presupuesto de Alojamiento - Orillas del Coilaco`);
                 const body = encodeURIComponent(presupuestoTexto.value);
-                
                 window.location.href = `mailto:${emails}?subject=${subject}&body=${body}`;
             });
         }

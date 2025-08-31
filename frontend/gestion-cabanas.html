@@ -123,180 +123,188 @@
     </div>
 
 <script type="module">
+    console.log('[DEBUG] Módulo de script de gestión de cabañas cargado.');
     import { checkSession, logout, fetchAPI } from './api.js';
 
-    const cabanasTableBody = document.getElementById('cabanas-table-body');
-    const loadingState = document.getElementById('loading-state');
-    const addNewBtn = document.getElementById('add-new-btn');
-    const modal = document.getElementById('form-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const cabanaForm = document.getElementById('cabana-form');
-    const modalSaveBtn = document.getElementById('modal-save-btn');
-    const modalCancelBtn = document.getElementById('modal-cancel-btn');
-    const modalStatus = document.getElementById('modal-status');
-    const equipamientoContainer = document.getElementById('equipamiento-checkboxes');
+    // Se ejecuta cuando el DOM está completamente cargado
+    document.addEventListener('DOMContentLoaded', () => {
+        console.log('[DEBUG] DOM completamente cargado. Iniciando script.');
 
-    const equipamientoDisponible = [
-        'Tinaja', 'Parrilla', 'Terraza Techada', 'Juego de Terraza', 'Pieza en Suite', 'Dos Pisos'
-    ];
-    
-    let allCabanas = [];
-    let editingCabanaId = null;
+        // --- Referencias a Elementos ---
+        const loader = document.getElementById('loader');
+        const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
+        const cabanasTableBody = document.getElementById('cabanas-table-body');
+        const loadingState = document.getElementById('loading-state');
+        const addNewBtn = document.getElementById('add-new-btn');
+        const modal = document.getElementById('form-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const cabanaForm = document.getElementById('cabana-form');
+        const modalSaveBtn = document.getElementById('modal-save-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const modalStatus = document.getElementById('modal-status');
+        const equipamientoContainer = document.getElementById('equipamiento-checkboxes');
+        
+        // --- Variables de Estado ---
+        let allCabanas = [];
+        let editingCabanaId = null;
+        
+        const equipamientoDisponible = [
+            'Tinaja', 'Parrilla', 'Terraza Techada', 'Juego de Terraza', 'Pieza en Suite', 'Dos Pisos'
+        ];
 
-    function renderEquipamientoCheckboxes() {
-        equipamientoContainer.innerHTML = '';
-        equipamientoDisponible.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'flex items-center';
-            div.innerHTML = `
-                <input id="equip-${item.replace(/\s+/g, '-')}" name="equipamiento" value="${item}" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
-                <label for="equip-${item.replace(/\s+/g, '-')}" class="ml-2 block text-sm text-gray-900">${item}</label>
-            `;
-            equipamientoContainer.appendChild(div);
-        });
-    }
+        // --- Definiciones de Funciones ---
+        function renderEquipamientoCheckboxes() {
+            equipamientoContainer.innerHTML = '';
+            equipamientoDisponible.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center';
+                div.innerHTML = `
+                    <input id="equip-${item.replace(/\s+/g, '-')}" name="equipamiento" value="${item}" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                    <label for="equip-${item.replace(/\s+/g, '-')}" class="ml-2 block text-sm text-gray-900">${item}</label>
+                `;
+                equipamientoContainer.appendChild(div);
+            });
+        }
 
-    function renderTable(cabanas) {
-        cabanasTableBody.innerHTML = '';
-        if (cabanas.length === 0) {
-            loadingState.innerHTML = '<p class="text-gray-500">No hay cabañas registradas. ¡Añade la primera!</p>';
+        function renderTable(cabanas) {
+            cabanasTableBody.innerHTML = '';
+            if (cabanas.length === 0) {
+                loadingState.innerHTML = '<p class="text-gray-500">No hay cabañas registradas. ¡Añade la primera!</p>';
+                loadingState.style.display = 'block';
+                return;
+            }
+            loadingState.style.display = 'none';
+
+            cabanas.forEach(cabana => {
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-50";
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${cabana.nombre}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cabana.capacidad}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cabana.piezas || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cabana.banos || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
+                        <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${cabana.id}">Editar</button>
+                        <button class="delete-btn text-red-600 hover:text-red-900" data-id="${cabana.id}">Eliminar</button>
+                    </td>
+                `;
+                cabanasTableBody.appendChild(row);
+            });
+            
+            document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', handleEditClick));
+            document.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', handleDeleteClick));
+        }
+
+        async function loadCabanas() {
             loadingState.style.display = 'block';
-            return;
-        }
-        loadingState.style.display = 'none';
-
-        cabanas.forEach(cabana => {
-            const row = document.createElement('tr');
-            row.className = "hover:bg-gray-50";
-            row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${cabana.nombre}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cabana.capacidad}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cabana.piezas || 'N/A'}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${cabana.banos || 'N/A'}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
-                    <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${cabana.id}">Editar</button>
-                    <button class="delete-btn text-red-600 hover:text-red-900" data-id="${cabana.id}">Eliminar</button>
-                </td>
-            `;
-            cabanasTableBody.appendChild(row);
-        });
-        
-        document.querySelectorAll('.edit-btn').forEach(b => b.addEventListener('click', handleEditClick));
-        document.querySelectorAll('.delete-btn').forEach(b => b.addEventListener('click', handleDeleteClick));
-    }
-
-    async function loadCabanas() {
-        loadingState.style.display = 'block';
-        try {
-            allCabanas = await fetchAPI('/api/cabanas');
-            renderTable(allCabanas);
-        } catch (error) {
-            console.error('Error al cargar las cabañas:', error);
-            loadingState.innerHTML = `<p class="text-red-500 font-semibold">No se pudieron cargar las cabañas: ${error.message}</p>`;
-        }
-    }
-
-    // --- INICIO DE LA NUEVA LÓGICA ---
-    function updateCalculatedCapacity() {
-        const matrimoniales = parseInt(document.getElementById('camas-matrimoniales').value) || 0;
-        const plazaYMedia = parseInt(document.getElementById('camas-plaza-y-media').value) || 0;
-        const camarotes = parseInt(document.getElementById('camas-camarotes').value) || 0;
-        const capacidadTotal = (matrimoniales * 2) + plazaYMedia + (camarotes * 2);
-        document.getElementById('capacidad').value = capacidadTotal;
-    }
-    // --- FIN DE LA NUEVA LÓGICA ---
-
-    function openModalForCreate() {
-        editingCabanaId = null;
-        modalTitle.textContent = 'Añadir Nueva Cabaña';
-        cabanaForm.reset();
-        updateCalculatedCapacity(); // Resetear a 0
-        document.querySelectorAll('input[name="equipamiento"]').forEach(cb => cb.checked = false);
-        modalStatus.textContent = '';
-        modal.classList.remove('hidden');
-    }
-
-    function handleEditClick(e) {
-        editingCabanaId = e.target.dataset.id;
-        const cabana = allCabanas.find(c => c.id === editingCabanaId);
-        if (!cabana) return;
-        
-        modalTitle.textContent = `Editar Cabaña: ${cabana.nombre}`;
-        document.getElementById('nombre').value = cabana.nombre || '';
-        document.getElementById('linkFotos').value = cabana.linkFotos || '';
-        document.getElementById('piezas').value = cabana.piezas || '';
-        document.getElementById('banos').value = cabana.banos || '';
-        document.getElementById('descripcion').value = cabana.descripcion || '';
-        
-        document.getElementById('camas-matrimoniales').value = cabana.camas?.matrimoniales || 0;
-        document.getElementById('camas-plaza-y-media').value = cabana.camas?.plazaYMedia || 0;
-        document.getElementById('camas-camarotes').value = cabana.camas?.camarotes || 0;
-        updateCalculatedCapacity(); // Calcular capacidad al editar
-
-        document.querySelectorAll('input[name="equipamiento"]').forEach(cb => {
-            cb.checked = cabana.equipamiento && cabana.equipamiento.includes(cb.value);
-        });
-
-        modalStatus.textContent = '';
-        modal.classList.remove('hidden');
-    }
-
-    async function handleFormSubmit(e) {
-        e.preventDefault();
-        modalSaveBtn.disabled = true;
-        modalSaveBtn.textContent = 'Guardando...';
-        modalStatus.textContent = '';
-
-        const equipamiento = Array.from(document.querySelectorAll('input[name="equipamiento"]:checked')).map(cb => cb.value);
-
-        const payload = {
-            nombre: document.getElementById('nombre').value,
-            capacidad: parseInt(document.getElementById('capacidad').value), // Tomar el valor calculado
-            linkFotos: document.getElementById('linkFotos').value,
-            piezas: parseInt(document.getElementById('piezas').value) || 0,
-            banos: parseInt(document.getElementById('banos').value) || 0,
-            camas: {
-                matrimoniales: parseInt(document.getElementById('camas-matrimoniales').value) || 0,
-                plazaYMedia: parseInt(document.getElementById('camas-plaza-y-media').value) || 0,
-                camarotes: parseInt(document.getElementById('camas-camarotes').value) || 0,
-            },
-            descripcion: document.getElementById('descripcion').value,
-            equipamiento: equipamiento
-        };
-        
-        try {
-            const endpoint = editingCabanaId ? `/api/cabanas/${editingCabanaId}` : '/api/cabanas';
-            const method = editingCabanaId ? 'PUT' : 'POST';
-            await fetchAPI(endpoint, { method, body: payload });
-            modal.classList.add('hidden');
-            await loadCabanas();
-        } catch (error) {
-            modalStatus.textContent = `Error: ${error.message}`;
-        } finally {
-            modalSaveBtn.disabled = false;
-            modalSaveBtn.textContent = 'Guardar';
-        }
-    }
-
-    async function handleDeleteClick(e) {
-        const id = e.target.dataset.id;
-        const cabana = allCabanas.find(c => c.id === id);
-        if (!cabana) return;
-        
-        if (confirm(`¿Estás seguro de que quieres eliminar la "${cabana.nombre}"?`)) {
             try {
-                await fetchAPI(`/api/cabanas/${id}`, { method: 'DELETE' });
-                await loadCabanas();
+                allCabanas = await fetchAPI('/api/cabanas');
+                renderTable(allCabanas);
             } catch (error) {
-                alert(`Error al eliminar la cabaña: ${error.message}`);
+                console.error('Error al cargar las cabañas:', error);
+                loadingState.innerHTML = `<p class="text-red-500 font-semibold">No se pudieron cargar las cabañas: ${error.message}</p>`;
             }
         }
-    }
 
-    document.addEventListener('DOMContentLoaded', () => {
+        function updateCalculatedCapacity() {
+            const matrimoniales = parseInt(document.getElementById('camas-matrimoniales').value) || 0;
+            const plazaYMedia = parseInt(document.getElementById('camas-plaza-y-media').value) || 0;
+            const camarotes = parseInt(document.getElementById('camas-camarotes').value) || 0;
+            const capacidadTotal = (matrimoniales * 2) + plazaYMedia + (camarotes * 2);
+            document.getElementById('capacidad').value = capacidadTotal;
+        }
+
+        function openModalForCreate() {
+            editingCabanaId = null;
+            modalTitle.textContent = 'Añadir Nueva Cabaña';
+            cabanaForm.reset();
+            updateCalculatedCapacity();
+            document.querySelectorAll('input[name="equipamiento"]').forEach(cb => cb.checked = false);
+            modalStatus.textContent = '';
+            modal.classList.remove('hidden');
+        }
+
+        function handleEditClick(e) {
+            editingCabanaId = e.target.dataset.id;
+            const cabana = allCabanas.find(c => c.id === editingCabanaId);
+            if (!cabana) return;
+            
+            modalTitle.textContent = `Editar Cabaña: ${cabana.nombre}`;
+            document.getElementById('nombre').value = cabana.nombre || '';
+            document.getElementById('linkFotos').value = cabana.linkFotos || '';
+            document.getElementById('piezas').value = cabana.piezas || '';
+            document.getElementById('banos').value = cabana.banos || '';
+            document.getElementById('descripcion').value = cabana.descripcion || '';
+            document.getElementById('camas-matrimoniales').value = cabana.camas?.matrimoniales || 0;
+            document.getElementById('camas-plaza-y-media').value = cabana.camas?.plazaYMedia || 0;
+            document.getElementById('camas-camarotes').value = cabana.camas?.camarotes || 0;
+            updateCalculatedCapacity();
+
+            document.querySelectorAll('input[name="equipamiento"]').forEach(cb => {
+                cb.checked = cabana.equipamiento && cabana.equipamiento.includes(cb.value);
+            });
+
+            modalStatus.textContent = '';
+            modal.classList.remove('hidden');
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            modalSaveBtn.disabled = true;
+            modalSaveBtn.textContent = 'Guardando...';
+            modalStatus.textContent = '';
+
+            const equipamiento = Array.from(document.querySelectorAll('input[name="equipamiento"]:checked')).map(cb => cb.value);
+
+            const payload = {
+                nombre: document.getElementById('nombre').value,
+                capacidad: parseInt(document.getElementById('capacidad').value),
+                linkFotos: document.getElementById('linkFotos').value,
+                piezas: parseInt(document.getElementById('piezas').value) || 0,
+                banos: parseInt(document.getElementById('banos').value) || 0,
+                camas: {
+                    matrimoniales: parseInt(document.getElementById('camas-matrimoniales').value) || 0,
+                    plazaYMedia: parseInt(document.getElementById('camas-plaza-y-media').value) || 0,
+                    camarotes: parseInt(document.getElementById('camas-camarotes').value) || 0,
+                },
+                descripcion: document.getElementById('descripcion').value,
+                equipamiento: equipamiento
+            };
+            
+            try {
+                const endpoint = editingCabanaId ? `/api/cabanas/${editingCabanaId}` : '/api/cabanas';
+                const method = editingCabanaId ? 'PUT' : 'POST';
+                await fetchAPI(endpoint, { method, body: payload });
+                modal.classList.add('hidden');
+                await loadCabanas();
+            } catch (error) {
+                modalStatus.textContent = `Error: ${error.message}`;
+            } finally {
+                modalSaveBtn.disabled = false;
+                modalSaveBtn.textContent = 'Guardar';
+            }
+        }
+
+        async function handleDeleteClick(e) {
+            const id = e.target.dataset.id;
+            const cabana = allCabanas.find(c => c.id === id);
+            if (!cabana) return;
+            
+            if (confirm(`¿Estás seguro de que quieres eliminar la "${cabana.nombre}"?`)) {
+                try {
+                    await fetchAPI(`/api/cabanas/${id}`, { method: 'DELETE' });
+                    await loadCabanas();
+                } catch (error) {
+                    alert(`Error al eliminar la cabaña: ${error.message}`);
+                }
+            }
+        }
+
+        // --- INICIO DE LA LÓGICA PRINCIPAL ---
         const session = checkSession();
-
         if (session) {
+            console.log('[DEBUG] Sesión válida encontrada. Inicializando la página.');
             loader.style.display = 'none';
             appContent.classList.remove('hidden');
             authInfo.innerHTML = `
@@ -312,10 +320,11 @@
             modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             cabanaForm.addEventListener('submit', handleFormSubmit);
 
-            // --- AÑADIR EVENT LISTENERS PARA EL CÁLCULO AUTOMÁTICO ---
             document.querySelectorAll('.cama-input').forEach(input => {
                 input.addEventListener('input', updateCalculatedCapacity);
             });
+        } else {
+            console.log('[DEBUG] No se encontró sesión válida. Redirigiendo a login.');
         }
     });
 </script>

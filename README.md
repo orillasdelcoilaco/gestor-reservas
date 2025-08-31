@@ -4,71 +4,62 @@ Este documento describe la arquitectura y el estado actual del desarrollo de la 
 Estado Actual del Proyecto
 El proyecto se encuentra en una fase funcional y estable, con las siguientes fases ya completadas:
 
-✅ Fase 1: Sincronización Automática y Carga de Datos: El sistema se conecta a Google Drive, descarga los reportes de SODC (CSV) y Booking (XLSX), y los carga en Firestore.
+✅ Fase 1: Sincronización Automática y Carga de Datos
 
-✅ Fase 2: Consolidación y Limpieza de Datos: La aplicación procesa los datos brutos, los limpia, convierte divisas (USD a CLP) y crea o actualiza los registros en las colecciones clientes y reservas.
+✅ Fase 2: Consolidación y Limpieza de Datos
 
-✅ Fase 3: Visualización y Herramientas Principales:
-
-Vista de Reservas y Clientes: Completamente funcionales, con búsqueda, edición y paginación para mejorar el rendimiento.
-
-Generador de Mensajes: Funcionalidad completa para crear mensajes de cobro y bienvenida, con plantillas personalizadas y lógica de divisas.
-
-Sincronización con Google Contacts: La lógica para crear y actualizar contactos en Google es robusta, usando el ID de reserva para búsquedas y aplicando actualizaciones condicionales.
+✅ Fase 3: Visualización y Herramientas Principales
 
 Próximos Pasos: Plan de Acción
 A continuación se detalla el plan para las próximas funcionalidades.
 
 Etapa 1: Historial de Tarifas por Canal (✅ Completada)
-Objetivo: Construir el sistema que permite registrar y gestionar las tarifas de las cabañas a lo largo del tiempo, detalladas por canal de venta.
-
 Etapa 2: Dashboard de KPIs (✅ Completada)
-Objetivo: Crear el dashboard dinámico para analizar el rendimiento del negocio en cualquier rango de fechas.
-
 Etapa 3: Panel de Gestión Diaria (✅ Completada)
-Objetivo: Crear el centro de operaciones para gestionar el ciclo de vida completo de cada reserva, desde el primer contacto hasta la facturación final.
-
 Etapa 4: Gestión de Cabañas y Base de Presupuestos (✅ Completada)
-Objetivo: Centralizar la información de las cabañas y crear la lógica inicial para la generación de presupuestos.
+Etapa 5: Generador de Presupuestos Avanzado (✅ Completada)
+Objetivo: Evolucionar la herramienta de presupuestos a un sistema completo de cotización y seguimiento, integrando la gestión de clientes y generando un resultado profesional.
 
-Paso 4.1 (Backend - Modelo de Datos): Se ha creado la colección cabanas y el documento complejo para almacenar la información de manera dinámica.
+Paso 5.1 (Integración con Clientes): Se ha añadido la funcionalidad para buscar clientes existentes o crear nuevos desde la interfaz de presupuestos.
 
-Paso 4.2 (Backend - API y Servicios): Se han implementado las rutas y servicios para el CRUD de cabañas y la lógica inicial de cálculo de presupuestos (disponibilidad, combinación de cabañas y precios).
+Paso 5.2 (Formato de Presupuesto Profesional): La herramienta ahora genera un texto con un formato detallado y profesional.
 
-Paso 4.3 (Frontend - Interfaz): Se han creado las páginas gestion-cabanas.html para administrar las cabañas y presupuestos.html para generar propuestas automáticas y permitir la modificación manual.
+Paso 5.3 (Guardado y Seguimiento de Presupuestos): Se ha implementado la lógica para guardar los presupuestos generados en la base de datos para su posterior seguimiento.
 
-Etapa 5: Generador de Presupuestos Avanzado (Próximo Desarrollo)
-Objetivo: Evolucionar la herramienta de presupuestos para que sea un sistema completo de cotización y seguimiento, integrando la gestión de clientes y generando un resultado profesional.
+Etapa 6: Presupuestos Avanzados: Filtros, Email y Branding (Próximo Desarrollo)
+Objetivo: Añadir funcionalidades avanzadas al generador de presupuestos, como filtros de exclusión, envío directo por correo electrónico e inclusión de la marca del complejo.
 
-Paso 5.1 (Integración con Clientes):
+Paso 6.1 (Modelo de Datos Detallado para Cabañas):
 
-Backend: Se ampliará la API de presupuestos.js para que pueda recibir un clienteId o los datos para crear un nuevo cliente junto con la solicitud de presupuesto.
+Acción: Se modificará la colección cabanas y la página gestion-cabanas.html. El campo de texto camas se reemplazará por una estructura de datos más detallada (ej: { matrimoniales: 1, plazaYMedia: 2, camarotes: 1 }). Esto es esencial para el cálculo de capacidad dinámica.
 
-Frontend (presupuestos.html): Se añadirá una sección para buscar un cliente existente por nombre o teléfono, o para ingresar los datos de un cliente nuevo directamente en la interfaz del presupuesto.
+Paso 6.2 (Lógica de Presupuesto con Filtros - Backend):
 
-Paso 5.2 (Formato de Presupuesto Profesional):
+Acción: Se actualizará el presupuestoService. La lógica para sugerir cabañas (findBestCombination) se modificará para aceptar un filtro "sinCamarotes".
 
-Backend: El servicio de presupuestos se mejorará para obtener datos adicionales del complejo (ej: servicios, políticas de cancelación, ubicación) desde el documento de configuración.
+Lógica Clave: Si el filtro está activo, el servicio calculará una capacidad temporal para cada cabaña (capacidadSinCamarotes = (camasMatrimoniales * 2) + camasPlazaYMedia + camarotes). Se considera que cada camarote aporta 1 persona (la litera de abajo).
 
-Frontend (presupuestos.html): La función generatePresupuestoText será reescrita por completo para generar un texto con el formato profesional solicitado, incluyendo:
+Paso 6.3 (Interfaz de Presupuestos Mejorada - Frontend):
 
-Encabezado con logo y datos de contacto.
+Acción: Se modificará la página presupuestos.html.
 
-Detalles del cliente.
+Nuevos Elementos:
 
-Desglose detallado por cabaña con descripción, capacidad, valor por noche y total.
+Se añadirá un checkbox "Sin Camarotes" cerca de los selectores de fecha/personas.
 
-Resumen del presupuesto.
+El campo de email del cliente permitirá ingresar múltiples correos separados por punto y coma (;).
 
-Inclusiones y condiciones de la reserva.
+Se añadirá un nuevo botón: "Enviar por Email".
 
-Pie de página con información de contacto.
+Lógica de Texto: La función generatePresupuestoText se actualizará para añadir una nota de observación si el filtro "Sin Camarotes" está activo, explicando por qué la selección de cabañas puede ser diferente.
 
-Paso 5.3 (Guardado y Seguimiento de Presupuestos):
+Paso 6.4 (Implementación de Envío de Email):
 
-Backend: Se implementará la lógica para guardar el presupuesto generado en la nueva colección presupuestos, almacenando el cliente, fechas, cabañas, valor total, fecha de envío y un estado inicial ("Enviado").
+Backend: Se creará un nuevo emailService utilizando Nodemailer para enviar correos transaccionales. Se requerirá configurar credenciales de un proveedor de email (ej: Gmail, SendGrid) en el servidor. Se creará una nueva ruta, POST /api/presupuestos/enviar, que recibirá los detalles del presupuesto y los correos de destino.
 
-Frontend (presupuestos.html): Se activará el botón "Guardar Presupuesto" para que, una vez generado el texto, se pueda enviar la cotización a la base de datos con un solo clic.
+Branding: Para incluir el logo, el emailService no enviará texto plano, sino un correo en formato HTML, permitiendo incrustar la imagen del logo, usar colores y un diseño más profesional.
+
+Frontend: El nuevo botón "Enviar por Email" llamará a esta nueva ruta, enviando toda la información necesaria para construir y despachar el correo.
 
 Funcionalidades Futuras (Plan Original - Pendientes)
 Actualización de Contactos (Generación de CSV).

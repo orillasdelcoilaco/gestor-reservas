@@ -245,7 +245,7 @@
             texto += `💵 *Condiciones de Reserva*\n`;
             texto += `Para confirmar la reserva se solicita un 10% de abono antes de 72 horas de recibida la reserva.\n`;
             texto += `El saldo restante se paga en el check-in.\n\n`;
-            texto += `📍 *Ubicación*: https://maps.app.goo.gl/9b9fG5l5j5k8j9H67`;
+            texto += `📍 *Ubicación*: http://googleusercontent.com/maps/google.com/11`;
             texto += `\n\n✍️ *Atentamente*,\nPablo Meza\nOrillas del Coilaco\n`;
             texto += `📧 reservas@orillasdelcoilaco.cl\n📱 +56 9 7518 0855\n🌐 www.orillasdelcoilaco.cl`;
             presupuestoTexto.value = texto;
@@ -404,7 +404,11 @@
                 }
                 const subject = encodeURIComponent(`Presupuesto de Alojamiento - Orillas del Coilaco`);
                 const body = encodeURIComponent(presupuestoTexto.value);
-                window.location.href = `mailto:${emails}?subject=${subject}&body=${body}`;
+                
+                // Usar un 'a' temporal para mayor compatibilidad
+                const mailtoLink = document.createElement('a');
+                mailtoLink.href = `mailto:${emails}?subject=${subject}&body=${body}`;
+                mailtoLink.click();
             });
         }
     });

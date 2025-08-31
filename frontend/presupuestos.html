@@ -241,7 +241,7 @@
             texto += `Capacidad total: *${capacidadTotalCalculada} personas*\n`;
             texto += `Duración estadía: *${dias} días - ${noches} noches*\n`;
             texto += `Valor total: *${formatCurrency(pricing.totalPrice)}* (IVA Incluido)\n\n`;
-            texto += `*Incluye*:\n✅ Estacionamiento privado\n✅ Ropa de cama y toallas\n✅ Acceso a orillas del río Coilaco\n✅ Terraza techada en cada cabaña\n\n`;
+            texto += `*Incluye*:\n✅ Tinaja en cada cabaña\n✅ Piscina\n✅ Gimnasio\n✅ Zona de juegos\n✅ Quincho\n✅ Parrilla en cada cabaña\n✅ Una hectárea de áreas verdes\n✅ Toallas (un juego por cada baño, se recomienda traer una toalla por persona extra)\n\n`;
             texto += `💵 *Condiciones de Reserva*\n`;
             texto += `Para confirmar la reserva se solicita un 10% de abono antes de 72 horas de recibida la reserva.\n`;
             texto += `El saldo restante se paga en el check-in.\n\n`;
@@ -279,8 +279,6 @@
             clientFormTitle.textContent = '... o actualiza los datos del cliente';
             clientSearchInput.value = client.nombre;
             clientResultsList.innerHTML = '';
-            
-            // Llenar y habilitar campos
             newClientNameInput.value = client.nombre || '';
             newClientCompanyInput.value = client.empresa || '';
             newClientPhoneInput.value = client.telefono || '';
@@ -365,7 +363,7 @@
                 let clienteParaGuardar;
                 if (selectedClient || newClientNameInput.value.trim()) {
                      clienteParaGuardar = {
-                        id: selectedClient ? selectedClient.id : null, // Enviar ID si existe
+                        id: selectedClient ? selectedClient.id : null,
                         nombre: newClientNameInput.value.trim(),
                         empresa: newClientCompanyInput.value.trim(),
                         telefono: newClientPhoneInput.value.trim(),

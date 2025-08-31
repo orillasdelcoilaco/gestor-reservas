@@ -97,19 +97,16 @@ module.exports = (db) => {
                     const totalAbonado = allTransactions.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
                     dataToUpdate.abono = totalAbonado;
                     
-                    // --- INICIO DE LA NUEVA LÓGICA DE AJUSTE ---
                     if (detallesParseados.esPagoFinal) {
                         nuevoEstado = 'Pendiente Boleta';
                         dataToUpdate.pagado = true;
                         
-                        // Si el total pagado es mayor que el valor actual de la reserva, lo corregimos.
                         if (totalAbonado > reservaData.valorCLP) {
                             console.log(`Ajuste automático de valor para reserva ${id}. Valor anterior: ${reservaData.valorCLP}, Nuevo valor (total pagado): ${totalAbonado}.`);
                             dataToUpdate.valorCLP = totalAbonado;
-                            dataToUpdate.valorManual = true; // Se marca para protegerlo de futuras sincronizaciones.
+                            dataToUpdate.valorManual = true;
                         }
                     }
-                    // --- FIN DE LA NUEVA LÓGICA DE AJUSTE ---
                     break;
 
                 case 'marcar_boleta_enviada':
@@ -132,6 +129,58 @@ module.exports = (db) => {
 
         } catch (error) {
             console.error(`Error al actualizar estado de reserva ${id}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    // --- NUEVA RUTA PARA AJUSTAR TARIFAS ---
+    router.post('/gestion/ajustar-tarifa/:id', jsonParser, async (req, res) => {
+        const { id } = req.params;
+        const { tipoAjuste, valor } = req.body;
+
+        if (!id || !tipoAjuste || valor === undefined) {
+            return res.status(400).json({ error: 'Faltan datos para el ajuste de tarifa.' });
+        }
+
+        try {
+            const reservaRef = db.collection('reservas').doc(id);
+            const doc = await reservaRef.get();
+            if (!doc.exists) {
+                return res.status(404).json({ error: 'Reserva no encontrada.' });
+            }
+
+            const reservaData = doc.data();
+            const dataToUpdate = { valorManual: true };
+
+            if (tipoAjuste === 'porcentaje') {
+                const descuentoPorcentaje = parseFloat(valor);
+                if (isNaN(descuentoPorcentaje) || descuentoPorcentaje < 0 || descuentoPorcentaje >= 100) {
+                    return res.status(400).json({ error: 'El porcentaje de descuento no es válido.' });
+                }
+                const valorReal = reservaData.valorCLP; // El valor en sistema es el real (con descuento)
+                const valorPotencial = valorReal / (1 - (descuentoPorcentaje / 100));
+                dataToUpdate.valorPotencialCLP = Math.round(valorPotencial);
+                dataToUpdate.descuentoAplicado = Math.round(valorPotencial - valorReal);
+            
+            } else if (tipoAjuste === 'valor') {
+                const valorRealPagado = parseFloat(valor);
+                if (isNaN(valorRealPagado) || valorRealPagado < 0) {
+                    return res.status(400).json({ error: 'El valor pagado no es válido.' });
+                }
+                const valorPotencial = reservaData.valorCLP; // El valor en sistema es el potencial (de lista)
+                dataToUpdate.valorPotencialCLP = valorPotencial;
+                dataToUpdate.valorCLP = valorRealPagado; // Actualizamos el valor real con el que pagó el cliente
+                dataToUpdate.descuentoAplicado = Math.round(valorPotencial - valorRealPagado);
+
+            } else {
+                return res.status(400).json({ error: 'Tipo de ajuste no válido.' });
+            }
+
+            await reservaRef.update(dataToUpdate);
+            res.status(200).json({ message: 'Tarifa ajustada y guardada correctamente.', newData: dataToUpdate });
+
+        } catch (error) {
+            console.error(`Error al ajustar la tarifa para la reserva ${id}:`, error);
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
@@ -200,7 +249,6 @@ module.exports = (db) => {
         }
     });
 
-    // --- NUEVA RUTA PARA OBTENER LA LISTA DE TRANSACCIONES ---
     router.get('/gestion/transacciones/:reservaId', async (req, res) => {
         const { reservaId } = req.params;
         try {

@@ -93,6 +93,37 @@
                     </div>
                 </div>
 
+                <div id="modal-view-ajuste-tarifa" class="hidden space-y-4">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Valor Actual en Sistema (CLP)</p>
+                        <p id="ajuste-valor-actual" class="text-2xl font-bold text-gray-800"></p>
+                    </div>
+                    <div class="border-t pt-4">
+                        <label class="block text-sm font-medium text-gray-700">¿Cómo quieres ajustar el valor?</label>
+                        <div class="mt-2 space-y-4">
+                            <div class="p-3 border rounded-md">
+                                <p class="font-semibold">Ajustar por Descuento (%)</p>
+                                <p class="text-xs text-gray-500 mb-2">Ideal para Booking. El valor actual es el final. Calcula el precio original.</p>
+                                <div class="flex items-center space-x-2">
+                                    <input type="number" id="ajuste-porcentaje-input" placeholder="Ej: 22" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                    <span class="text-gray-500">%</span>
+                                    <button id="ajuste-porcentaje-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Ajustar</button>
+                                </div>
+                            </div>
+                             <div class="p-3 border rounded-md">
+                                <p class="font-semibold">Ajustar por Valor Final ($)</p>
+                                <p class="text-xs text-gray-500 mb-2">Ideal para SODC. El valor actual es el de lista. Calcula el descuento.</p>
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-gray-500">$</span>
+                                    <input type="number" id="ajuste-valor-input" placeholder="Ej: 85000" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                    <button id="ajuste-valor-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Ajustar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                     <div id="ajuste-resultado" class="mt-4 p-3 bg-gray-100 rounded-md hidden"></div>
+                     <div id="ajuste-status" class="mt-2 text-sm text-red-600"></div>
+                </div>
                 <form id="modal-form-accion" class="hidden">
                      <div id="pago-fields" class="hidden space-y-4">
                         <div>
@@ -184,6 +215,17 @@
     const fileNameEl = document.getElementById('file-name');
     const sinDocumentoCheckbox = document.getElementById('sin-documento-checkbox');
     const modalStatus = document.getElementById('modal-status');
+    
+    // --- NUEVOS ELEMENTOS PARA AJUSTE DE TARIFA ---
+    const viewAjusteTarifa = document.getElementById('modal-view-ajuste-tarifa');
+    const ajusteValorActual = document.getElementById('ajuste-valor-actual');
+    const ajustePorcentajeInput = document.getElementById('ajuste-porcentaje-input');
+    const ajustePorcentajeBtn = document.getElementById('ajuste-porcentaje-btn');
+    const ajusteValorInput = document.getElementById('ajuste-valor-input');
+    const ajusteValorBtn = document.getElementById('ajuste-valor-btn');
+    const ajusteResultado = document.getElementById('ajuste-resultado');
+    const ajusteStatus = document.getElementById('ajuste-status');
+
 
     let allReservas = [];
     let currentReserva = null;
@@ -243,6 +285,7 @@
                     <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
                 </div>
                 <div class="mt-3 md:mt-0 flex space-x-2">
+                    <button data-gestion="ajuste_tarifa" class="gestion-btn px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-md hover:bg-yellow-200">Ajustar Tarifa</button>
                     <button data-gestion="reserva" class="gestion-btn px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-md hover:bg-blue-200">Gestionar Reserva</button>
                     <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
                     <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
@@ -287,10 +330,8 @@
     }
 
     function showActionForm(action, hasPreviousView = false) {
-        console.log(`[DEBUG] showActionForm called. Action: ${action}, HasPreviousView: ${hasPreviousView}`);
         currentAction = action;
-        viewDocumento.classList.add('hidden');
-        viewPagos.classList.add('hidden');
+        [viewDocumento, viewPagos, viewAjusteTarifa].forEach(el => el.classList.add('hidden'));
         formAccion.classList.remove('hidden');
         modalCancelBtn.classList.toggle('hidden', hasPreviousView);
         modalBackBtn.classList.toggle('hidden', !hasPreviousView);
@@ -298,11 +339,10 @@
     }
 
     function openManagementModal(type, reserva) {
-        console.log(`[DEBUG] openManagementModal called. Type: ${type}`);
         currentReserva = reserva;
         currentManagementType = type;
-        modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1)}`;
-        [viewDocumento, viewPagos, formAccion].forEach(el => el.classList.add('hidden'));
+        modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}`;
+        [viewDocumento, viewPagos, formAccion, viewAjusteTarifa].forEach(el => el.classList.add('hidden'));
         modalCancelBtn.classList.remove('hidden');
         modalBackBtn.classList.add('hidden');
 
@@ -310,10 +350,8 @@
             const docType = type === 'reserva' ? 'enlaceReserva' : 'enlaceBoleta';
             const action = type === 'reserva' ? 'subir_documento_reserva' : 'marcar_boleta_enviada';
             const docUrl = reserva.documentos?.[docType];
-
             viewDocumento.classList.remove('hidden');
             if (docUrl) {
-                console.log(`[DEBUG] Document found for type ${type}. URL: ${docUrl}`);
                 docExistente.classList.remove('hidden');
                 docSinDocMsg.classList.toggle('hidden', docUrl !== 'SIN_DOCUMENTO');
                 const isImage = docUrl && docUrl !== 'SIN_DOCUMENTO' && (docUrl.toLowerCase().includes('.png') || docUrl.toLowerCase().includes('.jpg') || docUrl.toLowerCase().includes('.jpeg'));
@@ -322,7 +360,6 @@
                 btnReemplazarDoc.onclick = () => showActionForm(action, true);
                 btnEliminarDoc.onclick = () => deleteDocument(docType);
             } else {
-                console.log(`[DEBUG] No document found for type ${type}. Showing form directly.`);
                 docExistente.classList.add('hidden');
                 showActionForm(action, false);
             }
@@ -330,6 +367,13 @@
             viewPagos.classList.remove('hidden');
             renderPagosList();
             btnRegistrarNuevoPago.onclick = () => showActionForm('registrar_pago', true);
+        } else if (type === 'ajuste_tarifa') {
+            viewAjusteTarifa.classList.remove('hidden');
+            ajusteValorActual.textContent = formatCurrency(reserva.valorCLP);
+            ajusteResultado.classList.add('hidden');
+            ajusteStatus.textContent = '';
+            ajustePorcentajeInput.value = '';
+            ajusteValorInput.value = '';
         }
         modal.classList.remove('hidden');
     }
@@ -394,7 +438,6 @@
     
     async function handleFormSubmit(event) {
         event.preventDefault();
-        console.log('[DEBUG] handleFormSubmit triggered!');
         modalSaveBtn.disabled = true;
         modalSaveBtn.textContent = 'Guardando...';
         modalStatus.textContent = '';
@@ -410,15 +453,10 @@
         }
 
         detalles.sinDocumento = sinDocumentoCheckbox.checked;
-        
-        console.log('[DEBUG] Current Action:', currentAction);
-        console.log('[DEBUG] Detalles object:', detalles);
-        
         const requiresDocument = ['subir_documento_reserva', 'marcar_boleta_enviada'].includes(currentAction);
 
         if (requiresDocument && !detalles.sinDocumento && documentoInput.files.length === 0) {
             modalStatus.textContent = 'Debes seleccionar un archivo o marcar "Sin Documento".';
-            console.log('[DEBUG] Validation failed: No file selected for required action.');
             modalSaveBtn.disabled = false;
             modalSaveBtn.textContent = 'Guardar';
             return;
@@ -426,23 +464,18 @@
 
         if (documentoInput.files.length > 0 && !detalles.sinDocumento) {
             formData.append('documento', documentoInput.files[0]);
-            console.log('[DEBUG] Appending file to FormData:', documentoInput.files[0].name);
         }
 
         formData.append('accion', currentAction);
         formData.append('detalles', JSON.stringify(detalles));
         
-        console.log('[DEBUG] FormData prepared. Calling fetchAPI...');
         try {
             const result = await fetchAPI(`/api/gestion/actualizar-estado/${currentReserva.id}`, { method: 'POST', body: formData });
-            console.log('[DEBUG] API call successful:', result);
             modal.classList.add('hidden');
-            await loadGestion(); // Recargamos toda la data
+            await loadGestion();
         } catch (error) {
-            console.error('[DEBUG] API call failed:', error);
             modalStatus.textContent = `Error: ${error.message}`;
         } finally {
-            console.log('[DEBUG] Finally block executed.');
             modalSaveBtn.disabled = false;
             modalSaveBtn.textContent = 'Guardar';
         }
@@ -517,11 +550,52 @@
         try {
             allReservas = await fetchAPI('/api/gestion/pendientes');
             loadingState.classList.add('hidden');
-            updateFilteredView(); // Usamos la nueva función para renderizar
+            updateFilteredView();
         } catch (error) {
             loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar las tareas: ${error.message}</p>`;
         }
     }
+    
+    async function handleAjusteTarifa(tipoAjuste) {
+        const valor = tipoAjuste === 'porcentaje' ? ajustePorcentajeInput.value : ajusteValorInput.value;
+        if (!valor) {
+            ajusteStatus.textContent = 'Por favor, ingresa un valor.';
+            return;
+        }
+        
+        const btn = tipoAjuste === 'porcentaje' ? ajustePorcentajeBtn : ajusteValorBtn;
+        btn.disabled = true;
+        btn.textContent = '...';
+        ajusteStatus.textContent = '';
+        ajusteResultado.classList.add('hidden');
+
+        try {
+            const result = await fetchAPI(`/api/gestion/ajustar-tarifa/${currentReserva.id}`, {
+                method: 'POST',
+                body: { tipoAjuste, valor: parseFloat(valor) }
+            });
+            
+            const { valorCLP, valorPotencialCLP, descuentoAplicado } = result.newData;
+            ajusteResultado.innerHTML = `
+                <p class="text-sm"><strong>Nuevo Cálculo:</strong></p>
+                <p class="text-xs">Valor Potencial (Tarifa): ${formatCurrency(valorPotencialCLP)}</p>
+                <p class="text-xs">Valor Real (Pagado): ${formatCurrency(valorCLP || currentReserva.valorCLP)}</p>
+                <p class="text-xs text-red-600">Descuento Aplicado: ${formatCurrency(descuentoAplicado)}</p>
+            `;
+            ajusteResultado.classList.remove('hidden');
+            ajusteStatus.textContent = '¡Ajuste guardado! La tabla se actualizará al cerrar.';
+            ajusteStatus.className = 'mt-2 text-sm text-green-600';
+            await loadGestion();
+
+        } catch (error) {
+            ajusteStatus.textContent = `Error: ${error.message}`;
+            ajusteStatus.className = 'mt-2 text-sm text-red-600';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Ajustar';
+        }
+    }
+
 
     document.addEventListener('DOMContentLoaded', () => {
         const session = checkSession();
@@ -564,6 +638,10 @@
                 documentoInput.disabled = isDisabled;
                 if(isDisabled) previewContainer.classList.add('hidden');
             });
+
+            // --- EVENT LISTENERS PARA LA NUEVA FUNCIONALIDAD ---
+            ajustePorcentajeBtn.addEventListener('click', () => handleAjusteTarifa('porcentaje'));
+            ajusteValorBtn.addEventListener('click', () => handleAjusteTarifa('valor'));
 
             loadGestion();
         }

@@ -47,6 +47,13 @@ El proyecto se encuentra en una fase funcional y estable.
     * **Problema:** Al sincronizar reportes nuevos, los valores de reservas que habían sido ajustados manualmente en el sistema podían ser sobrescritos si la tarifa en el sistema de origen había cambiado.
     * **Solución:** Se implementó una lógica en el panel de **Gestión Diaria**. Al registrar el **pago final** de una reserva, el sistema ahora verifica si el total abonado por el cliente es mayor al valor registrado. Si lo es, actualiza automáticamente el valor de la reserva para que coincida con el total pagado y le asigna una bandera `valorManual: true`. El proceso de consolidación de reportes respeta esta bandera, evitando que los valores corregidos manualmente sean sobrescritos.
 
+* **Herramienta de Ajuste de Tarifa para KPIs Precisos:**
+    * **Problema:** Los reportes de canales como Booking entregan el precio final con descuentos ya aplicados, mientras que otros canales como SODC entregan el precio de lista. Esto impedía calcular correctamente el "Ingreso Potencial" y los descuentos reales en el Dashboard de KPIs.
+    * **Solución:** Se añadió una **calculadora de ajuste de tarifa** en el panel de **Gestión Diaria**. Esta herramienta permite al operador ajustar el valor de cada reserva de dos maneras:
+        1.  **Por Porcentaje de Descuento (Ideal para Booking):** Se ingresa el % de descuento total y el sistema calcula hacia atrás el precio original (potencial).
+        2.  **Por Valor Final Pagado (Ideal para SODC):** Se ingresa el monto final que pagó el cliente y el sistema calcula el descuento aplicado.
+    * **Resultado:** Cada reserva ahora almacena el `valorCLP` (real) y el `valorPotencialCLP` (tarifa), lo que permite al Dashboard de KPIs mostrar cifras de ingresos y descuentos 100% precisas.
+
 ---
 
 ### **Funcionalidades Futuras (Plan Original - Pendientes)**

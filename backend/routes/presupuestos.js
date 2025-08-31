@@ -3,30 +3,27 @@ const router = express.Router();
 const { getAvailabilityData, findBestCombination, calculatePrice } = require('../services/presupuestoService');
 const { findOrCreateClient } = require('../services/clienteService');
 const admin = require('firebase-admin');
-
 const jsonParser = express.json();
 
 module.exports = (db) => {
     
     router.post('/presupuestos/generar', jsonParser, async (req, res) => {
-        const { fechaLlegada, fechaSalida, personas } = req.body;
+        // --- SE AÑADE sinCamarotes ---
+        const { fechaLlegada, fechaSalida, personas, sinCamarotes } = req.body;
 
         if (!fechaLlegada || !fechaSalida || !personas) {
             return res.status(400).json({ error: 'Se requieren fechas y cantidad de personas.' });
         }
-
         const startDate = new Date(fechaLlegada + 'T00:00:00Z');
         const endDate = new Date(fechaSalida + 'T00:00:00Z');
-        
-        // --- INICIO DE LA CORRECCIÓN DE FECHAS ---
         if (startDate >= endDate) {
             return res.status(400).json({ error: 'La fecha de salida debe ser posterior a la fecha de llegada.' });
         }
-        // --- FIN DE LA CORRECCIÓN DE FECHAS ---
 
         try {
             const { availableCabanas, allCabanas, complexDetails } = await getAvailabilityData(db, startDate, endDate);
-            const { combination, capacity } = findBestCombination(availableCabanas, parseInt(personas));
+            // --- SE PASA EL FILTRO A LA FUNCIÓN ---
+            const { combination, capacity } = findBestCombination(availableCabanas, parseInt(personas), sinCamarotes);
 
             if (combination.length === 0) {
                 return res.status(200).json({
@@ -39,18 +36,12 @@ module.exports = (db) => {
             }
 
             const pricing = await calculatePrice(db, combination, startDate, endDate);
-
             res.status(200).json({
-                suggestion: {
-                    cabanas: combination,
-                    totalCapacity: capacity,
-                    pricing: pricing
-                },
+                suggestion: { cabanas: combination, totalCapacity: capacity, pricing: pricing },
                 availableCabanas,
                 allCabanas,
                 complexDetails
             });
-
         } catch (error) {
             console.error("Error al generar el presupuesto:", error);
             res.status(500).json({ error: 'Error interno del servidor al generar el presupuesto.' });
@@ -62,7 +53,6 @@ module.exports = (db) => {
         if (!fechaLlegada || !fechaSalida || !cabanas) {
             return res.status(400).json({ error: 'Faltan datos para recalcular el precio.' });
         }
-
         try {
             const startDate = new Date(fechaLlegada + 'T00:00:00Z');
             const endDate = new Date(fechaSalida + 'T00:00:00Z');
@@ -74,18 +64,13 @@ module.exports = (db) => {
         }
     });
 
-    // --- INICIO DE LA NUEVA RUTA PARA GUARDAR ---
     router.post('/presupuestos/guardar', jsonParser, async (req, res) => {
         const { cliente, presupuesto } = req.body;
         if (!cliente || !presupuesto) {
             return res.status(400).json({ error: 'Faltan datos del cliente o del presupuesto.' });
         }
-        
         try {
-            // 1. Encuentra o crea el cliente y obtiene su ID
             const clienteId = await findOrCreateClient(db, cliente);
-            
-            // 2. Prepara el objeto de presupuesto para guardarlo
             const presupuestoData = {
                 clienteId: clienteId,
                 clienteNombre: cliente.nombre,
@@ -97,18 +82,13 @@ module.exports = (db) => {
                 valorTotal: presupuesto.valorTotal,
                 estado: 'Enviado'
             };
-
-            // 3. Guarda el presupuesto en la colección 'presupuestos'
             const docRef = await db.collection('presupuestos').add(presupuestoData);
-
             res.status(201).json({ message: 'Presupuesto guardado exitosamente', id: docRef.id });
-
         } catch (error) {
             console.error("Error al guardar el presupuesto:", error);
             res.status(500).json({ error: 'Error interno del servidor al guardar el presupuesto.' });
         }
     });
-     // --- FIN DE LA NUEVA RUTA PARA GUARDAR ---
 
     return router;
 };

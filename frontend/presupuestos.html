@@ -43,7 +43,7 @@
                                 <input type="text" id="new-client-name" placeholder="Nombre completo" class="block w-full rounded-md border-gray-300 shadow-sm">
                                 <input type="text" id="new-client-company" placeholder="Empresa (Opcional)" class="block w-full rounded-md border-gray-300 shadow-sm">
                                 <input type="tel" id="new-client-phone" placeholder="Teléfono (Opcional)" class="block w-full rounded-md border-gray-300 shadow-sm">
-                                <input type="email" id="new-client-email" placeholder="Email (Opcional)" class="block w-full rounded-md border-gray-300 shadow-sm">
+                                <input type="email" id="new-client-email" placeholder="Email(s) separados por ;" class="block w-full rounded-md border-gray-300 shadow-sm">
                             </div>
                         </div>
                     </div>
@@ -61,6 +61,10 @@
                         <div>
                             <label for="personas" class="block text-sm font-medium text-gray-700">N° de Personas</label>
                             <input type="number" id="personas" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </div>
+                        <div class="flex items-center pt-6">
+                            <input id="sin-camarotes-checkbox" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
+                            <label for="sin-camarotes-checkbox" class="ml-2 block text-sm font-medium text-gray-700">Sin Camarotes</label>
                         </div>
                         <button id="generar-btn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">
                             Generar Propuesta
@@ -86,8 +90,9 @@
                         <h3 class="text-lg font-semibold text-gray-800">4. Presupuesto Final</h3>
                         <textarea id="presupuesto-texto" rows="25" class="w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50 font-mono text-xs"></textarea>
                         <div class="flex space-x-2">
-                           <button id="copy-btn" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar Texto</button>
-                           <button id="save-btn" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700">Guardar Presupuesto</button>
+                           <button id="copy-btn" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
+                           <button id="save-btn" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-700">Guardar</button>
+                           <button id="email-btn" class="bg-blue-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-600">Enviar por Email</button>
                         </div>
                     </div>
                 </div>
@@ -99,7 +104,6 @@
     import { checkSession, logout, fetchAPI } from './api.js';
 
     document.addEventListener('DOMContentLoaded', () => {
-        
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
         const authInfo = document.getElementById('auth-info');
@@ -113,12 +117,14 @@
         const presupuestoTexto = document.getElementById('presupuesto-texto');
         const copyBtn = document.getElementById('copy-btn');
         const saveBtn = document.getElementById('save-btn');
+        const emailBtn = document.getElementById('email-btn');
         const clientSearchInput = document.getElementById('client-search');
         const clientResultsList = document.getElementById('client-results-list');
         const newClientNameInput = document.getElementById('new-client-name');
         const newClientCompanyInput = document.getElementById('new-client-company');
         const newClientPhoneInput = document.getElementById('new-client-phone');
         const newClientEmailInput = document.getElementById('new-client-email');
+        const sinCamarotesCheckbox = document.getElementById('sin-camarotes-checkbox');
         
         let allClients = [];
         let selectedClient = null;
@@ -126,20 +132,20 @@
         let selectedCabanas = [];
         let currentPricing = {};
 
-        function formatCurrency(value) {
-            return `$${(value || 0).toLocaleString('es-CL')}`;
-        }
+        function formatCurrency(value) { return `$${(value || 0).toLocaleString('es-CL')}`; }
 
         function createCabanaCheckbox(cabana, isSuggested) {
             const div = document.createElement('div');
             div.className = 'p-2 border rounded-md flex items-center justify-between';
+            const effectiveCapacity = sinCamarotesCheckbox.checked 
+                ? ((cabana.camas?.matrimoniales || 0) * 2) + (cabana.camas?.plazaYMedia || 0) + (cabana.camas?.camarotes || 0)
+                : cabana.capacidad;
             div.innerHTML = `
                 <div>
                     <input type="checkbox" id="cb-${cabana.id}" data-id="${cabana.id}" class="cabana-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded" ${isSuggested ? 'checked' : ''}>
                     <label for="cb-${cabana.id}" class="ml-2 font-medium">${cabana.nombre}</label>
-                    <span class="ml-2 text-sm text-gray-500">(Cap: ${cabana.capacidad})</span>
-                </div>
-            `;
+                    <span class="ml-2 text-sm text-gray-500">(Cap: ${effectiveCapacity})</span>
+                </div>`;
             return div;
         }
 
@@ -163,15 +169,13 @@
         }
 
         async function handleSelectionChange() {
-            const selectedIds = new Set();
-            document.querySelectorAll('.cabana-checkbox:checked').forEach(cb => selectedIds.add(cb.dataset.id));
+            const selectedIds = new Set(Array.from(document.querySelectorAll('.cabana-checkbox:checked')).map(cb => cb.dataset.id));
             selectedCabanas = fullData.allCabanas.filter(c => selectedIds.has(c.id));
 
             if (selectedCabanas.length === 0) {
                 generatePresupuestoText({ totalPrice: 0, nights: 0, details: [] });
                 return;
             }
-
             try {
                 const payload = {
                     fechaLlegada: fechaLlegadaInput.value,
@@ -190,12 +194,12 @@
             const fechaLlegada = new Date(fechaLlegadaInput.value + 'T00:00:00Z');
             const fechaSalida = new Date(fechaSalidaInput.value + 'T00:00:00Z');
             const hoy = new Date();
-            
             let clientName = selectedClient ? selectedClient.nombre : newClientNameInput.value.trim();
             let clientCompany = selectedClient ? '' : newClientCompanyInput.value.trim();
             const dirigidoA = clientCompany ? `${clientName} – ${clientCompany}` : clientName;
 
-            let texto = `🏞️ Orillas del Coilaco - Turismo & Naturaleza\n`;
+            let texto = `https://orillasdelcoilaco.cl/wp-content/uploads/2024/02/LOGO-CIRCULAR-PNG.png\n\n`;
+            texto += `🏞️ Orillas del Coilaco - Turismo & Naturaleza\n`;
             texto += `www.orillasdelcoilaco.cl – reservas@orillasdelcoilaco.cl – 📞 +56 9 7518 0855\n`;
             texto += `--------------------------------------------------------------------------\n`;
             texto += `📌 Presupuesto de Alojamiento\n`;
@@ -203,14 +207,19 @@
             texto += `Fecha: ${hoy.toLocaleDateString('es-CL')}\n`;
             texto += `Solicitado para: ${document.getElementById('personas').value} personas\n`;
             texto += `Estadía: ${fechaLlegada.toLocaleDateString('es-CL', {timeZone:'UTC'})} al ${fechaSalida.toLocaleDateString('es-CL', {timeZone:'UTC'})} (${pricing.nights} noches)\n\n`;
-            texto += `🏡 Detalle de las Cabañas Asignadas\n`;
             
+            if (sinCamarotesCheckbox.checked) {
+                texto += `NOTA: La selección de cabañas se ha ajustado para no utilizar las literas superiores de los camarotes, considerando solo una persona por camarote.\n\n`;
+            }
+
+            texto += `🏡 Detalle de las Cabañas Asignadas\n`;
             if (pricing.details && pricing.details.length > 0) {
                 pricing.details.forEach(detail => {
                     const cabanaInfo = fullData.allCabanas.find(c => c.nombre === detail.nombre);
-                    texto += `\n🔹 ${cabanaInfo.nombre} (Capacidad: ${cabanaInfo.capacidad} personas)\n`;
+                    const capacidadTexto = sinCamarotesCheckbox.checked ? `(Capacidad ajustada: ${(cabanaInfo.camas?.matrimoniales || 0) * 2 + (cabanaInfo.camas?.plazaYMedia || 0) + (cabanaInfo.camas?.camarotes || 0)})` : `(Capacidad: ${cabanaInfo.capacidad})`;
+                    texto += `\n🔹 ${cabanaInfo.nombre} ${capacidadTexto}\n`;
                     if (cabanaInfo.descripcion) texto += `${cabanaInfo.descripcion}\n`;
-                    if (cabanaInfo.camas) texto += `Camas: ${cabanaInfo.camas}\n`;
+                    if (cabanaInfo.camas) texto += `Camas: Matrimoniales(${cabanaInfo.camas.matrimoniales || 0}), 1.5 Plazas(${cabanaInfo.camas.plazaYMedia || 0}), Camarotes(${cabanaInfo.camas.camarotes || 0})\n`;
                     if (cabanaInfo.equipamiento && cabanaInfo.equipamiento.length > 0) texto += `Equipamiento: ${cabanaInfo.equipamiento.join(', ')}\n`;
                     if(cabanaInfo.linkFotos) texto += `📷 Ver fotos: ${cabanaInfo.linkFotos}\n`;
                     texto += `Valor por noche: ${formatCurrency(detail.precioPorNoche)}\n`;
@@ -222,18 +231,17 @@
 
             texto += `\n📊 Resumen del Presupuesto\n`;
             texto += `Cantidad de cabañas: ${selectedCabanas.length}\n`;
-            texto += `Capacidad total: ${selectedCabanas.reduce((acc, c) => acc + c.capacidad, 0)} personas\n`;
+            const capacidadTotalCalculada = sinCamarotesCheckbox.checked 
+                ? selectedCabanas.reduce((acc, c) => acc + ((c.camas?.matrimoniales || 0) * 2) + (c.camas?.plazaYMedia || 0) + (c.camas?.camarotes || 0), 0)
+                : selectedCabanas.reduce((acc, c) => acc + c.capacidad, 0);
+            texto += `Capacidad total: ${capacidadTotalCalculada} personas\n`;
             texto += `Duración estadía: ${pricing.nights} noches\n`;
             texto += `Valor total: ${formatCurrency(pricing.totalPrice)}\n\n`;
             texto += `Incluye:\n✅ Estacionamiento privado\n✅ Ropa de cama y toallas\n✅ Acceso a orillas del río Coilaco\n✅ Terraza techada en cada cabaña\n\n`;
-            
-            // --- INICIO DE LA CORRECCIÓN DE TEXTO ---
             texto += `💵 Condiciones de Reserva\n`;
             texto += `Para confirmar la reserva se solicita un 10% de abono antes de 72 horas de recibida la reserva.\n`;
             texto += `El saldo restante se paga en el check-in.\n\n`;
-            // --- FIN DE LA CORRECCIÓN DE TEXTO ---
-            
-            texto += `📍 Ubicación: https://maps.app.goo.gl/TuLocation\n\n\n\n`; // Reemplazar con link real
+            texto += `📍 Ubicación: https://maps.app.goo.gl/tuG5k1x42s43a72o7\n\n`;
             texto += `✍️ Atentamente,\nPablo Meza\nOrillas del Coilaco\n`;
             texto += `📧 reservas@orillasdelcoilaco.cl\n📱 +56 9 7518 0855\n🌐 www.orillasdelcoilaco.cl`;
             presupuestoTexto.value = texto;
@@ -242,9 +250,7 @@
         async function loadClients() {
             try {
                 allClients = await fetchAPI('/api/clientes/simplificado');
-            } catch (error) {
-                console.error("No se pudieron cargar los clientes:", error);
-            }
+            } catch (error) { console.error("No se pudieron cargar los clientes:", error); }
         }
 
         function filterClients() {
@@ -283,12 +289,10 @@
             appContent.classList.remove('hidden');
             authInfo.innerHTML = `
                 <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
-                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-            `;
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
             document.getElementById('logout-btn').addEventListener('click', logout);
             
             loadClients();
-
             fechaLlegadaInput.addEventListener('change', () => {
                 if (fechaLlegadaInput.value) {
                     fechaSalidaInput.min = fechaLlegadaInput.value;
@@ -299,7 +303,6 @@
                     }
                 }
             });
-
             clientSearchInput.addEventListener('input', filterClients);
             newClientNameInput.addEventListener('input', clearClientSelection);
 
@@ -308,19 +311,17 @@
                     fechaLlegada: fechaLlegadaInput.value,
                     fechaSalida: fechaSalidaInput.value,
                     personas: document.getElementById('personas').value,
+                    sinCamarotes: sinCamarotesCheckbox.checked
                 };
-
                 if (!payload.fechaLlegada || !payload.fechaSalida || !payload.personas || (!selectedClient && !newClientNameInput.value)) {
                     alert('Por favor, completa los datos del cliente, fechas y cantidad de personas.');
                     return;
                 }
-
                 generarBtn.disabled = true;
                 generarBtn.textContent = 'Generando...';
                 statusContainer.textContent = 'Buscando disponibilidad y calculando...';
                 statusContainer.classList.remove('hidden');
                 resultsContainer.classList.add('hidden');
-
                 try {
                     fullData = await fetchAPI('/api/presupuestos/generar', { method: 'POST', body: payload });
                     if (fullData.suggestion) {
@@ -361,7 +362,6 @@
                     alert('Debes seleccionar o ingresar un cliente para guardar el presupuesto.');
                     return;
                 }
-
                 const presupuestoParaGuardar = {
                     fechaLlegada: fechaLlegadaInput.value,
                     fechaSalida: fechaSalidaInput.value,
@@ -369,10 +369,8 @@
                     cabanasSeleccionadas: selectedCabanas,
                     valorTotal: currentPricing.totalPrice
                 };
-
                 saveBtn.disabled = true;
                 saveBtn.textContent = 'Guardando...';
-
                 try {
                     const result = await fetchAPI('/api/presupuestos/guardar', {
                         method: 'POST',
@@ -385,6 +383,18 @@
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Guardar Presupuesto';
                 }
+            });
+
+            emailBtn.addEventListener('click', () => {
+                const emails = newClientEmailInput.value.trim();
+                if (!emails) {
+                    alert('Por favor, ingresa al menos una dirección de correo electrónico.');
+                    return;
+                }
+                const subject = `Presupuesto de Alojamiento - Orillas del Coilaco`;
+                const body = encodeURIComponent(presupuestoTexto.value);
+                
+                window.location.href = `mailto:${emails}?subject=${subject}&body=${body}`;
             });
         }
     });

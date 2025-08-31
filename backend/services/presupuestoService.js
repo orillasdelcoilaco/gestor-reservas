@@ -1,24 +1,14 @@
 const admin = require('firebase-admin');
 
-/**
- * Obtiene todos los datos necesarios para un presupuesto.
- */
 async function getAvailabilityData(db, startDate, endDate) {
-    // Obtener todas las cabañas
     const cabanasSnapshot = await db.collection('cabanas').get();
     const allCabanas = cabanasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-    // Obtener detalles del complejo
     const complexDoc = await db.collection('config').doc('complejo').get();
     const complexDetails = complexDoc.exists ? complexDoc.data() : {};
-
-    // Obtener reservas que se superponen con el rango de fechas
     const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
     const endTimestamp = admin.firestore.Timestamp.fromDate(endDate);
-
     const reservasQuery1 = db.collection('reservas').where('fechaLlegada', '<', endTimestamp);
     const snapshot1 = await reservasQuery1.get();
-    
     const overlappingReservations = [];
     snapshot1.forEach(doc => {
         const reserva = doc.data();
@@ -26,18 +16,25 @@ async function getAvailabilityData(db, startDate, endDate) {
             overlappingReservations.push(reserva);
         }
     });
-
     const occupiedCabanaNames = new Set(overlappingReservations.map(reserva => reserva.alojamiento));
     const availableCabanas = allCabanas.filter(cabana => !occupiedCabanaNames.has(cabana.nombre));
-    
     return { availableCabanas, allCabanas, complexDetails };
 }
 
-/**
- * Encuentra la combinación óptima de cabañas para un número de personas.
- */
-function findBestCombination(availableCabanas, requiredCapacity) {
-    const sortedCabanas = [...availableCabanas].sort((a, b) => b.capacidad - a.capacidad);
+// --- FUNCIÓN ACTUALIZADA ---
+function findBestCombination(availableCabanas, requiredCapacity, sinCamarotes = false) {
+    // Calcula la capacidad efectiva de cada cabaña según el filtro
+    let cabanasToConsider = availableCabanas.map(c => {
+        const effectiveCapacity = sinCamarotes 
+            ? ((c.camas.matrimoniales || 0) * 2) + (c.camas.plazaYMedia || 0) + (c.camas.camarotes || 0)
+            : c.capacidad;
+        return { ...c, effectiveCapacity };
+    });
+
+    // Filtra las cabañas que no tienen capacidad bajo el criterio actual
+    cabanasToConsider = cabanasToConsider.filter(c => c.effectiveCapacity > 0);
+    // Ordena por la capacidad efectiva para encontrar la mejor combinación
+    const sortedCabanas = cabanasToConsider.sort((a, b) => b.effectiveCapacity - a.effectiveCapacity);
     
     let combination = [];
     let currentCapacity = 0;
@@ -45,7 +42,7 @@ function findBestCombination(availableCabanas, requiredCapacity) {
     for (const cabana of sortedCabanas) {
         if (currentCapacity < requiredCapacity) {
             combination.push(cabana);
-            currentCapacity += cabana.capacidad;
+            currentCapacity += cabana.effectiveCapacity;
         } else {
             break;
         }
@@ -58,14 +55,10 @@ function findBestCombination(availableCabanas, requiredCapacity) {
     return { combination, capacity: currentCapacity };
 }
 
-/**
- * Calcula el precio total para una selección de cabañas en un rango de fechas.
- */
 async function calculatePrice(db, cabanas, startDate, endDate) {
     const nights = Math.max(1, Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)));
     let totalPrice = 0;
     const priceDetails = [];
-
     for (const cabana of cabanas) {
         let cabanaPrice = 0;
         const q = db.collection('tarifas')
@@ -73,9 +66,7 @@ async function calculatePrice(db, cabanas, startDate, endDate) {
             .where('fechaInicio', '<=', admin.firestore.Timestamp.fromDate(startDate))
             .orderBy('fechaInicio', 'desc')
             .limit(1);
-        
         const snapshot = await q.get();
-
         if (!snapshot.empty) {
             const tarifa = snapshot.docs[0].data();
             if (tarifa.fechaTermino.toDate() >= startDate) {
@@ -84,7 +75,6 @@ async function calculatePrice(db, cabanas, startDate, endDate) {
                 }
             }
         }
-        
         totalPrice += cabanaPrice;
         priceDetails.push({
             nombre: cabana.nombre,
@@ -92,12 +82,7 @@ async function calculatePrice(db, cabanas, startDate, endDate) {
             precioPorNoche: cabanaPrice > 0 ? cabanaPrice / nights : 0,
         });
     }
-
-    return {
-        totalPrice,
-        nights,
-        details: priceDetails
-    };
+    return { totalPrice, nights, details: priceDetails };
 }
 
 module.exports = {

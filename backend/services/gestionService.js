@@ -2,7 +2,6 @@
 
 const admin = require('firebase-admin');
 
-// Función auxiliar para obtener la fecha de hoy en UTC para comparaciones correctas
 function getTodayUTC() {
     const today = new Date();
     return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
@@ -18,7 +17,6 @@ async function getReservasPendientes(db) {
         return [];
     }
 
-    // --- INICIO DE LA NUEVA LÓGICA DE AGRUPACIÓN ---
     const reservasAgrupadas = new Map();
 
     snapshot.docs.forEach(doc => {
@@ -27,17 +25,14 @@ async function getReservasPendientes(db) {
 
         if (!reservasAgrupadas.has(reservaId)) {
             reservasAgrupadas.set(reservaId, {
-                // Datos del grupo
                 reservaIdOriginal: reservaId,
                 clienteNombre: data.clienteNombre,
-                telefono: data.telefono || 'N/A', // Se asume que es el mismo para el grupo
+                telefono: data.telefono || 'N/A',
                 fechaLlegada: data.fechaLlegada ? data.fechaLlegada.toDate() : null,
                 fechaSalida: data.fechaSalida ? data.fechaSalida.toDate() : null,
-                estadoGestion: data.estadoGestion, // Se toma el de la primera reserva que encuentre
+                estadoGestion: data.estadoGestion,
                 documentos: data.documentos || {},
-                // Contenedor para las reservas individuales
                 reservasIndividuales: [],
-                // Acumuladores para los totales del grupo
                 valorCLP: 0,
                 abono: 0
             });
@@ -45,7 +40,6 @@ async function getReservasPendientes(db) {
 
         const grupo = reservasAgrupadas.get(reservaId);
         
-        // Se agrega la reserva individual al grupo
         grupo.reservasIndividuales.push({
             id: doc.id,
             alojamiento: data.alojamiento,
@@ -53,12 +47,9 @@ async function getReservasPendientes(db) {
             abono: data.abono || 0,
         });
 
-        // Se actualizan los totales del grupo sumando los de cada reserva individual
         grupo.valorCLP += data.valorCLP || 0;
-        // El abono se suma individualmente por si estuviera registrado de forma separada
         grupo.abono += data.abono || 0;
     });
-    // --- FIN DE LA NUEVA LÓGICA DE AGRUPACIÓN ---
 
     const reservas = Array.from(reservasAgrupadas.values());
     const today = getTodayUTC();

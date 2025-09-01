@@ -9,6 +9,9 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
         #gestion-modal { background-color: rgba(0, 0, 0, 0.5); }
+        .tab-btn.active { border-bottom-color: #4f46e5; color: #4f46e5; font-weight: 600; }
+        .paste-zone { border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .paste-zone.drag-over { background-color: #e0e7ff; border-color: #4f46e5; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -29,7 +32,7 @@
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
                     <h2 class="text-2xl font-semibold text-gray-900">Panel de Gestión Diaria</h2>
-                    <input type="text" id="search-input" placeholder="Buscar por nombre, reserva, teléfono..." class="mt-4 md:mt-0 w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    <input type="text" id="search-input" placeholder="Buscar por nombre, reserva..." class="mt-4 md:mt-0 w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
                 <div id="loading-state" class="text-center py-8"><p class="text-gray-500">Cargando tareas pendientes...</p></div>
                 <div id="hoy-container" class="hidden"><h3 class="text-xl font-bold text-red-600 mb-4 border-b pb-2">Requiere Acción Hoy</h3><div id="hoy-list" class="space-y-4"></div></div>
@@ -40,18 +43,20 @@
     </div>
 
     <div id="gestion-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
-            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modal-title">Gestionar</h3>
-            <div id="modal-content-container" class="space-y-4">
-                </div>
-            <button type="button" id="modal-cancel-btn" class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modal-title"></h3>
+            <div class="border-b border-gray-200"><nav class="-mb-px flex space-x-8"><button id="tab-pagos" class="tab-btn active whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Pagos y Documentos</button><button id="tab-valores" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm text-gray-500 hover:text-gray-700">Ajustar Valores</button></nav></div>
+            <div id="modal-content-container" class="overflow-y-auto py-4 flex-grow">
+                <div id="tab-content-pagos"></div>
+                <div id="tab-content-valores" class="hidden space-y-4"></div>
+            </div>
+            <div class="border-t pt-4"><button type="button" id="modal-cancel-btn" class="w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button></div>
         </div>
     </div>
 
 <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
     
-    // --- Referencias a Elementos ---
     const loader = document.getElementById('loader');
     const appContent = document.getElementById('app-content');
     const authInfo = document.getElementById('auth-info');
@@ -66,6 +71,10 @@
     const modalTitle = document.getElementById('modal-title');
     const modalContent = document.getElementById('modal-content-container');
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    const tabPagos = document.getElementById('tab-pagos');
+    const tabValores = document.getElementById('tab-valores');
+    const tabContentPagos = document.getElementById('tab-content-pagos');
+    const tabContentValores = document.getElementById('tab-content-valores');
 
     let allGrupos = [];
     let currentGrupo = null;
@@ -75,11 +84,11 @@
     
     function getStatusInfo(status) {
         switch (status) {
-            case 'Pendiente Bienvenida': return { text: 'PENDIENTE BIENVENIDA', color: 'bg-yellow-500', level: 1 };
-            case 'Pendiente Cobro': return { text: 'PENDIENTE COBRO', color: 'bg-orange-500', level: 2 };
-            case 'Pendiente Pago': return { text: 'PENDIENTE PAGO', color: 'bg-red-600', level: 3 };
-            case 'Pendiente Boleta': return { text: 'PENDIENTE BOLETA', color: 'bg-purple-600', level: 4 };
-            default: return { text: status ? status.toUpperCase() : 'DESCONOCIDO', color: 'bg-gray-400', level: 99 };
+            case 'Pendiente Bienvenida': return { level: 1, text: 'PENDIENTE BIENVENIDA', color: 'bg-yellow-500' };
+            case 'Pendiente Cobro': return { level: 2, text: 'PENDIENTE COBRO', color: 'bg-orange-500' };
+            case 'Pendiente Pago': return { level: 3, text: 'PENDIENTE PAGO', color: 'bg-red-600' };
+            case 'Pendiente Boleta': return { level: 4, text: 'PENDIENTE BOLETA', color: 'bg-purple-600' };
+            default: return { level: 99, text: status ? status.toUpperCase() : 'DESCONOCIDO', color: 'bg-gray-400' };
         }
     }
     
@@ -89,8 +98,6 @@
         const statusInfo = getStatusInfo(grupo.estadoGestion);
         const saldo = grupo.valorCLP - grupo.abono;
         const alojamientos = grupo.reservasIndividuales.map(r => r.alojamiento).join(', ');
-        const isGestionPagosActive = statusInfo.level >= 3;
-        const isGestionBoletaActive = statusInfo.level >= 4;
         
         const idReferencia = grupo.reservasIndividuales[0].id;
         let actionUrl = `mensajes.html?reservaId=${grupo.reservaIdOriginal}&reservaCompletaId=${idReferencia}`;
@@ -99,112 +106,79 @@
         const statusHtml = `<a href="${actionUrl}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</a>`;
         
         card.innerHTML = `
-            <div class="flex flex-col md:flex-row md:items-center justify-between w-full">
-                <div class="flex-grow">
-                    <div class="flex items-center mb-2">
-                        ${statusHtml}
-                        <p class="ml-4 text-lg font-bold text-gray-800">${grupo.clienteNombre}</p>
-                    </div>
-                    <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
-                        <p><strong>Teléfono:</strong> ${grupo.telefono || 'N/A'}</p>
-                        <p><strong>Cabañas (${grupo.reservasIndividuales.length}):</strong> ${alojamientos}</p>
-                        <p><strong>Llegada:</strong> ${formatDate(grupo.fechaLlegada)}</p>
-                        <p><strong>ID Reserva:</strong> ${grupo.reservaIdOriginal}</p>
-                    </div>
-                </div>
+            <div class="flex items-center mb-2">
+                ${statusHtml}
+                <p class="ml-4 text-lg font-bold text-gray-800">${grupo.clienteNombre}</p>
             </div>
-            <div class="border-t mt-4 pt-3 flex flex-col md:flex-row justify-between items-center text-sm">
-                 <div class="grid grid-cols-3 gap-4 font-semibold text-center w-full md:w-2/3">
+            <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
+                <p><strong>Teléfono:</strong> ${grupo.telefono || 'N/A'}</p>
+                <p><strong>Cabañas (${grupo.reservasIndividuales.length}):</strong> ${alojamientos}</p>
+                <p><strong>Llegada:</strong> ${formatDate(grupo.fechaLlegada)}</p>
+                <p><strong>ID Reserva:</strong> ${grupo.reservaIdOriginal}</p>
+            </div>
+            <div class="border-t mt-4 pt-3 flex justify-between items-center text-sm">
+                <div class="grid grid-cols-3 gap-4 font-semibold text-center flex-grow">
                     <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(grupo.valorCLP)}</div>
                     <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(grupo.abono)}</div>
                     <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
                 </div>
-                <div class="mt-3 md:mt-0 flex flex-wrap gap-2 justify-center">
-                    <button data-gestion="ajuste_tarifa" class="gestion-btn px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-md hover:bg-yellow-200">Ajustar Tarifa</button>
-                    <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
-                    <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
-                </div>
+                <button class="gestion-btn ml-4 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-md hover:bg-indigo-700">GESTIONAR GRUPO</button>
             </div>`;
-        card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));
+        card.querySelector('.gestion-btn').addEventListener('click', () => openManagementModal(grupo));
         return card;
     }
 
-    function openManagementModal(type, grupo) {
+    function openManagementModal(grupo) {
         currentGrupo = grupo;
-        modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')} (Reserva ${grupo.reservaIdOriginal})`;
-
-        if (type === 'ajuste_tarifa') {
-            if (grupo.reservasIndividuales.length > 1) {
-                renderAjusteGrupo();
-            } else {
-                renderAjusteIndividual();
-            }
-        } else {
-            // Lógica para otros modales (pagos, boleta) que se implementará después
-            modalContent.innerHTML = `<p class="text-center">Funcionalidad de gestión de ${type} para grupos en desarrollo.</p>`;
-        }
-        
+        modalTitle.textContent = `Gestionar Reserva N° ${grupo.reservaIdOriginal}`;
+        tabPagos.classList.add('active'); tabValores.classList.remove('active');
+        tabContentPagos.classList.remove('hidden'); tabContentValores.classList.add('hidden');
+        renderPagosTab();
+        renderValoresTab();
         modal.classList.remove('hidden');
     }
 
-    function renderAjusteIndividual() {
-        const reserva = currentGrupo.reservasIndividuales[0];
-        modalContent.innerHTML = `
-             <div class="space-y-4">
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Valor Actual en Sistema (CLP)</p>
-                    <p id="ajuste-valor-actual" class="text-2xl font-bold text-gray-800">${formatCurrency(reserva.valorCLP)}</p>
-                </div>
-                <div class="border-t pt-4">
-                    <div class="mt-2 space-y-4">
-                        <div class="p-3 border rounded-md">
-                            <p class="font-semibold">Ajustar por Descuento (%)</p>
-                            <div class="flex items-center space-x-2"><input type="number" id="ajuste-porcentaje-input" class="block w-full rounded-md border-gray-300"><span class="text-gray-500">%</span><button id="ajuste-porcentaje-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md">Ajustar</button></div>
-                        </div>
-                         <div class="p-3 border rounded-md">
-                            <p class="font-semibold">Ajustar por Valor Final ($)</p>
-                            <div class="flex items-center space-x-2"><span class="text-gray-500">$</span><input type="number" id="ajuste-valor-input" class="block w-full rounded-md border-gray-300"><button id="ajuste-valor-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md">Ajustar</button></div>
-                        </div>
-                    </div>
-                </div>
-                 <div id="ajuste-resultado" class="mt-4 p-3 bg-gray-100 rounded-md hidden"></div>
-                 <div id="ajuste-status" class="mt-2 text-sm text-red-600"></div>
+    function renderPagosTab() {
+        // Lógica para mostrar los botones de pago/boleta condicionalmente
+        const statusInfo = getStatusInfo(currentGrupo.estadoGestion);
+        const isGestionPagosActive = statusInfo.level >= 3;
+        const isGestionBoletaActive = statusInfo.level >= 4;
+        
+        tabContentPagos.innerHTML = `
+            <div class="space-y-4">
+                <button id="btn-gestionar-pagos" class="w-full text-left p-3 border rounded-md text-sm font-semibold ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
+                <button id="btn-gestionar-boleta" class="w-full text-left p-3 border rounded-md text-sm font-semibold ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
             </div>`;
-            // Lógica de eventos para el modal individual...
     }
-
-    function renderAjusteGrupo() {
+    
+    function renderValoresTab() {
         let cabanasHtml = currentGrupo.reservasIndividuales.map(res => `
             <div class="grid grid-cols-2 gap-4 items-center">
                 <label for="valor-${res.id}" class="text-sm font-medium">${res.alojamiento}</label>
                 <input type="number" id="valor-${res.id}" data-id="${res.id}" class="valor-input block w-full px-3 py-2 border rounded-md" value="${res.valorCLP}">
             </div>`).join('');
 
-        modalContent.innerHTML = `
-            <div class="space-y-4">
-                <p class="text-sm text-gray-600">Corrige la distribución del valor total entre las cabañas del grupo.</p>
-                <div class="space-y-2">${cabanasHtml}</div>
-                <div class="border-t pt-3 flex justify-between items-center font-bold">
-                    <span>Total del Grupo:</span><span id="ajuste-valores-total"></span>
-                </div>
-                <div id="ajuste-valores-status" class="text-sm"></div>
-                <div class="text-right"><button id="ajuste-valores-save-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-md">Guardar Distribución</button></div>
-            </div>`;
+        tabContentValores.innerHTML = `
+            <p class="text-sm text-gray-600">Corrige la distribución del valor total entre las cabañas del grupo.</p>
+            <div class="space-y-2">${cabanasHtml}</div>
+            <div class="border-t pt-3 flex justify-between items-center font-bold"><span class="text-gray-600">TOTAL DEL GRUPO:</span><span id="ajuste-valores-total"></span></div>
+            <div id="ajuste-valores-status" class="text-sm"></div>
+            <div class="text-right"><button id="ajuste-valores-save-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-md">Guardar</button></div>`;
         
-        modalContent.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
-        modalContent.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
+        tabContentValores.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
+        tabContentValores.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
         updateValoresTotal();
     }
     
     function updateValoresTotal() {
         let total = 0;
-        modalContent.querySelectorAll('.valor-input').forEach(input => { total += parseFloat(input.value) || 0; });
-        modalContent.querySelector('#ajuste-valores-total').textContent = formatCurrency(total);
+        tabContentValores.querySelectorAll('.valor-input').forEach(input => { total += parseFloat(input.value) || 0; });
+        tabContentValores.querySelector('#ajuste-valores-total').textContent = formatCurrency(total);
     }
 
     async function handleSaveAjusteGrupo() {
-        const valoresCabanas = Array.from(modalContent.querySelectorAll('.valor-input')).map(input => ({ id: input.dataset.id, valor: input.value }));
-        const statusEl = modalContent.querySelector('#ajuste-valores-status');
+        const valoresCabanas = Array.from(tabContentValores.querySelectorAll('.valor-input')).map(input => ({ id: input.dataset.id, valor: input.value }));
+        const statusEl = tabContentValores.querySelector('#ajuste-valores-status');
         statusEl.textContent = 'Guardando...';
         try {
             await fetchAPI('/api/gestion/grupo/ajustar-valores', { method: 'POST', body: { reservaIdOriginal: currentGrupo.reservaIdOriginal, valoresCabanas }});
@@ -220,8 +194,7 @@
     function updateFilteredView() {
         const searchTerm = searchInput.value.toLowerCase();
         const filteredGrupos = allGrupos.filter(g => (g.clienteNombre && g.clienteNombre.toLowerCase().includes(searchTerm)) || (g.reservaIdOriginal && g.reservaIdOriginal.toLowerCase().includes(searchTerm)));
-        hoyList.innerHTML = '';
-        proximasList.innerHTML = '';
+        hoyList.innerHTML = ''; proximasList.innerHTML = '';
         if (filteredGrupos.length === 0) {
             noPendientes.classList.remove('hidden');
             [hoyContainer, proximasContainer].forEach(el => el.classList.add('hidden'));
@@ -231,12 +204,10 @@
         const today = new Date(new Date().setUTCHours(0,0,0,0));
         const llegadasHoy = [], proximasLlegadas = [];
         filteredGrupos.forEach(grupo => { (new Date(grupo.fechaLlegada).getTime() <= today.getTime() ? llegadasHoy : proximasLlegadas).push(grupo); });
-        
         if (llegadasHoy.length > 0) {
             llegadasHoy.forEach(g => hoyList.appendChild(createGrupoCard(g)));
             hoyContainer.classList.remove('hidden');
         } else { hoyContainer.classList.add('hidden'); }
-        
         if (proximasLlegadas.length > 0) {
             proximasLlegadas.forEach(g => proximasList.appendChild(createGrupoCard(g)));
             proximasContainer.classList.remove('hidden');
@@ -265,7 +236,16 @@
             
             searchInput.addEventListener('input', updateFilteredView);
             modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            
+
+            tabPagos.addEventListener('click', () => {
+                tabPagos.classList.add('active'); tabValores.classList.remove('active');
+                tabContentPagos.classList.remove('hidden'); tabContentValores.classList.add('hidden');
+            });
+            tabValores.addEventListener('click', () => {
+                tabValores.classList.add('active'); tabPagos.classList.remove('active');
+                tabContentValores.classList.remove('hidden'); tabContentPagos.classList.add('hidden');
+            });
+
             loadGestion();
         }
     });

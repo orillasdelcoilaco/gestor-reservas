@@ -18,26 +18,56 @@ async function getReservasPendientes(db) {
         return [];
     }
 
-    const reservas = snapshot.docs.map(doc => {
-        const data = doc.data();
-        // --- CORRECCIÓN APLICADA AQUÍ ---
-        // Se asegura que las fechas existan y se añaden los nuevos campos para la interfaz.
-        return {
-            id: doc.id,
-            ...data,
-            fechaLlegada: data.fechaLlegada ? data.fechaLlegada.toDate() : null,
-            fechaSalida: data.fechaSalida ? data.fechaSalida.toDate() : null,
-            fechaReserva: data.fechaReserva ? data.fechaReserva.toDate() : null,
-            // --- NUEVOS CAMPOS AÑADIDOS ---
-            valorCLP: data.valorCLP || 0,
-            abono: data.abono || 0,
-            documentos: data.documentos || {} // Devuelve un objeto vacío si no hay documentos
-        };
-    }).filter(reserva => reserva.fechaLlegada); // Filtramos cualquier reserva que no tenga fecha de llegada
+    // --- INICIO DE LA LÓGICA DE AGRUPACIÓN ---
+    const reservasAgrupadas = new Map();
 
+    snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        const reservaId = data.reservaIdOriginal;
+
+        if (!reservasAgrupadas.has(reservaId)) {
+            reservasAgrupadas.set(reservaId, {
+                // Datos del grupo
+                reservaIdOriginal: reservaId,
+                clienteNombre: data.clienteNombre,
+                telefono: data.telefono, // Se asume que es el mismo para el grupo
+                fechaLlegada: data.fechaLlegada.toDate(),
+                fechaSalida: data.fechaSalida.toDate(),
+                estadoGestion: data.estadoGestion, // Se toma el de la primera reserva
+                documentos: data.documentos || {},
+                // Contenedor para las reservas individuales
+                reservasIndividuales: [],
+                // Acumuladores
+                valorCLP: 0,
+                abono: 0,
+                valorPotencialCLP: 0,
+                descuentoAplicado: 0
+            });
+        }
+
+        const grupo = reservasAgrupadas.get(reservaId);
+        
+        // Se agrega la reserva individual al grupo
+        grupo.reservasIndividuales.push({
+            id: doc.id,
+            alojamiento: data.alojamiento,
+            valorCLP: data.valorCLP || 0,
+            valorPotencialCLP: data.valorPotencialCLP || data.valorCLP, // Si no existe, se asume el mismo
+            descuentoAplicado: data.descuentoAplicado || 0
+        });
+
+        // Se actualizan los totales del grupo
+        grupo.valorCLP += data.valorCLP || 0;
+        grupo.abono += data.abono || 0;
+        grupo.valorPotencialCLP += data.valorPotencialCLP || data.valorCLP;
+        grupo.descuentoAplicado += data.descuentoAplicado || 0;
+    });
+    // --- FIN DE LA LÓGICA DE AGRUPACIÓN ---
+
+    const reservas = Array.from(reservasAgrupadas.values());
     const today = getTodayUTC();
 
-    // Lógica de priorización
+    // Lógica de priorización (ahora se aplica a los grupos)
     const priorityOrder = {
         'Pendiente Pago': 1,
         'Pendiente Boleta': 2,
@@ -49,11 +79,9 @@ async function getReservasPendientes(db) {
         const aLlegaHoy = a.fechaLlegada.getTime() === today.getTime();
         const bLlegaHoy = b.fechaLlegada.getTime() === today.getTime();
 
-        // Prioridad 1: Reservas que llegan hoy
         if (aLlegaHoy && !bLlegaHoy) return -1;
         if (!aLlegaHoy && bLlegaHoy) return 1;
 
-        // Si ambas (o ninguna) llegan hoy, ordenar por estado de gestión
         if (aLlegaHoy && bLlegaHoy) {
             const priorityA = priorityOrder[a.estadoGestion] || 99;
             const priorityB = priorityOrder[b.estadoGestion] || 99;
@@ -62,13 +90,11 @@ async function getReservasPendientes(db) {
             }
         }
         
-        // Prioridad 2: Reservas futuras, las más próximas primero
         return a.fechaLlegada - b.fechaLlegada;
     });
 
     return reservas;
 }
-
 
 module.exports = {
     getReservasPendientes,

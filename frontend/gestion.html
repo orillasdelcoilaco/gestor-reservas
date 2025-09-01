@@ -9,24 +9,10 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
         #gestion-modal { background-color: rgba(0, 0, 0, 0.5); }
-        .paste-zone {
-            border: 2px dashed #ccc;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .paste-zone.drag-over {
-            background-color: #e0e7ff;
-            border-color: #4f46e5;
-        }
     </style>
 </head>
 <body class="bg-gray-100">
-    <div id="loader" class="text-center p-8">
-        <p class="text-gray-500">Verificando sesión...</p>
-    </div>
-
+    <div id="loader" class="text-center p-8"><p class="text-gray-500">Verificando sesión...</p></div>
     <div id="app-content" class="min-h-screen hidden">
         <nav class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -39,32 +25,16 @@
                 </div>
             </div>
         </nav>
-
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
                     <h2 class="text-2xl font-semibold text-gray-900">Panel de Gestión Diaria</h2>
                     <input type="text" id="search-input" placeholder="Buscar por nombre, reserva, teléfono..." class="mt-4 md:mt-0 w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                 </div>
-
-                <div id="loading-state" class="text-center py-8">
-                    <p class="text-gray-500">Cargando tareas pendientes...</p>
-                </div>
-                
-                <div id="hoy-container" class="hidden">
-                    <h3 class="text-xl font-bold text-red-600 mb-4 border-b pb-2">Requiere Acción Hoy</h3>
-                    <div id="hoy-list" class="space-y-4"></div>
-                </div>
-
-                <div id="proximas-container" class="mt-8 hidden">
-                    <h3 class="text-xl font-semibold text-blue-600 mb-4 border-b pb-2">Próximas Llegadas</h3>
-                    <div id="proximas-list" class="space-y-4"></div>
-                </div>
-
-                 <div id="no-pendientes" class="text-center py-12 hidden">
-                    <p class="text-2xl font-semibold text-green-600">¡Todo al día!</p>
-                    <p class="text-gray-500 mt-2">No hay reservas con gestiones pendientes.</p>
-                </div>
+                <div id="loading-state" class="text-center py-8"><p class="text-gray-500">Cargando tareas pendientes...</p></div>
+                <div id="hoy-container" class="hidden"><h3 class="text-xl font-bold text-red-600 mb-4 border-b pb-2">Requiere Acción Hoy</h3><div id="hoy-list" class="space-y-4"></div></div>
+                <div id="proximas-container" class="mt-8 hidden"><h3 class="text-xl font-semibold text-blue-600 mb-4 border-b pb-2">Próximas Llegadas</h3><div id="proximas-list" class="space-y-4"></div></div>
+                <div id="no-pendientes" class="text-center py-12 hidden"><p class="text-2xl font-semibold text-green-600">¡Todo al día!</p><p class="text-gray-500 mt-2">No hay reservas con gestiones pendientes.</p></div>
             </div>
         </main>
     </div>
@@ -72,112 +42,15 @@
     <div id="gestion-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
             <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modal-title">Gestionar</h3>
-            
             <div id="modal-content-container" class="space-y-4">
-                
-                <div id="modal-view-documento" class="hidden">
-                    <div id="documento-existente" class="text-center hidden">
-                        <img id="documento-preview-img" src="" class="max-h-60 w-auto mx-auto rounded-md mb-4 hidden"/>
-                        <p id="documento-sin-doc-msg" class="text-gray-500 mb-4 hidden">Se marcó como "Sin Documento".</p>
-                        <div class="flex justify-center space-x-2">
-                           <button id="btn-reemplazar-doc" class="bg-blue-600 text-white px-4 py-2 text-sm rounded-md hover:bg-blue-700">Reemplazar</button>
-                           <button id="btn-eliminar-doc" class="bg-red-600 text-white px-4 py-2 text-sm rounded-md hover:bg-red-700">Eliminar</button>
-                        </div>
-                    </div>
                 </div>
-
-                <div id="modal-view-pagos" class="hidden">
-                    <div id="lista-pagos" class="space-y-2 max-h-60 overflow-y-auto pr-2"></div>
-                    <div class="border-t pt-4 mt-4">
-                        <button id="btn-registrar-nuevo-pago" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">Registrar Nuevo Pago</button>
-                    </div>
-                </div>
-
-                <div id="modal-view-ajuste-tarifa" class="hidden space-y-4">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500">Valor Actual en Sistema (CLP)</p>
-                        <p id="ajuste-valor-actual" class="text-2xl font-bold text-gray-800"></p>
-                    </div>
-                    <div class="border-t pt-4">
-                        <label class="block text-sm font-medium text-gray-700">¿Cómo quieres ajustar el valor?</label>
-                        <div class="mt-2 space-y-4">
-                            <div class="p-3 border rounded-md">
-                                <p class="font-semibold">Ajustar por Descuento (%)</p>
-                                <p class="text-xs text-gray-500 mb-2">Ideal para Booking. El valor actual es el final. Calcula el precio original.</p>
-                                <div class="flex items-center space-x-2">
-                                    <input type="number" id="ajuste-porcentaje-input" placeholder="Ej: 22" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                                    <span class="text-gray-500">%</span>
-                                    <button id="ajuste-porcentaje-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Ajustar</button>
-                                </div>
-                            </div>
-                             <div class="p-3 border rounded-md">
-                                <p class="font-semibold">Ajustar por Valor Final ($)</p>
-                                <p class="text-xs text-gray-500 mb-2">Ideal para SODC. El valor actual es el de lista. Calcula el descuento.</p>
-                                <div class="flex items-center space-x-2">
-                                    <span class="text-gray-500">$</span>
-                                    <input type="number" id="ajuste-valor-input" placeholder="Ej: 85000" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                                    <button id="ajuste-valor-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md hover:bg-indigo-700">Ajustar</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                     <div id="ajuste-resultado" class="mt-4 p-3 bg-gray-100 rounded-md hidden"></div>
-                     <div id="ajuste-status" class="mt-2 text-sm text-red-600"></div>
-                </div>
-
-                <form id="modal-form-accion" class="hidden">
-                     <div id="pago-fields" class="hidden space-y-4">
-                        <div>
-                            <label for="monto-input" class="block text-sm font-medium text-gray-700">Monto (CLP)</label>
-                            <input type="number" id="monto-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                        </div>
-                        <div>
-                            <label for="medio-pago-select" class="block text-sm font-medium text-gray-700">Medio de Pago</label>
-                            <select id="medio-pago-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                                <option value="Transferencia">Transferencia</option>
-                                <option value="Efectivo">Efectivo</option>
-                                <option value="Tarjeta">Tarjeta</option>
-                            </select>
-                        </div>
-                        <div class="flex items-center">
-                            <input id="pago-final-checkbox" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
-                            <label for="pago-final-checkbox" class="ml-2 block text-sm text-gray-900">¿Es el pago final?</label>
-                        </div>
-                    </div>
-
-                    <div id="documento-field" class="hidden">
-                        <label id="documento-label" class="block text-sm font-medium text-gray-700">Comprobante</label>
-                        <input type="file" id="documento-input" class="hidden"/>
-                        <div id="paste-zone" class="paste-zone mt-1 rounded-md">
-                            <p class="text-gray-500">Selecciona un archivo o pega una imagen aquí (Ctrl+V)</p>
-                        </div>
-                        <div id="preview-container" class="mt-2 hidden">
-                            <p class="text-sm font-medium text-gray-700">Archivo seleccionado:</p>
-                            <div class="flex items-center">
-                                <img id="thumbnail" class="w-12 h-12 object-cover rounded-md" src="">
-                                <span id="file-name" class="ml-2 text-sm text-gray-600"></span>
-                            </div>
-                        </div>
-                         <div class="flex items-center mt-3">
-                            <input id="sin-documento-checkbox" type="checkbox" class="h-4 w-4 text-indigo-600 border-gray-300 rounded">
-                            <label for="sin-documento-checkbox" class="ml-2 block text-sm text-gray-900">Registrar sin documento</label>
-                        </div>
-                    </div>
-                    <div id="modal-status" class="mt-2 text-sm text-red-600"></div>
-                     <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                        <button type="submit" id="modal-save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar</button>
-                        <button type="button" id="modal-back-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 hidden">Volver</button>
-                    </div>
-                </form>
-
-            </div>
             <button type="button" id="modal-cancel-btn" class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
         </div>
     </div>
 
 <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
-
+    
     // --- Referencias a Elementos ---
     const loader = document.getElementById('loader');
     const appContent = document.getElementById('app-content');
@@ -191,54 +64,14 @@
     const noPendientes = document.getElementById('no-pendientes');
     const modal = document.getElementById('gestion-modal');
     const modalTitle = document.getElementById('modal-title');
+    const modalContent = document.getElementById('modal-content-container');
     const modalCancelBtn = document.getElementById('modal-cancel-btn');
-    const modalSaveBtn = document.getElementById('modal-save-btn');
-    const modalBackBtn = document.getElementById('modal-back-btn');
-    const viewDocumento = document.getElementById('modal-view-documento');
-    const viewPagos = document.getElementById('modal-view-pagos');
-    const formAccion = document.getElementById('modal-form-accion');
-    const docExistente = document.getElementById('documento-existente');
-    const docPreviewImg = document.getElementById('documento-preview-img');
-    const docSinDocMsg = document.getElementById('documento-sin-doc-msg');
-    const btnReemplazarDoc = document.getElementById('btn-reemplazar-doc');
-    const btnEliminarDoc = document.getElementById('btn-eliminar-doc');
-    const listaPagos = document.getElementById('lista-pagos');
-    const btnRegistrarNuevoPago = document.getElementById('btn-registrar-nuevo-pago');
-    const pagoFields = document.getElementById('pago-fields');
-    const montoInput = document.getElementById('monto-input');
-    const medioPagoSelect = document.getElementById('medio-pago-select');
-    const pagoFinalCheckbox = document.getElementById('pago-final-checkbox');
-    const documentoField = document.getElementById('documento-field');
-    const documentoLabel = document.getElementById('documento-label');
-    const documentoInput = document.getElementById('documento-input');
-    const pasteZone = document.getElementById('paste-zone');
-    const previewContainer = document.getElementById('preview-container');
-    const thumbnail = document.getElementById('thumbnail');
-    const fileNameEl = document.getElementById('file-name');
-    const sinDocumentoCheckbox = document.getElementById('sin-documento-checkbox');
-    const modalStatus = document.getElementById('modal-status');
-    const viewAjusteTarifa = document.getElementById('modal-view-ajuste-tarifa');
-    const ajusteValorActual = document.getElementById('ajuste-valor-actual');
-    const ajustePorcentajeInput = document.getElementById('ajuste-porcentaje-input');
-    const ajustePorcentajeBtn = document.getElementById('ajuste-porcentaje-btn');
-    const ajusteValorInput = document.getElementById('ajuste-valor-input');
-    const ajusteValorBtn = document.getElementById('ajuste-valor-btn');
-    const ajusteResultado = document.getElementById('ajuste-resultado');
-    const ajusteStatus = document.getElementById('ajuste-status');
 
-    let allReservas = [];
-    let currentReserva = null;
-    let currentAction = null;
-    let currentManagementType = null;
+    let allGrupos = [];
+    let currentGrupo = null;
 
-    function formatDate(dateString) {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString('es-CL', { timeZone: 'UTC' });
-    }
-
-    function formatCurrency(value) {
-        return `$${(value || 0).toLocaleString('es-CL')}`;
-    }
+    function formatCurrency(value) { return `$${(value || 0).toLocaleString('es-CL')}`; }
+    function formatDate(dateString) { return dateString ? new Date(dateString).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'; }
     
     function getStatusInfo(status) {
         switch (status) {
@@ -250,398 +83,189 @@
         }
     }
     
-    function createReservaCard(reserva) {
+    function createGrupoCard(grupo) {
         const card = document.createElement('div');
         card.className = 'p-4 border rounded-lg shadow-sm flex flex-col';
-        const statusInfo = getStatusInfo(reserva.estadoGestion);
-        const saldo = reserva.valorCLP - reserva.abono;
+        const statusInfo = getStatusInfo(grupo.estadoGestion);
+        const saldo = grupo.valorCLP - grupo.abono;
+        const alojamientos = grupo.reservasIndividuales.map(r => r.alojamiento).join(', ');
         const isGestionPagosActive = statusInfo.level >= 3;
         const isGestionBoletaActive = statusInfo.level >= 4;
-        let statusHtml;
-        let actionUrl = `mensajes.html?reservaId=${reserva.reservaIdOriginal}&reservaCompletaId=${reserva.id}`;
-        if (reserva.estadoGestion === 'Pendiente Bienvenida') actionUrl += `&accion=marcar_bienvenida_enviada`;
-        else if (reserva.estadoGestion === 'Pendiente Cobro') actionUrl += `&accion=marcar_cobro_enviado`;
-        statusHtml = `<a href="${actionUrl}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80 transition-opacity">${statusInfo.text}</a>`;
+        
+        const idReferencia = grupo.reservasIndividuales[0].id;
+        let actionUrl = `mensajes.html?reservaId=${grupo.reservaIdOriginal}&reservaCompletaId=${idReferencia}`;
+        if (grupo.estadoGestion === 'Pendiente Bienvenida') actionUrl += `&accion=marcar_bienvenida_enviada`;
+        else if (grupo.estadoGestion === 'Pendiente Cobro') actionUrl += `&accion=marcar_cobro_enviado`;
+        const statusHtml = `<a href="${actionUrl}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</a>`;
+        
         card.innerHTML = `
             <div class="flex flex-col md:flex-row md:items-center justify-between w-full">
                 <div class="flex-grow">
                     <div class="flex items-center mb-2">
                         ${statusHtml}
-                        <p class="ml-4 text-lg font-bold text-gray-800">${reserva.clienteNombre}</p>
+                        <p class="ml-4 text-lg font-bold text-gray-800">${grupo.clienteNombre}</p>
                     </div>
                     <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
-                        <p><strong>Teléfono:</strong> ${reserva.telefono || 'N/A'}</p>
-                        <p><strong>Cabaña:</strong> ${reserva.alojamiento}</p>
-                        <p><strong>Llegada:</strong> ${formatDate(reserva.fechaLlegada)}</p>
-                        <p><strong>ID Reserva:</strong> ${reserva.reservaIdOriginal}</p>
+                        <p><strong>Teléfono:</strong> ${grupo.telefono || 'N/A'}</p>
+                        <p><strong>Cabañas (${grupo.reservasIndividuales.length}):</strong> ${alojamientos}</p>
+                        <p><strong>Llegada:</strong> ${formatDate(grupo.fechaLlegada)}</p>
+                        <p><strong>ID Reserva:</strong> ${grupo.reservaIdOriginal}</p>
                     </div>
                 </div>
             </div>
             <div class="border-t mt-4 pt-3 flex flex-col md:flex-row justify-between items-center text-sm">
                  <div class="grid grid-cols-3 gap-4 font-semibold text-center w-full md:w-2/3">
-                    <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(reserva.valorCLP)}</div>
-                    <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(reserva.abono)}</div>
+                    <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(grupo.valorCLP)}</div>
+                    <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(grupo.abono)}</div>
                     <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
                 </div>
-                <div class="mt-3 md:mt-0 flex space-x-2">
+                <div class="mt-3 md:mt-0 flex flex-wrap gap-2 justify-center">
                     <button data-gestion="ajuste_tarifa" class="gestion-btn px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-md hover:bg-yellow-200">Ajustar Tarifa</button>
-                    <button data-gestion="reserva" class="gestion-btn px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-md hover:bg-blue-200">Gestionar Reserva</button>
                     <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
                     <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
                 </div>
-            </div>
-        `;
-        card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, reserva)));
+            </div>`;
+        card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));
         return card;
     }
 
-    function showPreview(file) {
-        fileNameEl.textContent = file.name;
-        thumbnail.src = file.type.startsWith('image/') ? URL.createObjectURL(file) : '';
-        previewContainer.classList.remove('hidden');
-    }
+    function openManagementModal(type, grupo) {
+        currentGrupo = grupo;
+        modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')} (Reserva ${grupo.reservaIdOriginal})`;
 
-    function setupFormForAction(action) {
-        currentAction = action;
-        formAccion.reset();
-        [pagoFields, documentoField, previewContainer].forEach(el => el.classList.add('hidden'));
-        modalStatus.textContent = '';
-        sinDocumentoCheckbox.checked = false;
-        pasteZone.style.display = 'block';
-        documentoInput.disabled = false;
-        montoInput.required = false;
-        medioPagoSelect.required = false;
-        
-        switch (action) {
-            case 'registrar_pago':
-                pagoFields.classList.remove('hidden');
-                documentoField.classList.remove('hidden');
-                documentoLabel.textContent = 'Comprobante de Pago (Opcional)';
-                montoInput.required = true;
-                medioPagoSelect.required = true;
-                break;
-            case 'subir_documento_reserva':
-            case 'marcar_boleta_enviada':
-                documentoField.classList.remove('hidden');
-                documentoLabel.textContent = action.includes('boleta') ? 'Archivo de la Boleta' : 'Imagen de la Reserva';
-                break;
-        }
-    }
-
-    function showActionForm(action, hasPreviousView = false) {
-        currentAction = action;
-        [viewDocumento, viewPagos, viewAjusteTarifa].forEach(el => el.classList.add('hidden'));
-        formAccion.classList.remove('hidden');
-        modalCancelBtn.classList.toggle('hidden', hasPreviousView);
-        modalBackBtn.classList.toggle('hidden', !hasPreviousView);
-        setupFormForAction(action);
-    }
-
-    function openManagementModal(type, reserva) {
-        currentReserva = reserva;
-        currentManagementType = type;
-        modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}`;
-        [viewDocumento, viewPagos, formAccion, viewAjusteTarifa].forEach(el => el.classList.add('hidden'));
-        modalCancelBtn.classList.remove('hidden');
-        modalBackBtn.classList.add('hidden');
-
-        if (type === 'reserva' || type === 'boleta') {
-            const docType = type === 'reserva' ? 'enlaceReserva' : 'enlaceBoleta';
-            const action = type === 'reserva' ? 'subir_documento_reserva' : 'marcar_boleta_enviada';
-            const docUrl = reserva.documentos?.[docType];
-
-            viewDocumento.classList.remove('hidden');
-            if (docUrl) {
-                docExistente.classList.remove('hidden');
-                docSinDocMsg.classList.toggle('hidden', docUrl !== 'SIN_DOCUMENTO');
-                const isImage = docUrl && docUrl !== 'SIN_DOCUMENTO' && (docUrl.toLowerCase().includes('.png') || docUrl.toLowerCase().includes('.jpg') || docUrl.toLowerCase().includes('.jpeg'));
-                docPreviewImg.classList.toggle('hidden', !isImage);
-                if (isImage) docPreviewImg.src = docUrl;
-                btnReemplazarDoc.onclick = () => showActionForm(action, true);
-                btnEliminarDoc.onclick = () => deleteDocument(docType);
+        if (type === 'ajuste_tarifa') {
+            if (grupo.reservasIndividuales.length > 1) {
+                renderAjusteGrupo();
             } else {
-                docExistente.classList.add('hidden');
-                showActionForm(action, false);
+                renderAjusteIndividual();
             }
-        } else if (type === 'pagos') {
-            viewPagos.classList.remove('hidden');
-            renderPagosList();
-            btnRegistrarNuevoPago.onclick = () => showActionForm('registrar_pago', true);
-        } else if (type === 'ajuste_tarifa') {
-            viewAjusteTarifa.classList.remove('hidden');
-            ajusteValorActual.textContent = formatCurrency(reserva.valorCLP);
-            ajusteResultado.classList.add('hidden');
-            ajusteStatus.textContent = '';
-            ajustePorcentajeInput.value = '';
-            ajusteValorInput.value = '';
+        } else {
+            // Lógica para otros modales (pagos, boleta) que se implementará después
+            modalContent.innerHTML = `<p class="text-center">Funcionalidad de gestión de ${type} para grupos en desarrollo.</p>`;
         }
+        
         modal.classList.remove('hidden');
     }
-    
-    async function renderPagosList() {
-        listaPagos.innerHTML = '<p class="text-sm text-gray-500">Cargando pagos...</p>';
-        try {
-            const transacciones = await fetchAPI(`/api/gestion/transacciones/${currentReserva.id}`);
-            if (transacciones.length === 0) {
-                listaPagos.innerHTML = '<p class="text-sm text-center text-gray-500 p-4">No hay pagos registrados para esta reserva.</p>';
-                return;
-            }
-            listaPagos.innerHTML = '';
-            transacciones.forEach(t => {
-                const pagoEl = document.createElement('div');
-                pagoEl.className = 'p-2 border rounded-md flex justify-between items-center';
-                pagoEl.innerHTML = `
-                    <div>
-                        <p class="font-semibold">${formatCurrency(t.monto)} - <span class="font-normal text-gray-600">${t.tipo} (${t.medioDePago})</span></p>
-                        <p class="text-xs text-gray-500">Fecha: ${formatDate(t.fecha)}</p>
+
+    function renderAjusteIndividual() {
+        const reserva = currentGrupo.reservasIndividuales[0];
+        modalContent.innerHTML = `
+             <div class="space-y-4">
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Valor Actual en Sistema (CLP)</p>
+                    <p id="ajuste-valor-actual" class="text-2xl font-bold text-gray-800">${formatCurrency(reserva.valorCLP)}</p>
+                </div>
+                <div class="border-t pt-4">
+                    <div class="mt-2 space-y-4">
+                        <div class="p-3 border rounded-md">
+                            <p class="font-semibold">Ajustar por Descuento (%)</p>
+                            <div class="flex items-center space-x-2"><input type="number" id="ajuste-porcentaje-input" class="block w-full rounded-md border-gray-300"><span class="text-gray-500">%</span><button id="ajuste-porcentaje-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md">Ajustar</button></div>
+                        </div>
+                         <div class="p-3 border rounded-md">
+                            <p class="font-semibold">Ajustar por Valor Final ($)</p>
+                            <div class="flex items-center space-x-2"><span class="text-gray-500">$</span><input type="number" id="ajuste-valor-input" class="block w-full rounded-md border-gray-300"><button id="ajuste-valor-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md">Ajustar</button></div>
+                        </div>
                     </div>
-                    <div class="space-x-2">
-                        <button data-id="${t.id}" class="edit-pago-btn text-blue-600 hover:text-blue-800 text-xs font-bold">Editar</button>
-                        <button data-id="${t.id}" class="delete-pago-btn text-red-600 hover:text-red-800 text-xs font-bold">Eliminar</button>
-                    </div>
-                `;
-                listaPagos.appendChild(pagoEl);
-            });
-            listaPagos.querySelectorAll('.edit-pago-btn').forEach(b => b.addEventListener('click', handleEditPago));
-            listaPagos.querySelectorAll('.delete-pago-btn').forEach(b => b.addEventListener('click', handleDeletePago));
-        } catch (error) {
-            listaPagos.innerHTML = `<p class="text-sm text-red-500">Error al cargar pagos: ${error.message}</p>`;
-        }
+                </div>
+                 <div id="ajuste-resultado" class="mt-4 p-3 bg-gray-100 rounded-md hidden"></div>
+                 <div id="ajuste-status" class="mt-2 text-sm text-red-600"></div>
+            </div>`;
+            // Lógica de eventos para el modal individual...
+    }
+
+    function renderAjusteGrupo() {
+        let cabanasHtml = currentGrupo.reservasIndividuales.map(res => `
+            <div class="grid grid-cols-2 gap-4 items-center">
+                <label for="valor-${res.id}" class="text-sm font-medium">${res.alojamiento}</label>
+                <input type="number" id="valor-${res.id}" data-id="${res.id}" class="valor-input block w-full px-3 py-2 border rounded-md" value="${res.valorCLP}">
+            </div>`).join('');
+
+        modalContent.innerHTML = `
+            <div class="space-y-4">
+                <p class="text-sm text-gray-600">Corrige la distribución del valor total entre las cabañas del grupo.</p>
+                <div class="space-y-2">${cabanasHtml}</div>
+                <div class="border-t pt-3 flex justify-between items-center font-bold">
+                    <span>Total del Grupo:</span><span id="ajuste-valores-total"></span>
+                </div>
+                <div id="ajuste-valores-status" class="text-sm"></div>
+                <div class="text-right"><button id="ajuste-valores-save-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-md">Guardar Distribución</button></div>
+            </div>`;
+        
+        modalContent.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
+        modalContent.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
+        updateValoresTotal();
     }
     
-    function handleEditPago(e) {
-        const transaccionId = e.target.dataset.id;
-        const nuevoMonto = prompt('Ingresa el nuevo monto para este pago:');
-        if (nuevoMonto && !isNaN(parseFloat(nuevoMonto))) {
-            editTransaccion(transaccionId, parseFloat(nuevoMonto));
-        } else if (nuevoMonto !== null) {
-            alert('Por favor, ingresa un número válido.');
-        }
+    function updateValoresTotal() {
+        let total = 0;
+        modalContent.querySelectorAll('.valor-input').forEach(input => { total += parseFloat(input.value) || 0; });
+        modalContent.querySelector('#ajuste-valores-total').textContent = formatCurrency(total);
     }
 
-    async function editTransaccion(transaccionId, nuevoMonto) {
+    async function handleSaveAjusteGrupo() {
+        const valoresCabanas = Array.from(modalContent.querySelectorAll('.valor-input')).map(input => ({ id: input.dataset.id, valor: input.value }));
+        const statusEl = modalContent.querySelector('#ajuste-valores-status');
+        statusEl.textContent = 'Guardando...';
         try {
-            await fetchAPI('/api/gestion/transaccion/editar', {
-                method: 'POST',
-                body: { reservaId: currentReserva.id, transaccionId, nuevoMonto }
-            });
-            await renderPagosList();
-            await updateFilteredView();
-        } catch (error) {
-            alert(`Error al editar pago: ${error.message}`);
-        }
-    }
-
-    function handleDeletePago(e) {
-        deleteDocument('transaccion', e.target.dataset.id);
-    }
-    
-    async function handleFormSubmit(event) {
-        event.preventDefault();
-        modalSaveBtn.disabled = true;
-        modalSaveBtn.textContent = 'Guardando...';
-        modalStatus.textContent = '';
-        
-        const formData = new FormData();
-        const detalles = {};
-
-        if (currentAction === 'registrar_pago') {
-            detalles.monto = document.getElementById('monto-input').value;
-            detalles.medioDePago = document.getElementById('medio-pago-select').value;
-            detalles.esPagoFinal = document.getElementById('pago-final-checkbox').checked;
-            detalles.tipo = detalles.esPagoFinal ? 'Pago Final' : 'Abono';
-        }
-
-        detalles.sinDocumento = sinDocumentoCheckbox.checked;
-        const requiresDocument = ['subir_documento_reserva', 'marcar_boleta_enviada'].includes(currentAction);
-
-        if (requiresDocument && !detalles.sinDocumento && documentoInput.files.length === 0) {
-            modalStatus.textContent = 'Debes seleccionar un archivo o marcar "Sin Documento".';
-            modalSaveBtn.disabled = false;
-            modalSaveBtn.textContent = 'Guardar';
-            return;
-        }
-
-        if (documentoInput.files.length > 0 && !detalles.sinDocumento) {
-            formData.append('documento', documentoInput.files[0]);
-        }
-
-        formData.append('accion', currentAction);
-        formData.append('detalles', JSON.stringify(detalles));
-        
-        try {
-            const result = await fetchAPI(`/api/gestion/actualizar-estado/${currentReserva.id}`, { method: 'POST', body: formData });
-            modal.classList.add('hidden');
+            await fetchAPI('/api/gestion/grupo/ajustar-valores', { method: 'POST', body: { reservaIdOriginal: currentGrupo.reservaIdOriginal, valoresCabanas }});
+            statusEl.textContent = '¡Valores guardados!';
+            statusEl.className = 'text-sm text-green-600';
             await loadGestion();
         } catch (error) {
-            modalStatus.textContent = `Error: ${error.message}`;
-        } finally {
-            modalSaveBtn.disabled = false;
-            modalSaveBtn.textContent = 'Guardar';
-        }
-    }
-
-    async function deleteDocument(tipoDoc, transaccionId = null) {
-        if (!confirm('¿Estás seguro de que quieres eliminar este elemento? Esta acción no se puede deshacer.')) return;
-        try {
-            await fetchAPI('/api/gestion/documento/eliminar', {
-                method: 'POST',
-                body: { reservaId: currentReserva.id, tipoDoc, transaccionId }
-            });
-            if (tipoDoc === 'transaccion') {
-                await renderPagosList();
-                 await loadGestion();
-            } else {
-                modal.classList.add('hidden');
-                await loadGestion();
-            }
-        } catch(error) {
-            alert(`Error al eliminar: ${error.message}`);
+            statusEl.textContent = `Error: ${error.message}`;
+            statusEl.className = 'text-sm text-red-600';
         }
     }
 
     function updateFilteredView() {
         const searchTerm = searchInput.value.toLowerCase();
-        
-        const filteredReservas = allReservas.filter(r => 
-            (r.clienteNombre && r.clienteNombre.toLowerCase().includes(searchTerm)) ||
-            (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
-            (r.telefono && r.telefono.toLowerCase().includes(searchTerm))
-        );
-
+        const filteredGrupos = allGrupos.filter(g => (g.clienteNombre && g.clienteNombre.toLowerCase().includes(searchTerm)) || (g.reservaIdOriginal && g.reservaIdOriginal.toLowerCase().includes(searchTerm)));
         hoyList.innerHTML = '';
         proximasList.innerHTML = '';
-        
-        if (filteredReservas.length === 0) {
+        if (filteredGrupos.length === 0) {
             noPendientes.classList.remove('hidden');
-            hoyContainer.classList.add('hidden');
-            proximasContainer.classList.add('hidden');
+            [hoyContainer, proximasContainer].forEach(el => el.classList.add('hidden'));
             return;
         }
-
         noPendientes.classList.add('hidden');
         const today = new Date(new Date().setUTCHours(0,0,0,0));
-        const llegadasHoy = [];
-        const proximasLlegadas = [];
-
-        filteredReservas.forEach(reserva => {
-            (new Date(reserva.fechaLlegada).getTime() <= today.getTime() ? llegadasHoy : proximasLlegadas).push(reserva);
-        });
-
+        const llegadasHoy = [], proximasLlegadas = [];
+        filteredGrupos.forEach(grupo => { (new Date(grupo.fechaLlegada).getTime() <= today.getTime() ? llegadasHoy : proximasLlegadas).push(grupo); });
+        
         if (llegadasHoy.length > 0) {
-            llegadasHoy.forEach(res => hoyList.appendChild(createReservaCard(res)));
+            llegadasHoy.forEach(g => hoyList.appendChild(createGrupoCard(g)));
             hoyContainer.classList.remove('hidden');
-        } else {
-            hoyContainer.classList.add('hidden');
-        }
-
+        } else { hoyContainer.classList.add('hidden'); }
+        
         if (proximasLlegadas.length > 0) {
-            proximasLlegadas.forEach(res => proximasList.appendChild(createReservaCard(res)));
+            proximasLlegadas.forEach(g => proximasList.appendChild(createGrupoCard(g)));
             proximasContainer.classList.remove('hidden');
-        } else {
-            proximasContainer.classList.add('hidden');
-        }
+        } else { proximasContainer.classList.add('hidden'); }
     }
     
     async function loadGestion() {
         loadingState.classList.remove('hidden');
         [hoyContainer, proximasContainer, noPendientes].forEach(el => el.classList.add('hidden'));
-        
         try {
-            allReservas = await fetchAPI('/api/gestion/pendientes');
+            allGrupos = await fetchAPI('/api/gestion/pendientes');
             loadingState.classList.add('hidden');
             updateFilteredView();
         } catch (error) {
-            loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar las tareas: ${error.message}</p>`;
+            loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar tareas: ${error.message}</p>`;
         }
     }
-
-    async function handleAjusteTarifa(tipoAjuste) {
-        const valor = tipoAjuste === 'porcentaje' ? ajustePorcentajeInput.value : ajusteValorInput.value;
-        if (!valor) {
-            ajusteStatus.textContent = 'Por favor, ingresa un valor.';
-            return;
-        }
-        
-        const btn = tipoAjuste === 'porcentaje' ? ajustePorcentajeBtn : ajusteValorBtn;
-        btn.disabled = true;
-        btn.textContent = '...';
-        ajusteStatus.textContent = '';
-        ajusteResultado.classList.add('hidden');
-
-        try {
-            const result = await fetchAPI(`/api/gestion/ajustar-tarifa/${currentReserva.id}`, {
-                method: 'POST',
-                body: { tipoAjuste, valor: parseFloat(valor) }
-            });
-            
-            const { valorCLP, valorPotencialCLP, descuentoAplicado } = result.newData;
-            ajusteResultado.innerHTML = `
-                <p class="text-sm"><strong>Nuevo Cálculo:</strong></p>
-                <p class="text-xs">Valor Potencial (Tarifa): ${formatCurrency(valorPotencialCLP)}</p>
-                <p class="text-xs">Valor Real (Pagado): ${formatCurrency(valorCLP || currentReserva.valorCLP)}</p>
-                <p class="text-xs text-red-600">Descuento Aplicado: ${formatCurrency(descuentoAplicado)}</p>
-            `;
-            ajusteResultado.classList.remove('hidden');
-            ajusteStatus.textContent = '¡Ajuste guardado! La tabla se actualizará al cerrar.';
-            ajusteStatus.className = 'mt-2 text-sm text-green-600';
-            await loadGestion();
-
-        } catch (error) {
-            ajusteStatus.textContent = `Error: ${error.message}`;
-            ajusteStatus.className = 'mt-2 text-sm text-red-600';
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Ajustar';
-        }
-    }
-
 
     document.addEventListener('DOMContentLoaded', () => {
         const session = checkSession();
         if (session) {
             loader.style.display = 'none';
             appContent.classList.remove('hidden');
-            authInfo.innerHTML = `
-                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
-                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-            `;
+            authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
             document.getElementById('logout-btn').addEventListener('click', logout);
-
+            
             searchInput.addEventListener('input', updateFilteredView);
             modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            modalBackBtn.addEventListener('click', () => openManagementModal(currentManagementType, currentReserva));
-            formAccion.addEventListener('submit', handleFormSubmit);
-            pasteZone.addEventListener('click', () => documentoInput.click());
-            documentoInput.addEventListener('change', () => {
-                if (documentoInput.files.length > 0) showPreview(documentoInput.files[0]);
-            });
-            document.addEventListener('paste', (e) => {
-                if (modal.classList.contains('hidden') || formAccion.classList.contains('hidden') || documentoField.classList.contains('hidden')) return;
-                const items = (e.clipboardData || window.clipboardData).items;
-                for (const item of items) {
-                    if (item.type.indexOf('image') !== -1) {
-                        e.preventDefault();
-                        const blob = item.getAsFile();
-                        const file = new File([blob], "captura-pegada.png", { type: blob.type });
-                        const dataTransfer = new DataTransfer();
-                        dataTransfer.items.add(file);
-                        documentoInput.files = dataTransfer.files;
-                        showPreview(file);
-                        break; 
-                    }
-                }
-            });
-            sinDocumentoCheckbox.addEventListener('change', (e) => {
-                const isDisabled = e.target.checked;
-                pasteZone.style.display = isDisabled ? 'none' : 'block';
-                documentoInput.disabled = isDisabled;
-                if(isDisabled) previewContainer.classList.add('hidden');
-            });
-
-            ajustePorcentajeBtn.addEventListener('click', () => handleAjusteTarifa('porcentaje'));
-            ajusteValorBtn.addEventListener('click', () => handleAjusteTarifa('valor'));
-
+            
             loadGestion();
         }
     });

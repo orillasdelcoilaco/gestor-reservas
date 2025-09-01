@@ -18,26 +18,51 @@ async function getReservasPendientes(db) {
         return [];
     }
 
-    const reservas = snapshot.docs.map(doc => {
+    // --- INICIO DE LA NUEVA LÓGICA DE AGRUPACIÓN ---
+    const reservasAgrupadas = new Map();
+
+    snapshot.docs.forEach(doc => {
         const data = doc.data();
-        // --- CORRECCIÓN APLICADA AQUÍ ---
-        // Se asegura que las fechas existan y se añaden los nuevos campos para la interfaz.
-        return {
+        const reservaId = data.reservaIdOriginal;
+
+        if (!reservasAgrupadas.has(reservaId)) {
+            reservasAgrupadas.set(reservaId, {
+                // Datos del grupo
+                reservaIdOriginal: reservaId,
+                clienteNombre: data.clienteNombre,
+                telefono: data.telefono || 'N/A', // Se asume que es el mismo para el grupo
+                fechaLlegada: data.fechaLlegada ? data.fechaLlegada.toDate() : null,
+                fechaSalida: data.fechaSalida ? data.fechaSalida.toDate() : null,
+                estadoGestion: data.estadoGestion, // Se toma el de la primera reserva que encuentre
+                documentos: data.documentos || {},
+                // Contenedor para las reservas individuales
+                reservasIndividuales: [],
+                // Acumuladores para los totales del grupo
+                valorCLP: 0,
+                abono: 0
+            });
+        }
+
+        const grupo = reservasAgrupadas.get(reservaId);
+        
+        // Se agrega la reserva individual al grupo
+        grupo.reservasIndividuales.push({
             id: doc.id,
-            ...data,
-            fechaLlegada: data.fechaLlegada ? data.fechaLlegada.toDate() : null,
-            fechaSalida: data.fechaSalida ? data.fechaSalida.toDate() : null,
-            fechaReserva: data.fechaReserva ? data.fechaReserva.toDate() : null,
-            // --- NUEVOS CAMPOS AÑADIDOS ---
+            alojamiento: data.alojamiento,
             valorCLP: data.valorCLP || 0,
             abono: data.abono || 0,
-            documentos: data.documentos || {} // Devuelve un objeto vacío si no hay documentos
-        };
-    }).filter(reserva => reserva.fechaLlegada); // Filtramos cualquier reserva que no tenga fecha de llegada
+        });
 
+        // Se actualizan los totales del grupo sumando los de cada reserva individual
+        grupo.valorCLP += data.valorCLP || 0;
+        // El abono se suma individualmente por si estuviera registrado de forma separada
+        grupo.abono += data.abono || 0;
+    });
+    // --- FIN DE LA NUEVA LÓGICA DE AGRUPACIÓN ---
+
+    const reservas = Array.from(reservasAgrupadas.values());
     const today = getTodayUTC();
 
-    // Lógica de priorización
     const priorityOrder = {
         'Pendiente Pago': 1,
         'Pendiente Boleta': 2,
@@ -46,14 +71,12 @@ async function getReservasPendientes(db) {
     };
     
     reservas.sort((a, b) => {
-        const aLlegaHoy = a.fechaLlegada.getTime() === today.getTime();
-        const bLlegaHoy = b.fechaLlegada.getTime() === today.getTime();
+        const aLlegaHoy = a.fechaLlegada && a.fechaLlegada.getTime() === today.getTime();
+        const bLlegaHoy = b.fechaLlegada && b.fechaLlegada.getTime() === today.getTime();
 
-        // Prioridad 1: Reservas que llegan hoy
         if (aLlegaHoy && !bLlegaHoy) return -1;
         if (!aLlegaHoy && bLlegaHoy) return 1;
 
-        // Si ambas (o ninguna) llegan hoy, ordenar por estado de gestión
         if (aLlegaHoy && bLlegaHoy) {
             const priorityA = priorityOrder[a.estadoGestion] || 99;
             const priorityB = priorityOrder[b.estadoGestion] || 99;
@@ -62,13 +85,14 @@ async function getReservasPendientes(db) {
             }
         }
         
-        // Prioridad 2: Reservas futuras, las más próximas primero
-        return a.fechaLlegada - b.fechaLlegada;
+        if (a.fechaLlegada && b.fechaLlegada) {
+            return a.fechaLlegada - b.fechaLlegada;
+        }
+        return 0;
     });
 
     return reservas;
 }
-
 
 module.exports = {
     getReservasPendientes,

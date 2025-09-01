@@ -226,8 +226,8 @@
     const ajusteResultado = document.getElementById('ajuste-resultado');
     const ajusteStatus = document.getElementById('ajuste-status');
 
-    let allReservas = [];
-    let currentReserva = null;
+    let allGrupos = []; // Ahora trabajaremos con grupos
+    let currentReserva = null; // Seguiremos usando esto para acciones individuales por ahora
     let currentAction = null;
     let currentManagementType = null;
 
@@ -250,48 +250,56 @@
         }
     }
     
-    function createReservaCard(reserva) {
+    // --- NUEVA FUNCIÓN PARA RENDERIZAR TARJETAS DE GRUPO ---
+    function createReservaCard(grupo) {
         const card = document.createElement('div');
         card.className = 'p-4 border rounded-lg shadow-sm flex flex-col';
-        const statusInfo = getStatusInfo(reserva.estadoGestion);
-        const saldo = reserva.valorCLP - reserva.abono;
-        const isGestionPagosActive = statusInfo.level >= 3;
-        const isGestionBoletaActive = statusInfo.level >= 4;
-        let statusHtml;
-        let actionUrl = `mensajes.html?reservaId=${reserva.reservaIdOriginal}&reservaCompletaId=${reserva.id}`;
-        if (reserva.estadoGestion === 'Pendiente Bienvenida') actionUrl += `&accion=marcar_bienvenida_enviada`;
-        else if (reserva.estadoGestion === 'Pendiente Cobro') actionUrl += `&accion=marcar_cobro_enviado`;
-        statusHtml = `<a href="${actionUrl}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80 transition-opacity">${statusInfo.text}</a>`;
+        const statusInfo = getStatusInfo(grupo.estadoGestion);
+        const saldo = grupo.valorCLP - grupo.abono;
+        const alojamientos = grupo.reservasIndividuales.map(r => r.alojamiento).join(', ');
+        
+        // La acción de estado por ahora apunta a la primera reserva del grupo.
+        const idReferencia = grupo.reservasIndividuales[0].id;
+        let actionUrl = `mensajes.html?reservaId=${grupo.reservaIdOriginal}&reservaCompletaId=${idReferencia}`;
+        if (grupo.estadoGestion === 'Pendiente Bienvenida') actionUrl += `&accion=marcar_bienvenida_enviada`;
+        else if (grupo.estadoGestion === 'Pendiente Cobro') actionUrl += `&accion=marcar_cobro_enviado`;
+        const statusHtml = `<a href="${actionUrl}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80 transition-opacity">${statusInfo.text}</a>`;
+        
         card.innerHTML = `
             <div class="flex flex-col md:flex-row md:items-center justify-between w-full">
                 <div class="flex-grow">
                     <div class="flex items-center mb-2">
                         ${statusHtml}
-                        <p class="ml-4 text-lg font-bold text-gray-800">${reserva.clienteNombre}</p>
+                        <p class="ml-4 text-lg font-bold text-gray-800">${grupo.clienteNombre}</p>
                     </div>
                     <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
-                        <p><strong>Teléfono:</strong> ${reserva.telefono || 'N/A'}</p>
-                        <p><strong>Cabaña:</strong> ${reserva.alojamiento}</p>
-                        <p><strong>Llegada:</strong> ${formatDate(reserva.fechaLlegada)}</p>
-                        <p><strong>ID Reserva:</strong> ${reserva.reservaIdOriginal}</p>
+                        <p><strong>Teléfono:</strong> ${grupo.telefono || 'N/A'}</p>
+                        <p><strong>Cabañas (${grupo.reservasIndividuales.length}):</strong> ${alojamientos}</p>
+                        <p><strong>Llegada:</strong> ${formatDate(grupo.fechaLlegada)}</p>
+                        <p><strong>ID Reserva:</strong> ${grupo.reservaIdOriginal}</p>
                     </div>
                 </div>
             </div>
             <div class="border-t mt-4 pt-3 flex flex-col md:flex-row justify-between items-center text-sm">
                  <div class="grid grid-cols-3 gap-4 font-semibold text-center w-full md:w-2/3">
-                    <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(reserva.valorCLP)}</div>
-                    <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(reserva.abono)}</div>
+                    <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(grupo.valorCLP)}</div>
+                    <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(grupo.abono)}</div>
                     <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
                 </div>
                 <div class="mt-3 md:mt-0 flex space-x-2">
                     <button data-gestion="ajuste_tarifa" class="gestion-btn px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-md hover:bg-yellow-200">Ajustar Tarifa</button>
                     <button data-gestion="reserva" class="gestion-btn px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-md hover:bg-blue-200">Gestionar Reserva</button>
-                    <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
-                    <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
+                    <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md">Gestionar Pagos</button>
+                    <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md">Gestionar Boleta</button>
                 </div>
             </div>
         `;
-        card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, reserva)));
+        // Los botones de gestión ahora pasarán el grupo completo
+        card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => {
+             // Temporalmente, para mantener la compatibilidad, pasamos la primera reserva individual
+            const reservaDeReferencia = { ...grupo.reservasIndividuales[0], ...grupo };
+            openManagementModal(e.target.dataset.gestion, reservaDeReferencia);
+        }));
         return card;
     }
 
@@ -338,7 +346,7 @@
     }
 
     function openManagementModal(type, reserva) {
-        currentReserva = reserva;
+        currentReserva = reserva; // Guardamos la reserva de referencia
         currentManagementType = type;
         modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')}`;
         [viewDocumento, viewPagos, formAccion, viewAjusteTarifa].forEach(el => el.classList.add('hidden'));
@@ -503,16 +511,16 @@
     function updateFilteredView() {
         const searchTerm = searchInput.value.toLowerCase();
         
-        const filteredReservas = allReservas.filter(r => 
-            (r.clienteNombre && r.clienteNombre.toLowerCase().includes(searchTerm)) ||
-            (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
-            (r.telefono && r.telefono.toLowerCase().includes(searchTerm))
+        const filteredGrupos = allGrupos.filter(g => 
+            (g.clienteNombre && g.clienteNombre.toLowerCase().includes(searchTerm)) ||
+            (g.reservaIdOriginal && g.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
+            (g.telefono && g.telefono.toLowerCase().includes(searchTerm))
         );
 
         hoyList.innerHTML = '';
         proximasList.innerHTML = '';
         
-        if (filteredReservas.length === 0) {
+        if (filteredGrupos.length === 0) {
             noPendientes.classList.remove('hidden');
             hoyContainer.classList.add('hidden');
             proximasContainer.classList.add('hidden');
@@ -524,19 +532,19 @@
         const llegadasHoy = [];
         const proximasLlegadas = [];
 
-        filteredReservas.forEach(reserva => {
-            (new Date(reserva.fechaLlegada).getTime() <= today.getTime() ? llegadasHoy : proximasLlegadas).push(reserva);
+        filteredGrupos.forEach(grupo => {
+            (new Date(grupo.fechaLlegada).getTime() <= today.getTime() ? llegadasHoy : proximasLlegadas).push(grupo);
         });
 
         if (llegadasHoy.length > 0) {
-            llegadasHoy.forEach(res => hoyList.appendChild(createReservaCard(res)));
+            llegadasHoy.forEach(g => hoyList.appendChild(createReservaCard(g)));
             hoyContainer.classList.remove('hidden');
         } else {
             hoyContainer.classList.add('hidden');
         }
 
         if (proximasLlegadas.length > 0) {
-            proximasLlegadas.forEach(res => proximasList.appendChild(createReservaCard(res)));
+            proximasLlegadas.forEach(g => proximasList.appendChild(createReservaCard(g)));
             proximasContainer.classList.remove('hidden');
         } else {
             proximasContainer.classList.add('hidden');
@@ -548,7 +556,7 @@
         [hoyContainer, proximasContainer, noPendientes].forEach(el => el.classList.add('hidden'));
         
         try {
-            allReservas = await fetchAPI('/api/gestion/pendientes');
+            allGrupos = await fetchAPI('/api/gestion/pendientes'); // Ahora obtenemos grupos
             loadingState.classList.add('hidden');
             updateFilteredView();
         } catch (error) {

@@ -20,117 +20,169 @@ module.exports = (db) => {
         }
     });
 
-    // --- RUTA MODIFICADA PARA APLICAR ACCIONES A GRUPOS ---
-    router.post('/gestion/actualizar-estado-grupo/:reservaIdOriginal', upload.single('documento'), async (req, res) => {
-        const { reservaIdOriginal } = req.params;
-        const { accion, detalles, idsIndividuales } = req.body;
+    router.post('/gestion/actualizar-estado/:id', upload.single('documento'), async (req, res) => {
+        const { id } = req.params;
+        const { accion, detalles } = req.body;
 
-        if (!accion || !idsIndividuales) {
-            return res.status(400).json({ error: 'La acción y los IDs de las reservas son requeridos.' });
+        if (!accion) {
+            return res.status(400).json({ error: 'La acción es requerida.' });
         }
 
-        const batch = db.batch();
-        const detallesParseados = detalles ? JSON.parse(detalles) : {};
-        const individualIds = JSON.parse(idsIndividuales);
-
         try {
+            const reservaRef = db.collection('reservas').doc(id);
+            const reservaDoc = await reservaRef.get();
+            if (!reservaDoc.exists) {
+                return res.status(404).json({ error: 'Reserva no encontrada.' });
+            }
+            const reservaData = reservaDoc.data();
+            const transaccionesRef = reservaRef.collection('transacciones');
+
+            const dataToUpdate = {};
+            let nuevoEstado = '';
+            const detallesParseados = detalles ? JSON.parse(detalles) : {};
             let publicUrl = null;
+
             if (detallesParseados.sinDocumento) {
                 publicUrl = 'SIN_DOCUMENTO';
             } else if (req.file) {
-                const firstReservaRef = db.collection('reservas').doc(individualIds[0]);
-                const firstReservaDoc = await firstReservaRef.get();
-                const reservaData = firstReservaDoc.data();
-                const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
+                 const year = reservaData.fechaLlegada.toDate().getFullYear().toString();
+                const reservaId = reservaData.reservaIdOriginal;
                 const fileExtension = path.extname(req.file.originalname);
-                let fileName = `${reservaIdOriginal}_${accion}${fileExtension}`;
-                const destinationPath = `reservas/${year}/${reservaIdOriginal}/${fileName}`;
+                let fileName = '';
+
+                switch(accion) {
+                    case 'registrar_pago':
+                        const transaccionesSnapshot = await transaccionesRef.get();
+                        const abonoIndex = transaccionesSnapshot.docs.filter(doc => doc.data().tipo === 'Abono').length + 1;
+                        const tipoPago = detallesParseados.esPagoFinal ? 'pago_final' : `abono_${abonoIndex}`;
+                        fileName = `${reservaId}_${tipoPago}${fileExtension}`;
+                        break;
+                    case 'marcar_boleta_enviada':
+                        fileName = `${reservaId}_boleta${fileExtension}`;
+                        break;
+                    case 'subir_documento_reserva':
+                        fileName = `${reservaId}_reserva_comprobante${fileExtension}`;
+                        break;
+                    default:
+                        fileName = `${reservaId}_documento_${Date.now()}${fileExtension}`;
+                }
+
+                const destinationPath = `reservas/${year}/${reservaId}/${fileName}`;
                 publicUrl = await storageService.uploadFile(req.file.buffer, destinationPath, req.file.mimetype);
             }
 
-            for (const id of individualIds) {
-                const reservaRef = db.collection('reservas').doc(id);
-                const dataToUpdate = {};
-                let nuevoEstado = '';
-                
-                switch (accion) {
-                    case 'marcar_bienvenida_enviada':
-                        nuevoEstado = 'Pendiente Cobro';
-                        dataToUpdate.fechaMensajeBienvenida = admin.firestore.FieldValue.serverTimestamp();
-                        break;
-                    case 'marcar_cobro_enviado':
-                        nuevoEstado = 'Pendiente Pago';
-                        dataToUpdate.fechaMensajeCobro = admin.firestore.FieldValue.serverTimestamp();
-                        break;
-                    case 'registrar_pago':
-                        if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {
-                            return res.status(400).json({ error: 'Monto y medio de pago son requeridos.' });
-                        }
-                        const transaccionesRef = reservaRef.collection('transacciones');
-                        const newTransactionRef = transaccionesRef.doc();
-                        batch.set(newTransactionRef, {
-                            monto: parseFloat(detallesParseados.monto) / individualIds.length, // Se divide el pago
-                            medioDePago: detallesParseados.medioDePago,
-                            tipo: detallesParseados.tipo || 'Abono',
-                            fecha: admin.firestore.FieldValue.serverTimestamp(),
-                            enlaceComprobante: publicUrl
-                        });
+            switch (accion) {
+                case 'marcar_bienvenida_enviada':
+                    nuevoEstado = 'Pendiente Cobro';
+                    dataToUpdate.fechaMensajeBienvenida = admin.firestore.FieldValue.serverTimestamp();
+                    break;
+                case 'marcar_cobro_enviado':
+                    nuevoEstado = 'Pendiente Pago';
+                    dataToUpdate.fechaMensajeCobro = admin.firestore.FieldValue.serverTimestamp();
+                    break;
+                case 'registrar_pago':
+                     if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {
+                        return res.status(400).json({ error: 'Monto y medio de pago son requeridos.' });
+                    }
+                    const newTransactionRef = transaccionesRef.doc();
+                    await newTransactionRef.set({
+                        monto: parseFloat(detallesParseados.monto),
+                        medioDePago: detallesParseados.medioDePago,
+                        tipo: detallesParseados.tipo || 'Abono',
+                        fecha: admin.firestore.FieldValue.serverTimestamp(),
+                        enlaceComprobante: publicUrl
+                    });
+                    
+                    const allTransactions = await transaccionesRef.get();
+                    const totalAbonado = allTransactions.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
+                    dataToUpdate.abono = totalAbonado;
+                    
+                    if (detallesParseados.esPagoFinal) {
+                        nuevoEstado = 'Pendiente Boleta';
+                        dataToUpdate.pagado = true;
                         
-                        // Recalcular el abono total para esta reserva individual
-                        const transSnapshot = await transaccionesRef.get();
-                        const abonoPrevio = transSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
-                        dataToUpdate.abono = abonoPrevio + (parseFloat(detallesParseados.monto) / individualIds.length);
-
-                        if (detallesParseados.esPagoFinal) {
-                            nuevoEstado = 'Pendiente Boleta';
-                            dataToUpdate.pagado = true;
+                        if (totalAbonado > reservaData.valorCLP) {
+                            console.log(`Ajuste automático de valor para reserva ${id}. Valor anterior: ${reservaData.valorCLP}, Nuevo valor (total pagado): ${totalAbonado}.`);
+                            dataToUpdate.valorCLP = totalAbonado;
+                            dataToUpdate.valorManual = true;
                         }
-                        break;
-                    case 'marcar_boleta_enviada':
-                        nuevoEstado = 'Facturado';
-                        dataToUpdate.fechaBoletaEnviada = admin.firestore.FieldValue.serverTimestamp();
-                        dataToUpdate.boleta = true;
-                        if (publicUrl) dataToUpdate['documentos.enlaceBoleta'] = publicUrl;
-                        break;
-                }
+                    }
+                    break;
 
-                if (nuevoEstado) dataToUpdate.estadoGestion = nuevoEstado;
-                if (Object.keys(dataToUpdate).length > 0) batch.update(reservaRef, dataToUpdate);
+                case 'marcar_boleta_enviada':
+                    nuevoEstado = 'Facturado';
+                    dataToUpdate.fechaBoletaEnviada = admin.firestore.FieldValue.serverTimestamp();
+                    dataToUpdate.boleta = true;
+                    if (publicUrl) dataToUpdate['documentos.enlaceBoleta'] = publicUrl;
+                    break;
+                case 'subir_documento_reserva':
+                    if (publicUrl) dataToUpdate['documentos.enlaceReserva'] = publicUrl;
+                    break;
+                default:
+                    return res.status(400).json({ error: 'Acción no válida.' });
             }
 
-            await batch.commit();
-            res.status(200).json({ message: `Acción '${accion}' registrada exitosamente para el grupo ${reservaIdOriginal}.` });
+            if (nuevoEstado) dataToUpdate.estadoGestion = nuevoEstado;
+            if (Object.keys(dataToUpdate).length > 0) await reservaRef.update(dataToUpdate);
+           
+            res.status(200).json({ message: `Acción '${accion}' registrada exitosamente.` });
+
         } catch (error) {
-            console.error(`Error al actualizar estado del grupo ${reservaIdOriginal}:`, error);
+            console.error(`Error al actualizar estado de reserva ${id}:`, error);
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
 
-    // --- NUEVA RUTA PARA AJUSTAR VALORES DE UN GRUPO ---
-    router.post('/gestion/grupo/ajustar-valores', jsonParser, async (req, res) => {
-        const { reservaIdOriginal, valoresCabanas } = req.body;
-        if (!reservaIdOriginal || !valoresCabanas) {
-            return res.status(400).json({ error: 'Faltan datos para el ajuste.' });
+    router.post('/gestion/ajustar-tarifa/:id', jsonParser, async (req, res) => {
+        const { id } = req.params;
+        const { tipoAjuste, valor } = req.body;
+
+        if (!id || !tipoAjuste || valor === undefined) {
+            return res.status(400).json({ error: 'Faltan datos para el ajuste de tarifa.' });
         }
+
         try {
-            const batch = db.batch();
-            for (const item of valoresCabanas) {
-                const reservaRef = db.collection('reservas').doc(item.id);
-                batch.update(reservaRef, {
-                    valorCLP: parseFloat(item.valor),
-                    valorManual: true
-                });
+            const reservaRef = db.collection('reservas').doc(id);
+            const doc = await reservaRef.get();
+            if (!doc.exists) {
+                return res.status(404).json({ error: 'Reserva no encontrada.' });
             }
-            await batch.commit();
-            res.status(200).json({ message: `Valores del grupo ${reservaIdOriginal} actualizados.` });
+
+            const reservaData = doc.data();
+            const dataToUpdate = { valorManual: true };
+
+            if (tipoAjuste === 'porcentaje') {
+                const descuentoPorcentaje = parseFloat(valor);
+                if (isNaN(descuentoPorcentaje) || descuentoPorcentaje < 0 || descuentoPorcentaje >= 100) {
+                    return res.status(400).json({ error: 'El porcentaje de descuento no es válido.' });
+                }
+                const valorReal = reservaData.valorCLP; // El valor en sistema es el real (con descuento)
+                const valorPotencial = valorReal / (1 - (descuentoPorcentaje / 100));
+                dataToUpdate.valorPotencialCLP = Math.round(valorPotencial);
+                dataToUpdate.descuentoAplicado = Math.round(valorPotencial - valorReal);
+            
+            } else if (tipoAjuste === 'valor') {
+                const valorRealPagado = parseFloat(valor);
+                if (isNaN(valorRealPagado) || valorRealPagado < 0) {
+                    return res.status(400).json({ error: 'El valor pagado no es válido.' });
+                }
+                const valorPotencial = reservaData.valorCLP; // El valor en sistema es el de lista
+                dataToUpdate.valorPotencialCLP = valorPotencial;
+                dataToUpdate.valorCLP = valorRealPagado; // Actualizamos el valor real con el que pagó el cliente
+                dataToUpdate.descuentoAplicado = Math.round(valorPotencial - valorRealPagado);
+
+            } else {
+                return res.status(400).json({ error: 'Tipo de ajuste no válido.' });
+            }
+
+            await reservaRef.update(dataToUpdate);
+            res.status(200).json({ message: 'Tarifa ajustada y guardada correctamente.', newData: dataToUpdate });
+
         } catch (error) {
-            console.error(`Error al ajustar valores del grupo ${reservaIdOriginal}:`, error);
+            console.error(`Error al ajustar la tarifa para la reserva ${id}:`, error);
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    
-    // Rutas anteriores para editar/eliminar transacciones y documentos (sin cambios mayores)
-    // ... (el resto del código de gestion.js permanece igual) ...
 
     router.post('/gestion/transaccion/editar', jsonParser, async (req, res) => {
         const { reservaId, transaccionId, nuevoMonto } = req.body;
@@ -196,6 +248,7 @@ module.exports = (db) => {
         }
     });
 
+    // --- NUEVA RUTA PARA OBTENER LA LISTA DE TRANSACCIONES ---
     router.get('/gestion/transacciones/:reservaId', async (req, res) => {
         const { reservaId } = req.params;
         try {
@@ -218,7 +271,6 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-
 
     return router;
 };

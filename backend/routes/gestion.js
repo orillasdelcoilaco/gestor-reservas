@@ -351,27 +351,43 @@ module.exports = (db) => {
         }
     });
 
-    // --- INICIO DE LA NUEVA RUTA ---
-    router.post('/gestion/grupo/revertir-estado', jsonParser, async (req, res) => {
-        const { reservaIdOriginal, nuevoEstado, idsIndividuales } = req.body;
-        if (!reservaIdOriginal || !nuevoEstado || !idsIndividuales || !Array.isArray(idsIndividuales)) {
-            return res.status(400).json({ error: 'Faltan datos para revertir el estado.' });
-        }
-
+    // --- INICIO DE LA NUEVA RUTA DE REPARACIÓN ---
+    router.post('/gestion/fix-missing-states', async (req, res) => {
         try {
-            const batch = db.batch();
-            for (const id of idsIndividuales) {
-                const reservaRef = db.collection('reservas').doc(id);
-                batch.update(reservaRef, { estadoGestion: nuevoEstado });
+            console.log('Iniciando proceso para reparar estados de gestión faltantes...');
+            const snapshot = await db.collection('reservas').get();
+            if (snapshot.empty) {
+                return res.status(200).json({ message: 'No hay reservas para verificar.', repairedCount: 0 });
             }
-            await batch.commit();
-            res.status(200).json({ message: `El estado del grupo ${reservaIdOriginal} se ha revertido a "${nuevoEstado}".` });
+    
+            const batch = db.batch();
+            let repairedCount = 0;
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                // Solo reparamos las que no tienen el campo y están confirmadas
+                if (!data.hasOwnProperty('estadoGestion') && data.estado === 'Confirmada') {
+                    const reservaRef = db.collection('reservas').doc(doc.id);
+                    batch.update(reservaRef, { estadoGestion: 'Pendiente Bienvenida' });
+                    repairedCount++;
+                }
+            });
+    
+            if (repairedCount > 0) {
+                await batch.commit();
+                console.log(`Proceso completado. Se repararon ${repairedCount} reservas.`);
+                res.status(200).json({ message: `Proceso completado. Se añadió el estado de gestión inicial a ${repairedCount} reservas.` });
+            } else {
+                console.log('No se encontraron reservas que necesitaran reparación.');
+                res.status(200).json({ message: 'No se encontraron reservas que necesitaran ser reparadas. Todo parece estar en orden.' });
+            }
+    
         } catch (error) {
-            console.error(`Error al revertir el estado del grupo ${reservaIdOriginal}:`, error);
-            res.status(500).json({ error: 'Error interno del servidor.' });
+            console.error("Error al reparar estados de gestión:", error);
+            res.status(500).json({ error: 'Error interno del servidor al reparar los estados.' });
         }
     });
-    // --- FIN DE LA NUEVA RUTA ---
-
+    // --- FIN DE LA NUEVA RUTA DE REPARACIÓN ---
+    
     return router;
 };

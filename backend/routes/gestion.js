@@ -13,7 +13,38 @@ module.exports = (db) => {
     // ... (Todas las rutas existentes hasta el final del archivo permanecen igual) ...
 
     router.post('/gestion/fix-missing-states', async (req, res) => {
-        // ... (Esta ruta no cambia) ...
+        try {
+            console.log('Iniciando proceso para reparar estados de gestión faltantes...');
+            const snapshot = await db.collection('reservas').get();
+            if (snapshot.empty) {
+                return res.status(200).json({ message: 'No hay reservas para verificar.', repairedCount: 0 });
+            }
+    
+            const batch = db.batch();
+            let repairedCount = 0;
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (!data.hasOwnProperty('estadoGestion') && data.estado === 'Confirmada') {
+                    const reservaRef = db.collection('reservas').doc(doc.id);
+                    batch.update(reservaRef, { estadoGestion: 'Pendiente Bienvenida' });
+                    repairedCount++;
+                }
+            });
+    
+            if (repairedCount > 0) {
+                await batch.commit();
+                console.log(`Proceso completado. Se repararon ${repairedCount} reservas.`);
+                res.status(200).json({ message: `Proceso completado. Se añadió el estado de gestión inicial a ${repairedCount} reservas.` });
+            } else {
+                console.log('No se encontraron reservas que necesitaran reparación.');
+                res.status(200).json({ message: 'No se encontraron reservas que necesitaran ser reparadas. Todo parece estar en orden.' });
+            }
+    
+        } catch (error) {
+            console.error("Error al reparar estados de gestión:", error);
+            res.status(500).json({ error: 'Error interno del servidor al reparar los estados.' });
+        }
     });
 
     // --- INICIO DE LA NUEVA RUTA DE REPARACIÓN DE TELÉFONOS ---
@@ -29,24 +60,20 @@ module.exports = (db) => {
             const batch = db.batch();
             let repairedCount = 0;
             
-            // Usamos un bucle for...of para poder usar await dentro
             for (const doc of snapshot.docs) {
                 const data = doc.data();
                 
-                // Si la reserva no tiene teléfono pero sí tiene un cliente asociado
                 if ((!data.hasOwnProperty('telefono') || !data.telefono) && data.clienteId) {
                     let clientPhone = clientsCache.get(data.clienteId);
 
-                    // Si no tenemos el teléfono del cliente en caché, lo buscamos
                     if (!clientPhone) {
                         const clientDoc = await db.collection('clientes').doc(data.clienteId).get();
                         if (clientDoc.exists() && clientDoc.data().phone) {
                             clientPhone = clientDoc.data().phone;
-                            clientsCache.set(data.clienteId, clientPhone); // Guardamos en caché para no volver a buscar
+                            clientsCache.set(data.clienteId, clientPhone);
                         }
                     }
 
-                    // Si encontramos un teléfono, preparamos la actualización
                     if (clientPhone) {
                         const reservaRef = db.collection('reservas').doc(doc.id);
                         batch.update(reservaRef, { telefono: clientPhone });

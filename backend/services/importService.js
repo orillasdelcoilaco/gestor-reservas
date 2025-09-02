@@ -178,9 +178,7 @@ async function processHistoricalBookings(db, fileBuffer) {
             valorOriginal: valorOriginal,
             valorCLP: valorCLPCalculado,
             correo: null,
-            // --- INICIO DE LA MODIFICACIÓN ---
             telefono: phone, // Se añade el teléfono al documento de la reserva
-            // --- FIN DE LA MODIFICACIÓN ---
             pais: row['Booker country'] || null,
             valorDolarDia: valorDolarDia,
             comision: parseCurrency(row['Importe de la comisión'], 'USD'),

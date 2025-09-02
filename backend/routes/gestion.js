@@ -53,14 +53,6 @@ module.exports = (db) => {
                 let nuevoEstado = '';
                 
                 switch (accion) {
-                    case 'marcar_bienvenida_enviada':
-                        nuevoEstado = 'Pendiente Cobro';
-                        dataToUpdate.fechaMensajeBienvenida = admin.firestore.FieldValue.serverTimestamp();
-                        break;
-                    case 'marcar_cobro_enviado':
-                        nuevoEstado = 'Pendiente Pago';
-                        dataToUpdate.fechaMensajeCobro = admin.firestore.FieldValue.serverTimestamp();
-                        break;
                     case 'registrar_pago':
                         if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {
                             return res.status(400).json({ error: 'Monto y medio de pago son requeridos.' });
@@ -128,7 +120,6 @@ module.exports = (db) => {
         }
     });
     
-    // --- RUTA PARA OBTENER TRANSACCIONES DE UN GRUPO ---
     router.post('/gestion/transacciones-grupo', jsonParser, async (req, res) => {
         const { idsIndividuales } = req.body;
         if (!idsIndividuales || !Array.isArray(idsIndividuales)) {
@@ -155,6 +146,72 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    
+
+    // Rutas para editar y eliminar transacciones individuales (se mantienen por si se necesitan a futuro)
+    router.post('/gestion/transaccion/editar', jsonParser, async (req, res) => {
+        const { reservaId, transaccionId, nuevoMonto } = req.body;
+        if (!reservaId || !transaccionId || nuevoMonto === undefined) {
+            return res.status(400).json({ error: 'Faltan datos para editar la transacción.' });
+        }
+        try {
+            const transaccionRef = db.collection('reservas').doc(reservaId).collection('transacciones').doc(transaccionId);
+            await transaccionRef.update({ monto: parseFloat(nuevoMonto) });
+
+            const reservaRef = db.collection('reservas').doc(reservaId);
+            const transaccionesSnapshot = await reservaRef.collection('transacciones').get();
+            const totalAbonado = transaccionesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
+            await reservaRef.update({ abono: totalAbonado });
+
+            res.status(200).json({ message: 'Transacción actualizada y total recalculado.' });
+        } catch (error) {
+            console.error('Error al editar transacción:', error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    router.post('/gestion/documento/eliminar', jsonParser, async (req, res) => {
+        const { reservaId, tipoDoc, transaccionId } = req.body;
+        if (!reservaId || !tipoDoc) {
+            return res.status(400).json({ error: 'Faltan datos para eliminar el documento.' });
+        }
+        try {
+            const reservaRef = db.collection('reservas').doc(reservaId);
+            const reservaDoc = await reservaRef.get();
+            if (!reservaDoc.exists) { return res.status(404).json({ error: 'Reserva no encontrada.' }); }
+            const reservaData = reservaDoc.data();
+            let filePath = null;
+
+            if (tipoDoc === 'transaccion') {
+                if (!transaccionId) return res.status(400).json({ error: 'Falta ID de transacción.' });
+                const transaccionRef = reservaRef.collection('transacciones').doc(transaccionId);
+                const transaccionDoc = await transaccionRef.get();
+                if (transaccionDoc.exists && transaccionDoc.data().enlaceComprobante && transaccionDoc.data().enlaceComprobante !== 'SIN_DOCUMENTO') {
+                    filePath = new URL(transaccionDoc.data().enlaceComprobante).pathname.split('/').slice(3).join('/');
+                }
+                await transaccionRef.delete();
+                const transaccionesSnapshot = await reservaRef.collection('transacciones').get();
+                const totalAbonado = transaccionesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
+                await reservaRef.update({ abono: totalAbonado });
+
+            } else { 
+                if (reservaData.documentos && reservaData.documentos[tipoDoc] && reservaData.documentos[tipoDoc] !== 'SIN_DOCUMENTO') {
+                    filePath = new URL(reservaData.documentos[tipoDoc]).pathname.split('/').slice(3).join('/');
+                }
+                await reservaRef.update({ [`documentos.${tipoDoc}`]: admin.firestore.FieldValue.delete() });
+            }
+
+            if (filePath) {
+                const bucket = admin.storage().bucket();
+                const file = bucket.file(decodeURIComponent(filePath));
+                await file.delete().catch(err => console.error(`No se pudo borrar el archivo ${filePath} de Storage, puede que ya no exista.`, err.message));
+            }
+            
+            res.status(200).json({ message: 'Elemento eliminado correctamente.' });
+        } catch (error) {
+            console.error('Error al eliminar documento:', error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
     return router;
 };

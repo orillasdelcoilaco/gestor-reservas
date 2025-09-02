@@ -3,657 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestión Diaria - Gestor de Reservas</title>
+    <title>Procesar y Consolidar - Gestor de Reservas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        #gestion-modal { background-color: rgba(0, 0, 0, 0.5); }
-        .paste-zone { border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
-        .paste-zone.drag-over { background-color: #e0e7ff; border-color: #4f46e5; }
     </style>
 </head>
 <body class="bg-gray-100">
-    <div id="loader" class="text-center p-8"><p class="text-gray-500">Verificando sesión...</p></div>
+    <div id="loader" class="text-center p-8">
+        <p class="text-gray-500">Verificando sesión...</p>
+    </div>
+
     <div id="app-content" class="min-h-screen hidden">
         <nav class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
-                    <div class="flex items-center space-x-4">
-                        <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
-                        <a href="dashboard.html" class="hidden sm:block px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200">Volver al Dashboard</a>
-                    </div>
+                    <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
                     <div id="auth-info" class="flex items-center space-x-4"></div>
                 </div>
             </div>
         </nav>
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                    <h2 class="text-2xl font-semibold text-gray-900">Panel de Gestión Diaria</h2>
-                    <input type="text" id="search-input" placeholder="Buscar por nombre, reserva, teléfono..." class="mt-4 md:mt-0 w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-2">Consolidar Reportes</h2>
+                <p class="text-gray-600 mb-6">Este proceso leerá los reportes brutos que subiste, los limpiará, transformará y guardará en las colecciones finales 'clientes' y 'reservas'.</p>
+                <div class="mt-4">
+                    <button id="consolidate-btn" class="w-full sm:w-auto inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700">
+                        Iniciar Proceso de Consolidación
+                    </button>
                 </div>
-                <div id="loading-state" class="text-center py-8"><p class="text-gray-500">Cargando tareas pendientes...</p></div>
-                <div id="hoy-container" class="hidden"><h3 class="text-xl font-bold text-red-600 mb-4 border-b pb-2">Requiere Acción Hoy</h3><div id="hoy-list" class="space-y-4"></div></div>
-                <div id="proximas-container" class="mt-8 hidden"><h3 class="text-xl font-semibold text-blue-600 mb-4 border-b pb-2">Próximas Llegadas</h3><div id="proximas-list" class="space-y-4"></div></div>
-                <div id="no-pendientes" class="text-center py-12 hidden"><p class="text-2xl font-semibold text-green-600">¡Todo al día!</p><p class="text-gray-500 mt-2">No hay reservas con gestiones pendientes.</p></div>
+                <div id="consolidate-status" class="mt-6 p-4 rounded-md hidden"></div>
             </div>
         </main>
     </div>
-
-    <div id="gestion-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
-            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modal-title">Gestionar</h3>
-            <div id="modal-content-container" class="space-y-4"></div>
-            <button type="button" id="modal-cancel-btn" class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
-        </div>
-    </div>
-
+    
 <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
-    
-    const loader = document.getElementById('loader');
-    const appContent = document.getElementById('app-content');
-    const authInfo = document.getElementById('auth-info');
-    const loadingState = document.getElementById('loading-state');
-    const searchInput = document.getElementById('search-input');
-    const hoyContainer = document.getElementById('hoy-container');
-    const hoyList = document.getElementById('hoy-list');
-    const proximasContainer = document.getElementById('proximas-container');
-    const proximasList = document.getElementById('proximas-list');
-    const noPendientes = document.getElementById('no-pendientes');
-    const modal = document.getElementById('gestion-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalContent = document.getElementById('modal-content-container');
-    const modalCancelBtn = document.getElementById('modal-cancel-btn');
-
-    let allGrupos = [];
-    let currentGrupo = null;
-    let currentAction = null;
-    let allTransacciones = [];
-
-    function formatCurrency(value) { return `$${(value || 0).toLocaleString('es-CL')}`; }
-    function formatDate(dateString) { return dateString ? new Date(dateString).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'; }
-    
-    function getStatusInfo(status) {
-        switch (status) {
-            case 'Pendiente Bienvenida': return { level: 1, text: 'PENDIENTE BIENVENIDA', color: 'bg-yellow-500' };
-            case 'Pendiente Cobro': return { level: 2, text: 'PENDIENTE COBRO', color: 'bg-orange-500' };
-            case 'Pendiente Pago': return { level: 3, text: 'PENDIENTE PAGO', color: 'bg-red-600' };
-            case 'Pendiente Boleta': return { level: 4, text: 'PENDIENTE BOLETA', color: 'bg-purple-600' };
-            default: return { level: 99, text: status ? status.toUpperCase() : 'DESCONOCIDO', color: 'bg-gray-400' };
-        }
-    }
-    
-    function createGrupoCard(grupo) {
-        const card = document.createElement('div');
-        card.id = `card-${grupo.reservaIdOriginal}`;
-        card.className = 'p-4 border rounded-lg shadow-sm flex flex-col';
-        const statusInfo = getStatusInfo(grupo.estadoGestion);
-        const saldo = grupo.valorCLP - grupo.abono;
-        const alojamientos = grupo.reservasIndividuales.map(r => r.alojamiento).join(', ');
-        
-        const isGestionPagosActive = statusInfo.level >= 2;
-        const isGestionBoletaActive = statusInfo.level >= 4;
-        
-        const idReferencia = grupo.reservasIndividuales[0].id;
-        let accionParaMarcar = null;
-        if (grupo.estadoGestion === 'Pendiente Bienvenida') accionParaMarcar = 'marcar_bienvenida_enviada';
-        else if (grupo.estadoGestion === 'Pendiente Cobro') accionParaMarcar = 'marcar_cobro_enviado';
-        
-        let statusHtml;
-        if(accionParaMarcar){
-            statusHtml = `<button data-accion="${accionParaMarcar}" class="marcar-enviado-btn text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</button>`;
-        } else {
-             statusHtml = `<span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>`;
-        }
-        
-        card.innerHTML = `
-            <div class="flex items-center mb-2">
-                ${statusHtml}
-                <p class="ml-4 text-lg font-bold text-gray-800">${grupo.clienteNombre}</p>
-            </div>
-            <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
-                <p><strong>Teléfono:</strong> ${grupo.telefono || 'N/A'}</p>
-                <p><strong>Cabañas (${grupo.reservasIndividuales.length}):</strong> ${alojamientos}</p>
-                <p><strong>Llegada:</strong> ${formatDate(grupo.fechaLlegada)}</p>
-                <p><strong>ID Reserva:</strong> ${grupo.reservaIdOriginal}</p>
-            </div>
-            <div class="border-t mt-4 pt-3 flex flex-col md:flex-row justify-between items-center text-sm">
-                 <div class="grid grid-cols-3 gap-4 font-semibold text-center w-full md:w-2/3">
-                    <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(grupo.valorCLP)}</div>
-                    <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(grupo.abono)}</div>
-                    <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
-                </div>
-                <div class="mt-3 md:mt-0 flex flex-wrap gap-2 justify-center">
-                    <button data-gestion="ajuste_tarifa" class="gestion-btn px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-md hover:bg-yellow-200">Ajustar Tarifa</button>
-                    <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
-                    <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
-                </div>
-            </div>`;
-        card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));
-        
-        const marcarBtn = card.querySelector('.marcar-enviado-btn');
-        if (marcarBtn) {
-            marcarBtn.addEventListener('click', () => handleMarcarComoEnviado(marcarBtn.dataset.accion, grupo));
-        }
-
-        return card;
-    }
-
-    async function handleMarcarComoEnviado(accion, grupo) {
-        const formData = new FormData();
-        formData.append('accion', accion);
-        formData.append('idsIndividuales', JSON.stringify(grupo.reservasIndividuales.map(r => r.id)));
-        formData.append('reservaIdOriginal', grupo.reservaIdOriginal);
-        formData.append('detalles', JSON.stringify({ sinDocumento: true }));
-
-
-        try {
-            await fetchAPI(`/api/gestion/actualizar-estado`, {
-                method: 'POST',
-                body: formData
-            });
-            await loadGestion();
-        } catch (error) {
-            alert('Error al marcar como enviado: ' + error.message);
-        }
-    }
-
-    function openManagementModal(type, grupo) {
-        currentGrupo = grupo;
-        modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')} (Reserva ${grupo.reservaIdOriginal})`;
-        
-        if (type === 'ajuste_tarifa') {
-            renderAjusteTarifaModal();
-        } else if (type === 'pagos') {
-            renderPagosModal();
-        } else if (type === 'boleta') {
-            renderBoletaModal();
-        }
-        
-        modal.classList.remove('hidden');
-    }
-
-    function renderAjusteTarifaModal() {
-        modalContent.innerHTML = `
-            <div class="border-b border-gray-200">
-                <nav id="modal-tabs" class="-mb-px flex space-x-6" aria-label="Tabs">
-                    <button data-tab="kpi" class="modal-tab whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600">Calcular Potencial (KPI)</button>
-                    <button data-tab="ajuste" class="modal-tab whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Ajustar Cobro</button>
-                    ${currentGrupo.reservasIndividuales.length > 1 ? `<button data-tab="distribuir" class="modal-tab whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Distribuir Valores</button>` : ''}
-                </nav>
-            </div>
-            <div id="modal-tab-content" class="mt-5">
-            </div>
-        `;
-
-        const tabs = modalContent.querySelectorAll('.modal-tab');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => {
-                    t.classList.remove('border-indigo-500', 'text-indigo-600');
-                    t.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-                });
-                tab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-                tab.classList.add('border-indigo-500', 'text-indigo-600');
-                renderTabContent(tab.dataset.tab);
-            });
-        });
-
-        renderTabContent('kpi');
-    }
-
-    function renderTabContent(tabName) {
-        const contentContainer = document.getElementById('modal-tab-content');
-        const valorActualTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + r.valorCLP, 0);
-
-        switch(tabName) {
-            case 'kpi':
-                contentContainer.innerHTML = `
-                    <p class="text-sm text-gray-600 mb-3">Calcula el precio de lista (potencial) basado en el valor de cobro actual y un descuento. <strong>Esto no altera el valor a cobrar al cliente.</strong></p>
-                    <div class="space-y-4">
-                        <div>
-                            <label for="descuento-pct" class="block text-sm font-medium text-gray-700">Porcentaje de Descuento (%)</label>
-                            <input type="number" id="descuento-pct" placeholder="Ej: 15" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                        </div>
-                        <div>
-                            <p class="text-sm">Valor de Cobro Actual: <span class="font-semibold">${formatCurrency(valorActualTotal)}</span></p>
-                            <p class="text-sm">Valor Potencial Calculado: <span id="valor-potencial-preview" class="font-semibold text-blue-600"></span></p>
-                        </div>
-                        <div id="kpi-status" class="text-sm"></div>
-                        <div class="text-right">
-                            <button id="kpi-save-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md">Calcular y Guardar Potencial</button>
-                        </div>
-                    </div>`;
-                
-                const descuentoInput = contentContainer.querySelector('#descuento-pct');
-                const previewEl = contentContainer.querySelector('#valor-potencial-preview');
-                descuentoInput.addEventListener('input', () => {
-                    const pct = parseFloat(descuentoInput.value);
-                    if (pct > 0 && pct < 100) {
-                        const potencial = Math.round(valorActualTotal / (1 - (pct / 100)));
-                        previewEl.textContent = formatCurrency(potencial);
-                    } else {
-                        previewEl.textContent = '';
-                    }
-                });
-                contentContainer.querySelector('#kpi-save-btn').addEventListener('click', handleSaveKpi);
-                break;
-
-            case 'ajuste':
-                contentContainer.innerHTML = `
-                    <p class="text-sm text-gray-600 mb-3">Modifica el monto final que se cobrará al cliente. <strong>Esta acción es permanente y actualizará el valor de la reserva.</strong></p>
-                    <div class="space-y-4">
-                         <div>
-                            <label for="nuevo-valor-final" class="block text-sm font-medium text-gray-700">Nuevo Valor Final a Cobrar (CLP)</label>
-                            <input type="number" id="nuevo-valor-final" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value="${valorActualTotal}">
-                        </div>
-                         <p class="text-sm">Valor Original: <span class="font-semibold">${formatCurrency(valorActualTotal)}</span></p>
-                         <div id="ajuste-status" class="text-sm"></div>
-                         <div class="text-right">
-                            <button id="ajuste-save-btn" class="px-6 py-2 bg-red-600 text-white rounded-md">Ajustar Monto Final</button>
-                        </div>
-                    </div>`;
-                contentContainer.querySelector('#ajuste-save-btn').addEventListener('click', handleSaveAjusteFinal);
-                break;
-
-            case 'distribuir':
-                renderAjusteGrupo();
-                break;
-        }
-    }
-
-    async function handleSaveKpi() {
-        const descuento = document.getElementById('descuento-pct').value;
-        const statusEl = document.getElementById('kpi-status');
-        const saveBtn = document.getElementById('kpi-save-btn');
-
-        if (!descuento || parseFloat(descuento) <= 0) {
-            statusEl.textContent = 'Por favor, ingresa un porcentaje de descuento válido.';
-            statusEl.className = 'text-sm text-red-600';
-            return;
-        }
-
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Guardando...';
-        statusEl.textContent = '';
-        
-        try {
-            await fetchAPI('/api/gestion/grupo/calcular-potencial', {
-                method: 'POST',
-                body: {
-                    reservaIdOriginal: currentGrupo.reservaIdOriginal,
-                    descuento: descuento
-                }
-            });
-            statusEl.textContent = '¡Valor potencial guardado con éxito!';
-            statusEl.className = 'text-sm text-green-600';
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-            statusEl.className = 'text-sm text-red-600';
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Calcular y Guardar Potencial';
-        }
-    }
-
-    async function handleSaveAjusteFinal() {
-        const nuevoTotalCLP = document.getElementById('nuevo-valor-final').value;
-        const statusEl = document.getElementById('ajuste-status');
-        const saveBtn = document.getElementById('ajuste-save-btn');
-
-        if (!nuevoTotalCLP || parseFloat(nuevoTotalCLP) < 0) {
-            statusEl.textContent = 'Por favor, ingresa un monto final válido.';
-            statusEl.className = 'text-sm text-red-600';
-            return;
-        }
-
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Guardando...';
-        statusEl.textContent = '';
-        
-        try {
-            await fetchAPI('/api/gestion/grupo/ajustar-monto-final', {
-                method: 'POST',
-                body: {
-                    reservaIdOriginal: currentGrupo.reservaIdOriginal,
-                    nuevoTotalCLP: nuevoTotalCLP
-                }
-            });
-            modal.classList.add('hidden');
-            await loadGestion();
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-            statusEl.className = 'text-sm text-red-600';
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Ajustar Monto Final';
-        }
-    }
-    
-    function renderAjusteGrupo() {
-        const contentContainer = document.getElementById('modal-tab-content') || modalContent;
-        let cabanasHtml = currentGrupo.reservasIndividuales.map(res => `
-            <div class="grid grid-cols-2 gap-4 items-center">
-                <label for="valor-${res.id}" class="text-sm font-medium">${res.alojamiento}</label>
-                <input type="number" id="valor-${res.id}" data-id="${res.id}" class="valor-input block w-full px-3 py-2 border rounded-md" value="${res.valorCLP}">
-            </div>`).join('');
-        contentContainer.innerHTML = `
-            <div class="space-y-4">
-                <p class="text-sm text-gray-600">Corrige la distribución del valor total entre las cabañas del grupo.</p>
-                <div class="space-y-2">${cabanasHtml}</div>
-                <div class="border-t pt-3 flex justify-between items-center font-bold"><span>TOTAL:</span><span id="ajuste-valores-total"></span></div>
-                <div id="ajuste-valores-status" class="text-sm"></div>
-                <div class="text-right"><button id="ajuste-valores-save-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-md">Guardar</button></div>
-            </div>`;
-        contentContainer.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
-        contentContainer.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
-        updateValoresTotal();
-    }
-    
-    function updateValoresTotal() {
-        let total = 0;
-        const container = document.getElementById('modal-tab-content') || modalContent;
-        container.querySelectorAll('.valor-input').forEach(input => { total += parseFloat(input.value) || 0; });
-        container.querySelector('#ajuste-valores-total').textContent = formatCurrency(total);
-    }
-
-    async function handleSaveAjusteGrupo() {
-        const container = document.getElementById('modal-tab-content') || modalContent;
-        const valoresCabanas = Array.from(container.querySelectorAll('.valor-input')).map(input => ({ id: input.dataset.id, valor: input.value }));
-        const statusEl = container.querySelector('#ajuste-valores-status');
-        statusEl.textContent = 'Guardando...';
-        try {
-            await fetchAPI('/api/gestion/grupo/ajustar-valores', { method: 'POST', body: { reservaIdOriginal: currentGrupo.reservaIdOriginal, valoresCabanas }});
-            statusEl.textContent = '¡Valores guardados!';
-            statusEl.className = 'text-sm text-green-600';
-            await loadGestion();
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-            statusEl.className = 'text-sm text-red-600';
-        }
-    }
-    
-    function renderPagosModal() {
-        modalContent.innerHTML = `
-            <div id="pagos-summary" class="grid grid-cols-3 gap-4 font-semibold text-center w-full mb-4 p-2 bg-gray-50 rounded-md">
-            </div>
-            <div id="lista-pagos" class="space-y-2 max-h-48 overflow-y-auto pr-2 border-t border-b py-3">Cargando pagos...</div>
-            <div id="pagos-form-container" class="pt-4 mt-4">
-            </div>
-            <div class="mt-4">
-                 <button id="btn-registrar-nuevo-pago" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">Registrar Nuevo Pago</button>
-            </div>
-            `;
-        
-        modalContent.querySelector('#btn-registrar-nuevo-pago').addEventListener('click', () => {
-             showActionForm('registrar_pago');
-        });
-        
-        renderPagosList();
-    }
-    
-    async function renderPagosList() {
-        const listaPagosEl = modalContent.querySelector('#lista-pagos');
-        const summaryEl = modalContent.querySelector('#pagos-summary');
-
-        const ids = currentGrupo.reservasIndividuales.map(r => r.id);
-        allTransacciones = await fetchAPI('/api/gestion/transacciones-grupo', { method: 'POST', body: { idsIndividuales: ids } });
-        
-        const totalAbonado = allTransacciones.reduce((sum, t) => sum + t.monto, 0);
-        const valorTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
-        const saldo = valorTotal - totalAbonado;
-
-        summaryEl.innerHTML = `
-            <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(valorTotal)}</div>
-            <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(totalAbonado)}</div>
-            <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
-        `;
-        
-        if (allTransacciones.length === 0) {
-            listaPagosEl.innerHTML = '<p class="text-sm text-center text-gray-500 p-4">No hay pagos registrados.</p>';
-            return;
-        }
-        
-        listaPagosEl.innerHTML = allTransacciones.map(p => `
-            <div class="p-2 border rounded-md flex justify-between items-center">
-                <div>
-                    <p class="font-semibold">${formatCurrency(p.monto)} - <span class="font-normal text-gray-600">${p.tipo} (${p.medioDePago})</span></p>
-                    <p class="text-xs text-gray-500">Fecha: ${formatDate(p.fecha)}</p>
-                </div>
-                <div class="space-x-2">
-                    <button data-id="${p.id}" class="edit-pago-btn text-xs text-indigo-600 hover:text-indigo-900">Editar</button>
-                    <button data-id="${p.id}" data-reserva-id="${p.reservaId}" class="delete-pago-btn text-xs text-red-600 hover:text-red-900">Eliminar</button>
-                </div>
-            </div>`).join('');
-            
-        listaPagosEl.querySelectorAll('.edit-pago-btn').forEach(btn => btn.addEventListener('click', (e) => {
-            const transaccion = allTransacciones.find(t => t.id === e.target.dataset.id);
-            showActionForm('editar_pago', transaccion);
-        }));
-        listaPagosEl.querySelectorAll('.delete-pago-btn').forEach(btn => btn.addEventListener('click', (e) => handleDeleteTransaction(e.target.dataset.id, e.target.dataset.reservaId)));
-    }
-
-    function renderBoletaModal() {
-        showActionForm('marcar_boleta_enviada');
-    }
-
-    function showActionForm(action, transaccion = null) {
-        currentAction = action;
-        let formTitle = transaccion ? 'Editar Pago' : (action === 'registrar_pago' ? 'Registrar Nuevo Pago' : 'Subir Boleta/Factura');
-        const container = document.getElementById('pagos-form-container');
-        
-        const montoTotalGrupo = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
-        const abonoTotalGrupo = allTransacciones.reduce((sum, t) => sum + t.monto, 0);
-        const saldoPendiente = montoTotalGrupo - abonoTotalGrupo;
-
-        container.innerHTML = `
-            <form id="modal-form-accion">
-                <h4 class="font-semibold text-lg mb-4">${formTitle}</h4>
-                <div class="${action.includes('pago') ? '' : 'hidden'} space-y-4">
-                    <div><label class="block text-sm">Monto (CLP)</label><input type="number" id="monto-input" required class="mt-1 block w-full rounded-md border-gray-300" value="${transaccion?.monto || saldoPendiente}"></div>
-                    <div><label class="block text-sm">Medio de Pago</label><select id="medio-pago-select" class="mt-1 block w-full rounded-md border-gray-300"></select></div>
-                    <div class="flex items-center"><input id="pago-final-checkbox" type="checkbox" class="h-4 w-4 rounded" ${transaccion?.tipo === 'Pago Final' ? 'checked' : ''}><label for="pago-final-checkbox" class="ml-2 text-sm">¿Es el pago final?</label></div>
-                </div>
-                <div class="mt-4">
-                    <label class="block text-sm">Comprobante (Opcional)</label>
-                    <input type="file" id="documento-input" class="hidden"/>
-                    <div id="paste-zone" class="paste-zone mt-1 rounded-md"><p class="text-gray-500">Selecciona o pega una imagen</p></div>
-                    <div id="preview-container" class="mt-2 hidden"><p class="text-sm">Vista Previa:</p><img id="thumbnail" class="w-24 h-24 object-cover rounded-md"></div>
-                    <div class="flex items-center mt-3"><input id="sin-documento-checkbox" type="checkbox" class="h-4 w-4" ${transaccion?.enlaceComprobante === 'SIN_DOCUMENTO' ? 'checked' : ''}><label for="sin-documento-checkbox" class="ml-2 text-sm">Registrar sin documento</label></div>
-                </div>
-                <div id="modal-status" class="mt-2 text-sm text-red-600"></div>
-                <div class="mt-5 flex justify-end space-x-2">
-                    <button type="button" id="form-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md">Cancelar</button>
-                    <button type="submit" id="modal-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Guardar</button>
-                </div>
-            </form>`;
-        
-        const mediosDePago = ['Transferencia', 'Efectivo', 'Tarjeta'];
-        const select = container.querySelector('#medio-pago-select');
-        mediosDePago.forEach(medio => {
-            const option = document.createElement('option');
-            option.value = medio;
-            option.textContent = medio;
-            if (transaccion?.medioDePago === medio) option.selected = true;
-            select.appendChild(option);
-        });
-
-        const form = container.querySelector('#modal-form-accion');
-        form.addEventListener('submit', (e) => handleGroupFormSubmit(e, transaccion));
-
-        form.querySelector('#form-cancel-btn').addEventListener('click', () => {
-            container.innerHTML = '';
-            document.getElementById('btn-registrar-nuevo-pago').classList.remove('hidden');
-        });
-
-        const docInput = form.querySelector('#documento-input');
-        const pasteZone = form.querySelector('#paste-zone');
-        const previewContainer = form.querySelector('#preview-container');
-        const thumbnail = form.querySelector('#thumbnail');
-        const sinDocCheckbox = form.querySelector('#sin-documento-checkbox');
-        
-        if (transaccion?.enlaceComprobante && transaccion.enlaceComprobante !== 'SIN_DOCUMENTO') {
-            thumbnail.src = transaccion.enlaceComprobante;
-            previewContainer.classList.remove('hidden');
-        }
-
-        pasteZone.addEventListener('click', () => docInput.click());
-        docInput.addEventListener('change', () => { if(docInput.files.length) showPreview(docInput.files[0], thumbnail, previewContainer); });
-        document.addEventListener('paste', e => handlePaste(e, docInput, thumbnail, previewContainer));
-        sinDocCheckbox.addEventListener('change', () => { pasteZone.style.display = sinDocCheckbox.checked ? 'none' : 'block'; });
-
-        document.getElementById('btn-registrar-nuevo-pago').classList.add('hidden');
-    }
-    
-    async function handleGroupFormSubmit(event, transaccion = null) {
-        event.preventDefault();
-        const form = event.target;
-        const saveBtn = form.querySelector('#modal-save-btn');
-        const statusEl = form.querySelector('#modal-status');
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Guardando...';
-        statusEl.textContent = '';
-        
-        const formData = new FormData();
-        const detalles = {};
-        const idsIndividuales = currentGrupo.reservasIndividuales.map(r => r.id);
-
-        let endpoint;
-        let esPago = currentAction.includes('pago');
-        
-        if(esPago) {
-            detalles.monto = parseFloat(form.querySelector('#monto-input').value);
-            detalles.medioDePago = form.querySelector('#medio-pago-select').value;
-            detalles.tipo = form.querySelector('#pago-final-checkbox').checked ? 'Pago Final' : 'Abono';
-            detalles.esPagoFinal = form.querySelector('#pago-final-checkbox').checked;
-        }
-
-        detalles.sinDocumento = form.querySelector('#sin-documento-checkbox').checked;
-        const docInput = form.querySelector('#documento-input');
-        if (docInput && docInput.files.length > 0 && !detalles.sinDocumento) {
-            formData.append('documento', docInput.files[0]);
-        }
-        
-        if (transaccion) {
-            endpoint = '/api/gestion/transaccion/editar';
-            formData.append('reservaId', transaccion.reservaId);
-            formData.append('transaccionId', transaccion.id);
-        } else {
-            endpoint = '/api/gestion/actualizar-estado';
-            formData.append('accion', currentAction);
-        }
-        
-        formData.append('detalles', JSON.stringify(detalles));
-        formData.append('idsIndividuales', JSON.stringify(idsIndividuales));
-        formData.append('reservaIdOriginal', currentGrupo.reservaIdOriginal);
-
-        try {
-            await fetchAPI(endpoint, { method: 'POST', body: formData });
-            form.parentElement.innerHTML = '';
-            document.getElementById('btn-registrar-nuevo-pago').classList.remove('hidden');
-            await renderPagosList();
-            await loadGestion();
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Guardar';
-        }
-    }
-
-    async function handleDeleteTransaction(transaccionId, reservaId) {
-        if (!confirm('¿Estás seguro de que quieres eliminar este pago?')) return;
-        try {
-            await fetchAPI('/api/gestion/transaccion/eliminar', {
-                method: 'POST',
-                body: {
-                    reservaId,
-                    transaccionId,
-                    idsIndividuales: currentGrupo.reservasIndividuales.map(r => r.id)
-                }
-            });
-            await renderPagosList();
-            await loadGestion();
-        } catch (error) {
-            alert(`Error al eliminar el pago: ${error.message}`);
-        }
-    }
-    
-    function showPreview(file, thumb, container) {
-        if (file.type.startsWith('image/')) {
-            thumb.src = URL.createObjectURL(file);
-            container.classList.remove('hidden');
-        }
-    }
-
-    function handlePaste(e, docInput, thumb, container) {
-        if (!modal.contains(e.target)) return;
-        const items = (e.clipboardData || window.clipboardData).items;
-        for (const item of items) {
-            if (item.type.indexOf('image') !== -1) {
-                e.preventDefault();
-                const blob = item.getAsFile();
-                const file = new File([blob], "captura.png", { type: blob.type });
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                docInput.files = dataTransfer.files;
-                showPreview(file, thumb, container);
-                break;
-            }
-        }
-    }
-    
-    function updateFilteredView() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const filteredGrupos = allGrupos.filter(g => (g.clienteNombre && g.clienteNombre.toLowerCase().includes(searchTerm)) || (g.reservaIdOriginal && g.reservaIdOriginal.toLowerCase().includes(searchTerm)));
-        hoyList.innerHTML = ''; proximasList.innerHTML = '';
-        if (filteredGrupos.length === 0) {
-            noPendientes.classList.remove('hidden');
-            [hoyContainer, proximasContainer].forEach(el => el.classList.add('hidden'));
-            return;
-        }
-        noPendientes.classList.add('hidden');
-        const today = new Date(new Date().setUTCHours(0,0,0,0));
-        const llegadasHoy = [], proximasLlegadas = [];
-        filteredGrupos.forEach(grupo => { (new Date(grupo.fechaLlegada).getTime() <= today.getTime() ? llegadasHoy : proximasLlegadas).push(grupo); });
-        
-        if (llegadasHoy.length > 0) {
-            llegadasHoy.forEach(g => hoyList.appendChild(createGrupoCard(g)));
-            hoyContainer.classList.remove('hidden');
-        } else { hoyContainer.classList.add('hidden'); }
-        
-        if (proximasLlegadas.length > 0) {
-            proximasLlegadas.forEach(g => proximasList.appendChild(createGrupoCard(g)));
-            proximasContainer.classList.remove('hidden');
-        } else { proximasContainer.classList.add('hidden'); }
-    }
-    
-    async function loadGestion() {
-        loadingState.classList.remove('hidden');
-        [hoyContainer, proximasContainer, noPendientes].forEach(el => el.classList.add('hidden'));
-        try {
-            allGrupos = await fetchAPI('/api/gestion/pendientes');
-            loadingState.classList.add('hidden');
-            updateFilteredView();
-        } catch (error) {
-            loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar tareas: ${error.message}</p>`;
-        }
-    }
 
     document.addEventListener('DOMContentLoaded', () => {
+        const loader = document.getElementById('loader');
+        const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
+
         const session = checkSession();
         if (session) {
             loader.style.display = 'none';
             appContent.classList.remove('hidden');
-            authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
             document.getElementById('logout-btn').addEventListener('click', logout);
-            
-            searchInput.addEventListener('input', updateFilteredView);
-            modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            
-            loadGestion();
+
+            const consolidateBtn = document.getElementById('consolidate-btn');
+            const consolidateStatus = document.getElementById('consolidate-status');
+
+            function showStatus(element, message, isError = false) {
+                element.innerHTML = message;
+                let statusClass = isError ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800';
+                 if (message.includes('¡Proceso de consolidación finalizado!')) {
+                    statusClass = 'bg-green-100 text-green-800';
+                }
+                element.className = `mt-6 p-4 rounded-md text-sm ${statusClass}`;
+                element.classList.remove('hidden');
+            }
+
+            consolidateBtn.addEventListener('click', async () => {
+                consolidateBtn.disabled = true;
+                consolidateBtn.textContent = 'Procesando...';
+                showStatus(consolidateStatus, 'Iniciando consolidación. Esto puede tardar varios segundos...');
+                try {
+                    const result = await fetchAPI('/api/consolidar', {
+                        method: 'POST'
+                    });
+                    
+                    // --- NUEVA LÓGICA PARA MOSTRAR EL RESUMEN DETALLADO ---
+                    const sodc = result.summary.sodc;
+                    const booking = result.summary.booking;
+
+                    let summaryHtml = `
+                        <strong>¡Proceso de consolidación finalizado!</strong>
+                        <div class="grid grid-cols-2 gap-4 mt-2">
+                            <div>
+                                <h4 class="font-semibold">SODC</h4>
+                                <ul class="list-disc list-inside text-sm">
+                                    <li>Reportes procesados: <strong>${sodc.reportesEncontrados}</strong></li>
+                                    <li>Reservas creadas: <strong>${sodc.reservasCreadas}</strong></li>
+                                    <li>Reservas actualizadas: <strong>${sodc.reservasActualizadas}</strong></li>
+                                    <li>Clientes nuevos: <strong>${sodc.clientesNuevos}</strong></li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-semibold">Booking</h4>
+                                <ul class="list-disc list-inside text-sm">
+                                    <li>Reportes procesados: <strong>${booking.reportesEncontrados}</strong></li>
+                                    <li>Reservas creadas: <strong>${booking.reservasCreadas}</strong></li>
+                                    <li>Reservas actualizadas: <strong>${booking.reservasActualizadas}</strong></li>
+                                    <li>Clientes nuevos: <strong>${booking.clientesNuevos}</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                    showStatus(consolidateStatus, summaryHtml);
+
+                } catch (error) {
+                    console.error('Error al consolidar:', error);
+                    showStatus(consolidateStatus, `<strong>Error:</strong> ${error.message}`, true);
+                } finally {
+                    consolidateBtn.disabled = false;
+                    consolidateBtn.textContent = 'Iniciar Proceso de Consolidación';
+                }
+            });
         }
     });
 </script>

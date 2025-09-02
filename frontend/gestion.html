@@ -146,6 +146,8 @@
         formData.append('accion', accion);
         formData.append('idsIndividuales', JSON.stringify(grupo.reservasIndividuales.map(r => r.id)));
         formData.append('reservaIdOriginal', grupo.reservaIdOriginal);
+        formData.append('detalles', JSON.stringify({ sinDocumento: true }));
+
 
         try {
             await fetchAPI(`/api/gestion/actualizar-estado`, {
@@ -400,7 +402,7 @@
         allTransacciones = await fetchAPI('/api/gestion/transacciones-grupo', { method: 'POST', body: { idsIndividuales: ids } });
         
         const totalAbonado = allTransacciones.reduce((sum, t) => sum + t.monto, 0);
-        const valorTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + r.valorCLP, 0);
+        const valorTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
         const saldo = valorTotal - totalAbonado;
 
         summaryEl.innerHTML = `
@@ -442,11 +444,15 @@
         let formTitle = transaccion ? 'Editar Pago' : (action === 'registrar_pago' ? 'Registrar Nuevo Pago' : 'Subir Boleta/Factura');
         const container = document.getElementById('pagos-form-container');
         
+        const montoTotalGrupo = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
+        const abonoTotalGrupo = allTransacciones.reduce((sum, t) => sum + t.monto, 0);
+        const saldoPendiente = montoTotalGrupo - abonoTotalGrupo;
+
         container.innerHTML = `
             <form id="modal-form-accion">
                 <h4 class="font-semibold text-lg mb-4">${formTitle}</h4>
                 <div class="${action.includes('pago') ? '' : 'hidden'} space-y-4">
-                    <div><label class="block text-sm">Monto (CLP)</label><input type="number" id="monto-input" required class="mt-1 block w-full rounded-md border-gray-300" value="${transaccion?.monto || ''}"></div>
+                    <div><label class="block text-sm">Monto (CLP)</label><input type="number" id="monto-input" required class="mt-1 block w-full rounded-md border-gray-300" value="${transaccion?.monto || saldoPendiente}"></div>
                     <div><label class="block text-sm">Medio de Pago</label><select id="medio-pago-select" class="mt-1 block w-full rounded-md border-gray-300"></select></div>
                     <div class="flex items-center"><input id="pago-final-checkbox" type="checkbox" class="h-4 w-4 rounded" ${transaccion?.tipo === 'Pago Final' ? 'checked' : ''}><label for="pago-final-checkbox" class="ml-2 text-sm">¿Es el pago final?</label></div>
                 </div>
@@ -521,6 +527,7 @@
             detalles.monto = parseFloat(form.querySelector('#monto-input').value);
             detalles.medioDePago = form.querySelector('#medio-pago-select').value;
             detalles.tipo = form.querySelector('#pago-final-checkbox').checked ? 'Pago Final' : 'Abono';
+            detalles.esPagoFinal = form.querySelector('#pago-final-checkbox').checked;
         }
 
         detalles.sinDocumento = form.querySelector('#sin-documento-checkbox').checked;
@@ -529,11 +536,11 @@
             formData.append('documento', docInput.files[0]);
         }
         
-        if (transaccion) { // Editando
+        if (transaccion) {
             endpoint = '/api/gestion/transaccion/editar';
             formData.append('reservaId', transaccion.reservaId);
             formData.append('transaccionId', transaccion.id);
-        } else { // Creando
+        } else {
             endpoint = '/api/gestion/actualizar-estado';
             formData.append('accion', currentAction);
         }

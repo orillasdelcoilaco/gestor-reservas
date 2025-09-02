@@ -50,7 +50,7 @@ module.exports = (db) => {
             if(accion === 'registrar_pago' && individualIds.length > 1){
                 for(const id of individualIds){
                      const reservaDoc = await db.collection('reservas').doc(id).get();
-                     totalValorGrupo += reservaDoc.data().valorCLP;
+                     totalValorGrupo += reservaDoc.data().valorCLP || 0;
                 }
             }
 
@@ -76,7 +76,7 @@ module.exports = (db) => {
                         let montoIndividual;
                         if(individualIds.length > 1) {
                             const reservaDoc = await reservaRef.get();
-                            const valorCabana = reservaDoc.data().valorCLP;
+                            const valorCabana = reservaDoc.data().valorCLP || 0;
                             const proporcion = totalValorGrupo > 0 ? valorCabana / totalValorGrupo : 1 / individualIds.length;
                             montoIndividual = Math.round(parseFloat(detallesParseados.monto) * proporcion);
                         } else {
@@ -121,7 +121,7 @@ module.exports = (db) => {
                     
                     const updatePayload = { abono: totalAbonado };
 
-                    if (individualIds.length === 1 && totalAbonado > reservaData.valorCLP) {
+                    if (individualIds.length === 1 && totalAbonado > (reservaData.valorCLP || 0)) {
                         updatePayload.valorCLP = totalAbonado;
                         updatePayload.valorManual = true;
                     }
@@ -206,11 +206,11 @@ module.exports = (db) => {
                 batch.update(docRef, { valorCLP: parseFloat(nuevoTotalCLP), valorManual: true });
             } else {
                 let totalActualGrupo = 0;
-                snapshot.docs.forEach(doc => totalActualGrupo += doc.data().valorCLP);
+                snapshot.docs.forEach(doc => totalActualGrupo += (doc.data().valorCLP || 0));
 
                 snapshot.docs.forEach(doc => {
                     const reservaActual = doc.data();
-                    const proporcion = totalActualGrupo > 0 ? reservaActual.valorCLP / totalActualGrupo : 1 / snapshot.size;
+                    const proporcion = totalActualGrupo > 0 ? (reservaActual.valorCLP || 0) / totalActualGrupo : 1 / snapshot.size;
                     const nuevoValorIndividual = Math.round(parseFloat(nuevoTotalCLP) * proporcion);
                     batch.update(doc.ref, { valorCLP: nuevoValorIndividual, valorManual: true });
                 });
@@ -285,7 +285,7 @@ module.exports = (db) => {
                  const reservaData = reservaDoc.data();
                  const updatePayload = { abono: totalAbonado };
 
-                 if (individualIds.length === 1 && totalAbonado > reservaData.valorCLP) {
+                 if (individualIds.length === 1 && totalAbonado > (reservaData.valorCLP || 0)) {
                      updatePayload.valorCLP = totalAbonado;
                      updatePayload.valorManual = true;
                  }

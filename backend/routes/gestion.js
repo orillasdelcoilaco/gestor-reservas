@@ -277,6 +277,15 @@ module.exports = (db) => {
             await transaccionRef.update(detallesParseados);
             
             const individualIds = JSON.parse(idsIndividuales);
+            const batch = db.batch();
+
+            if (detallesParseados.tipo === 'Pago Final') {
+                for(const id of individualIds) {
+                    const reservaRef = db.collection('reservas').doc(id);
+                    batch.update(reservaRef, { estadoGestion: 'Pendiente Boleta', pagado: true });
+                }
+            }
+            await batch.commit();
 
             for(const id of individualIds) {
                  const resRef = db.collection('reservas').doc(id);

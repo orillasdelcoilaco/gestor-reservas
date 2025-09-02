@@ -137,6 +137,16 @@
             const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')} ${iconoValorManual}`;
             const nombreFormateado = `${reserva.nombre} ${iconoNombreManual}`;
             const telefonoFormateado = `${reserva.telefono} ${iconoTelefonoManual}`;
+
+            // --- INICIO DE LA MODIFICACIÓN ---
+            let syncHtml = '';
+            if (reserva.googleContactSynced) {
+                syncHtml = '<span title="Sincronizado con Google Contacts">✅</span>';
+            } else {
+                syncHtml = `<button class="sync-btn text-blue-600 hover:text-blue-900 text-xs" data-id="${reserva.id}">Sincronizar</button>`;
+            }
+            // --- FIN DE LA MODIFICACIÓN ---
+
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${nombreFormateado}</td>
@@ -150,13 +160,45 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}" data-reserva-id-original="${reserva.reservaIdOriginal}">Editar</button>
+                    ${syncHtml}
                 </td>`;
             reservasTableBody.appendChild(row);
         });
         document.querySelectorAll('.edit-btn').forEach(button => {
             button.addEventListener('click', handleEditClick);
         });
+
+        // --- INICIO DE LA MODIFICACIÓN ---
+        document.querySelectorAll('.sync-btn').forEach(button => {
+            button.addEventListener('click', handleSyncClick);
+        });
+        // --- FIN DE LA MODIFICACIÓN ---
     }
+    
+    // --- INICIO DE LA NUEVA FUNCIÓN ---
+    async function handleSyncClick(event) {
+        const button = event.target;
+        const clienteId = button.dataset.id;
+        if (!confirm('¿Sincronizar este cliente con Google Contacts?')) {
+            return;
+        }
+
+        button.disabled = true;
+        button.textContent = 'Sincronizando...';
+
+        try {
+            const result = await fetchAPI(`/api/clientes/${clienteId}/sincronizar-google`, {
+                method: 'POST'
+            });
+            alert(result.message);
+            await loadReservas(); // Recargar para mostrar el estado actualizado
+        } catch (error) {
+            alert(`Error al sincronizar: ${error.message}`);
+            button.disabled = false;
+            button.textContent = 'Sincronizar';
+        }
+    }
+    // --- FIN DE LA NUEVA FUNCIÓN ---
 
     function updateTableView() {
         const searchTerm = searchInput.value.toLowerCase();

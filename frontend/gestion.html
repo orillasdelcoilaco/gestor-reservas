@@ -141,6 +141,38 @@
         modal.classList.remove('hidden');
     }
     
+    function renderAjusteTarifaModal() {
+        if (currentGrupo.reservasIndividuales.length > 1) {
+            renderAjusteGrupo();
+        } else {
+            renderAjusteIndividual();
+        }
+    }
+    
+    function renderAjusteIndividual() {
+        const reserva = currentGrupo.reservasIndividuales[0];
+        modalContent.innerHTML = `...`; // Lógica para ajuste individual
+    }
+
+    function renderAjusteGrupo() {
+        let cabanasHtml = currentGrupo.reservasIndividuales.map(res => `
+            <div class="grid grid-cols-2 gap-4 items-center">
+                <label for="valor-${res.id}" class="text-sm font-medium">${res.alojamiento}</label>
+                <input type="number" id="valor-${res.id}" data-id="${res.id}" class="valor-input block w-full px-3 py-2 border rounded-md" value="${res.valorCLP}">
+            </div>`).join('');
+        modalContent.innerHTML = `
+            <div class="space-y-4">
+                <p class="text-sm text-gray-600">Corrige la distribución del valor total entre las cabañas.</p>
+                <div class="space-y-2">${cabanasHtml}</div>
+                <div class="border-t pt-3 flex justify-between items-center font-bold"><span>TOTAL:</span><span id="ajuste-valores-total"></span></div>
+                <div id="ajuste-valores-status" class="text-sm"></div>
+                <div class="text-right"><button id="ajuste-valores-save-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-md">Guardar</button></div>
+            </div>`;
+        modalContent.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
+        modalContent.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
+        updateValoresTotal();
+    }
+    
     function renderPagosModal() {
         modalContent.innerHTML = `
             <div id="lista-pagos" class="space-y-2 max-h-60 overflow-y-auto pr-2">Cargando pagos...</div>
@@ -148,10 +180,7 @@
                 <button id="btn-registrar-nuevo-pago" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">Registrar Nuevo Pago</button>
             </div>`;
         
-        modalContent.querySelector('#btn-registrar-nuevo-pago').addEventListener('click', () => {
-             showActionForm('registrar_pago');
-        });
-        
+        modalContent.querySelector('#btn-registrar-nuevo-pago').addEventListener('click', () => showActionForm('registrar_pago'));
         renderPagosList();
     }
     
@@ -165,14 +194,10 @@
             return;
         }
 
-        // Agrupar transacciones para mostrar un solo registro por pago
         const pagosAgrupados = transacciones.reduce((acc, t) => {
             const key = t.fecha.seconds;
-            if (!acc[key]) {
-                acc[key] = { ...t, montoTotal: 0, count: 0 };
-            }
+            if (!acc[key]) acc[key] = { ...t, montoTotal: 0 };
             acc[key].montoTotal += t.monto;
-            acc[key].count++;
             return acc;
         }, {});
         
@@ -186,88 +211,24 @@
     function renderBoletaModal() {
         showActionForm('marcar_boleta_enviada');
     }
-
-    function renderAjusteTarifaModal() {
-        if (currentGrupo.reservasIndividuales.length > 1) {
-            renderAjusteGrupo();
-        } else {
-            renderAjusteIndividual();
-        }
-    }
-
-    function renderAjusteIndividual() {
-        const reserva = currentGrupo.reservasIndividuales[0];
-        modalContent.innerHTML = `
-             <div class="space-y-4">
-                <div>
-                    <p class="text-sm font-medium text-gray-500">Valor Actual (CLP)</p>
-                    <p class="text-2xl font-bold text-gray-800">${formatCurrency(reserva.valorCLP)}</p>
-                </div>
-                <div class="border-t pt-4 space-y-4">
-                    <div class="p-3 border rounded-md">
-                        <p class="font-semibold">Ajustar por Descuento (%)</p>
-                        <div class="flex items-center space-x-2"><input type="number" id="ajuste-porcentaje-input" class="block w-full rounded-md border-gray-300"><span class="text-gray-500">%</span><button id="ajuste-porcentaje-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md">Ajustar</button></div>
-                    </div>
-                     <div class="p-3 border rounded-md">
-                        <p class="font-semibold">Ajustar por Valor Final ($)</p>
-                        <div class="flex items-center space-x-2"><span class="text-gray-500">$</span><input type="number" id="ajuste-valor-input" class="block w-full rounded-md border-gray-300"><button id="ajuste-valor-btn" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-md">Ajustar</button></div>
-                    </div>
-                </div>
-                 <div id="ajuste-resultado" class="mt-4 p-3 bg-gray-100 rounded-md hidden"></div>
-                 <div id="ajuste-status" class="mt-2 text-sm text-red-600"></div>
-            </div>`;
-        
-        modalContent.querySelector('#ajuste-porcentaje-btn').addEventListener('click', () => handleAjusteTarifaIndividual('porcentaje'));
-        modalContent.querySelector('#ajuste-valor-btn').addEventListener('click', () => handleAjusteTarifaIndividual('valor'));
-    }
-
-    function renderAjusteGrupo() {
-        let cabanasHtml = currentGrupo.reservasIndividuales.map(res => `
-            <div class="grid grid-cols-2 gap-4 items-center">
-                <label for="valor-${res.id}" class="text-sm font-medium">${res.alojamiento}</label>
-                <input type="number" id="valor-${res.id}" data-id="${res.id}" class="valor-input block w-full px-3 py-2 border rounded-md" value="${res.valorCLP}">
-            </div>`).join('');
-        modalContent.innerHTML = `
-            <div class="space-y-4">
-                <p class="text-sm text-gray-600">Corrige la distribución del valor total entre las cabañas del grupo.</p>
-                <div class="space-y-2">${cabanasHtml}</div>
-                <div class="border-t pt-3 flex justify-between items-center font-bold"><span>TOTAL:</span><span id="ajuste-valores-total"></span></div>
-                <div id="ajuste-valores-status" class="text-sm"></div>
-                <div class="text-right"><button id="ajuste-valores-save-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-md">Guardar</button></div>
-            </div>`;
-        modalContent.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
-        modalContent.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
-        updateValoresTotal();
-    }
     
     function showActionForm(action) {
         currentAction = action;
-        let formTitle = '';
-        let showPagoFields = false;
-        let showDocumentoField = false;
-
-        if (action === 'registrar_pago') {
-            formTitle = 'Registrar Nuevo Pago';
-            showPagoFields = true;
-            showDocumentoField = true;
-        } else if (action === 'marcar_boleta_enviada') {
-            formTitle = 'Subir Boleta/Factura';
-            showDocumentoField = true;
-        }
-
+        let formTitle = action === 'registrar_pago' ? 'Registrar Nuevo Pago' : 'Subir Boleta/Factura';
+        
         modalContent.innerHTML = `
             <form id="modal-form-accion">
                 <h4 class="font-semibold text-lg mb-4">${formTitle}</h4>
-                <div id="pago-fields" class="${showPagoFields ? '' : 'hidden'} space-y-4">
-                    <div><label for="monto-input" class="block text-sm font-medium text-gray-700">Monto (CLP)</label><input type="number" id="monto-input" required class="mt-1 block w-full rounded-md border-gray-300"></div>
-                    <div><label for="medio-pago-select" class="block text-sm font-medium text-gray-700">Medio de Pago</label><select id="medio-pago-select" class="mt-1 block w-full rounded-md border-gray-300"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
-                    <div class="flex items-center"><input id="pago-final-checkbox" type="checkbox" class="h-4 w-4 rounded"><label for="pago-final-checkbox" class="ml-2 block text-sm">¿Es el pago final?</label></div>
+                <div class="${action === 'registrar_pago' ? '' : 'hidden'} space-y-4">
+                    <div><label class="block text-sm">Monto Total (CLP)</label><input type="number" id="monto-input" required class="mt-1 block w-full rounded-md border-gray-300"></div>
+                    <div><label class="block text-sm">Medio de Pago</label><select id="medio-pago-select" class="mt-1 block w-full rounded-md border-gray-300"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
+                    <div class="flex items-center"><input id="pago-final-checkbox" type="checkbox" class="h-4 w-4"><label for="pago-final-checkbox" class="ml-2 text-sm">¿Es el pago final?</label></div>
                 </div>
-                <div id="documento-field" class="${showDocumentoField ? '' : 'hidden'} mt-4">
-                    <label class="block text-sm font-medium text-gray-700">Comprobante (Opcional)</label>
+                <div class="mt-4">
+                    <label class="block text-sm">Comprobante (Opcional)</label>
                     <input type="file" id="documento-input" class="hidden"/>
                     <div id="paste-zone" class="paste-zone mt-1 rounded-md"><p class="text-gray-500">Selecciona o pega una imagen</p></div>
-                    <div class="flex items-center mt-3"><input id="sin-documento-checkbox" type="checkbox" class="h-4 w-4 rounded"><label for="sin-documento-checkbox" class="ml-2 block text-sm">Registrar sin documento</label></div>
+                    <div class="flex items-center mt-3"><input id="sin-documento-checkbox" type="checkbox" class="h-4 w-4"><label for="sin-documento-checkbox" class="ml-2 text-sm">Registrar sin documento</label></div>
                 </div>
                 <div id="modal-status" class="mt-2 text-sm text-red-600"></div>
                 <div class="mt-5 flex justify-end"><button type="submit" id="modal-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Guardar</button></div>
@@ -275,7 +236,7 @@
 
         modalContent.querySelector('#modal-form-accion').addEventListener('submit', handleGroupFormSubmit);
     }
-    
+
     async function handleGroupFormSubmit(event) {
         event.preventDefault();
         const form = event.target;
@@ -308,7 +269,7 @@
         formData.append('reservaIdOriginal', currentGrupo.reservaIdOriginal);
 
         try {
-            await fetchAPI(`/api/gestion/actualizar-estado-grupo`, { method: 'POST', body: formData });
+            await fetchAPI(`/api/gestion/actualizar-estado`, { method: 'POST', body: formData });
             modal.classList.add('hidden');
             await loadGestion();
         } catch (error) {
@@ -318,8 +279,6 @@
         }
     }
 
-    // --- LÓGICA DE INICIALIZACIÓN Y FILTRADO ---
-    
     function updateFilteredView() {
         const searchTerm = searchInput.value.toLowerCase();
         const filteredGrupos = allGrupos.filter(g => (g.clienteNombre && g.clienteNombre.toLowerCase().includes(searchTerm)) || (g.reservaIdOriginal && g.reservaIdOriginal.toLowerCase().includes(searchTerm)));
@@ -368,15 +327,6 @@
             searchInput.addEventListener('input', updateFilteredView);
             modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             
-            tabPagos.addEventListener('click', () => {
-                tabPagos.classList.add('active'); tabValores.classList.remove('active');
-                tabContentPagos.classList.remove('hidden'); tabContentValores.classList.add('hidden');
-            });
-            tabValores.addEventListener('click', () => {
-                tabValores.classList.add('active'); tabPagos.classList.remove('active');
-                tabContentValores.classList.remove('hidden'); tabContentPagos.classList.add('hidden');
-            });
-
             loadGestion();
         }
     });

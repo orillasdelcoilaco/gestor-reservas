@@ -1,5 +1,3 @@
-// backend/services/gestionService.js
-
 const admin = require('firebase-admin');
 
 function getTodayUTC() {

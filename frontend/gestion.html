@@ -141,13 +141,160 @@
         modal.classList.remove('hidden');
     }
 
-    // --- LÓGICA DE MODALES ---
-
     function renderAjusteTarifaModal() {
-        if (currentGrupo.reservasIndividuales.length > 1) {
-            renderAjusteGrupo();
-        } else {
-            renderAjusteIndividual();
+        modalContent.innerHTML = `
+            <div class="border-b border-gray-200">
+                <nav id="modal-tabs" class="-mb-px flex space-x-6" aria-label="Tabs">
+                    <button data-tab="kpi" class="modal-tab whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600">Calcular Potencial (KPI)</button>
+                    <button data-tab="ajuste" class="modal-tab whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Ajustar Cobro</button>
+                    ${currentGrupo.reservasIndividuales.length > 1 ? `<button data-tab="distribuir" class="modal-tab whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">Distribuir Valores</button>` : ''}
+                </nav>
+            </div>
+            <div id="modal-tab-content" class="mt-5">
+            </div>
+        `;
+
+        const tabs = modalContent.querySelectorAll('.modal-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('border-indigo-500', 'text-indigo-600');
+                    t.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                });
+                tab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                tab.classList.add('border-indigo-500', 'text-indigo-600');
+                renderTabContent(tab.dataset.tab);
+            });
+        });
+
+        renderTabContent('kpi');
+    }
+
+    function renderTabContent(tabName) {
+        const contentContainer = document.getElementById('modal-tab-content');
+        const valorActualTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + r.valorCLP, 0);
+
+        switch(tabName) {
+            case 'kpi':
+                contentContainer.innerHTML = `
+                    <p class="text-sm text-gray-600 mb-3">Calcula el precio de lista (potencial) basado en el valor de cobro actual y un descuento. <strong>Esto no altera el valor a cobrar al cliente.</strong></p>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="descuento-pct" class="block text-sm font-medium text-gray-700">Porcentaje de Descuento (%)</label>
+                            <input type="number" id="descuento-pct" placeholder="Ej: 15" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </div>
+                        <div>
+                            <p class="text-sm">Valor de Cobro Actual: <span class="font-semibold">${formatCurrency(valorActualTotal)}</span></p>
+                            <p class="text-sm">Valor Potencial Calculado: <span id="valor-potencial-preview" class="font-semibold text-blue-600"></span></p>
+                        </div>
+                        <div id="kpi-status" class="text-sm"></div>
+                        <div class="text-right">
+                            <button id="kpi-save-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md">Calcular y Guardar Potencial</button>
+                        </div>
+                    </div>`;
+                
+                const descuentoInput = contentContainer.querySelector('#descuento-pct');
+                const previewEl = contentContainer.querySelector('#valor-potencial-preview');
+                descuentoInput.addEventListener('input', () => {
+                    const pct = parseFloat(descuentoInput.value);
+                    if (pct > 0 && pct < 100) {
+                        const potencial = Math.round(valorActualTotal / (1 - (pct / 100)));
+                        previewEl.textContent = formatCurrency(potencial);
+                    } else {
+                        previewEl.textContent = '';
+                    }
+                });
+                contentContainer.querySelector('#kpi-save-btn').addEventListener('click', handleSaveKpi);
+                break;
+
+            case 'ajuste':
+                contentContainer.innerHTML = `
+                    <p class="text-sm text-gray-600 mb-3">Modifica el monto final que se cobrará al cliente. <strong>Esta acción es permanente y actualizará el valor de la reserva.</strong></p>
+                    <div class="space-y-4">
+                         <div>
+                            <label for="nuevo-valor-final" class="block text-sm font-medium text-gray-700">Nuevo Valor Final a Cobrar (CLP)</label>
+                            <input type="number" id="nuevo-valor-final" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" value="${valorActualTotal}">
+                        </div>
+                         <p class="text-sm">Valor Original: <span class="font-semibold">${formatCurrency(valorActualTotal)}</span></p>
+                         <div id="ajuste-status" class="text-sm"></div>
+                         <div class="text-right">
+                            <button id="ajuste-save-btn" class="px-6 py-2 bg-red-600 text-white rounded-md">Ajustar Monto Final</button>
+                        </div>
+                    </div>`;
+                contentContainer.querySelector('#ajuste-save-btn').addEventListener('click', handleSaveAjusteFinal);
+                break;
+
+            case 'distribuir':
+                renderAjusteGrupo();
+                break;
+        }
+    }
+
+    async function handleSaveKpi() {
+        const descuento = document.getElementById('descuento-pct').value;
+        const statusEl = document.getElementById('kpi-status');
+        const saveBtn = document.getElementById('kpi-save-btn');
+
+        if (!descuento || parseFloat(descuento) <= 0) {
+            statusEl.textContent = 'Por favor, ingresa un porcentaje de descuento válido.';
+            statusEl.className = 'text-sm text-red-600';
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+        statusEl.textContent = '';
+        
+        try {
+            await fetchAPI('/api/gestion/grupo/calcular-potencial', {
+                method: 'POST',
+                body: {
+                    reservaIdOriginal: currentGrupo.reservaIdOriginal,
+                    descuento: descuento
+                }
+            });
+            statusEl.textContent = '¡Valor potencial guardado con éxito!';
+            statusEl.className = 'text-sm text-green-600';
+        } catch (error) {
+            statusEl.textContent = `Error: ${error.message}`;
+            statusEl.className = 'text-sm text-red-600';
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Calcular y Guardar Potencial';
+        }
+    }
+
+    async function handleSaveAjusteFinal() {
+        const nuevoTotalCLP = document.getElementById('nuevo-valor-final').value;
+        const statusEl = document.getElementById('ajuste-status');
+        const saveBtn = document.getElementById('ajuste-save-btn');
+
+        if (!nuevoTotalCLP || parseFloat(nuevoTotalCLP) < 0) {
+            statusEl.textContent = 'Por favor, ingresa un monto final válido.';
+            statusEl.className = 'text-sm text-red-600';
+            return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+        statusEl.textContent = '';
+        
+        try {
+            await fetchAPI('/api/gestion/grupo/ajustar-monto-final', {
+                method: 'POST',
+                body: {
+                    reservaIdOriginal: currentGrupo.reservaIdOriginal,
+                    nuevoTotalCLP: nuevoTotalCLP
+                }
+            });
+            modal.classList.add('hidden');
+            await loadGestion();
+        } catch (error) {
+            statusEl.textContent = `Error: ${error.message}`;
+            statusEl.className = 'text-sm text-red-600';
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Ajustar Monto Final';
         }
     }
 
@@ -301,12 +448,13 @@
     }
     
     function renderAjusteGrupo() {
+        const contentContainer = document.getElementById('modal-tab-content') || modalContent;
         let cabanasHtml = currentGrupo.reservasIndividuales.map(res => `
             <div class="grid grid-cols-2 gap-4 items-center">
                 <label for="valor-${res.id}" class="text-sm font-medium">${res.alojamiento}</label>
                 <input type="number" id="valor-${res.id}" data-id="${res.id}" class="valor-input block w-full px-3 py-2 border rounded-md" value="${res.valorCLP}">
             </div>`).join('');
-        modalContent.innerHTML = `
+        contentContainer.innerHTML = `
             <div class="space-y-4">
                 <p class="text-sm text-gray-600">Corrige la distribución del valor total entre las cabañas del grupo.</p>
                 <div class="space-y-2">${cabanasHtml}</div>
@@ -314,20 +462,22 @@
                 <div id="ajuste-valores-status" class="text-sm"></div>
                 <div class="text-right"><button id="ajuste-valores-save-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-md">Guardar</button></div>
             </div>`;
-        modalContent.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
-        modalContent.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
+        contentContainer.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
+        contentContainer.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
         updateValoresTotal();
     }
     
     function updateValoresTotal() {
         let total = 0;
-        modalContent.querySelectorAll('.valor-input').forEach(input => { total += parseFloat(input.value) || 0; });
-        modalContent.querySelector('#ajuste-valores-total').textContent = formatCurrency(total);
+        const container = document.getElementById('modal-tab-content') || modalContent;
+        container.querySelectorAll('.valor-input').forEach(input => { total += parseFloat(input.value) || 0; });
+        container.querySelector('#ajuste-valores-total').textContent = formatCurrency(total);
     }
 
     async function handleSaveAjusteGrupo() {
-        const valoresCabanas = Array.from(modalContent.querySelectorAll('.valor-input')).map(input => ({ id: input.dataset.id, valor: input.value }));
-        const statusEl = modalContent.querySelector('#ajuste-valores-status');
+        const container = document.getElementById('modal-tab-content') || modalContent;
+        const valoresCabanas = Array.from(container.querySelectorAll('.valor-input')).map(input => ({ id: input.dataset.id, valor: input.value }));
+        const statusEl = container.querySelector('#ajuste-valores-status');
         statusEl.textContent = 'Guardando...';
         try {
             await fetchAPI('/api/gestion/grupo/ajustar-valores', { method: 'POST', body: { reservaIdOriginal: currentGrupo.reservaIdOriginal, valoresCabanas }});
@@ -339,8 +489,6 @@
             statusEl.className = 'text-sm text-red-600';
         }
     }
-
-    // --- LÓGICA GENERAL DE LA PÁGINA ---
     
     function updateFilteredView() {
         const searchTerm = searchInput.value.toLowerCase();

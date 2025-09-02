@@ -20,7 +20,6 @@ module.exports = (db) => {
         }
     });
 
-    // --- RUTA UNIFICADA PARA ACTUALIZAR ESTADO (INDIVIDUAL Y GRUPO) ---
     router.post('/gestion/actualizar-estado', upload.single('documento'), async (req, res) => {
         const { accion, detalles, idsIndividuales, reservaIdOriginal } = req.body;
         
@@ -119,6 +118,71 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
+
+    router.post('/gestion/grupo/calcular-potencial', jsonParser, async (req, res) => {
+        const { reservaIdOriginal, descuento } = req.body;
+        if (!reservaIdOriginal || descuento === undefined) {
+            return res.status(400).json({ error: 'Faltan datos para el cálculo.' });
+        }
+        try {
+            const batch = db.batch();
+            const query = db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal);
+            const snapshot = await query.get();
+            if (snapshot.empty) {
+                return res.status(404).json({ error: 'No se encontraron reservas.' });
+            }
+
+            snapshot.forEach(doc => {
+                const reservaRef = db.collection('reservas').doc(doc.id);
+                const valorActual = doc.data().valorCLP;
+                const valorPotencial = Math.round(valorActual / (1 - (parseFloat(descuento) / 100)));
+                batch.update(reservaRef, { valorPotencialCLP: valorPotencial });
+            });
+            
+            await batch.commit();
+            res.status(200).json({ message: 'Valor potencial calculado y guardado para el grupo.' });
+        } catch (error) {
+            console.error(`Error al calcular valor potencial para ${reservaIdOriginal}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    router.post('/gestion/grupo/ajustar-monto-final', jsonParser, async (req, res) => {
+        const { reservaIdOriginal, nuevoTotalCLP } = req.body;
+        if (!reservaIdOriginal || nuevoTotalCLP === undefined) {
+            return res.status(400).json({ error: 'Faltan datos para el ajuste.' });
+        }
+
+        try {
+            const batch = db.batch();
+            const query = db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal);
+            const snapshot = await query.get();
+            if (snapshot.empty) {
+                return res.status(404).json({ error: 'No se encontraron reservas.' });
+            }
+
+            if (snapshot.size === 1) {
+                const docRef = snapshot.docs[0].ref;
+                batch.update(docRef, { valorCLP: parseFloat(nuevoTotalCLP), valorManual: true });
+            } else {
+                let totalActualGrupo = 0;
+                snapshot.docs.forEach(doc => totalActualGrupo += doc.data().valorCLP);
+
+                snapshot.docs.forEach(doc => {
+                    const reservaActual = doc.data();
+                    const proporcion = totalActualGrupo > 0 ? reservaActual.valorCLP / totalActualGrupo : 1 / snapshot.size;
+                    const nuevoValorIndividual = Math.round(parseFloat(nuevoTotalCLP) * proporcion);
+                    batch.update(doc.ref, { valorCLP: nuevoValorIndividual, valorManual: true });
+                });
+            }
+
+            await batch.commit();
+            res.status(200).json({ message: `Monto final del grupo ${reservaIdOriginal} actualizado.` });
+        } catch (error) {
+            console.error(`Error al ajustar monto final para ${reservaIdOriginal}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
     
     router.post('/gestion/transacciones-grupo', jsonParser, async (req, res) => {
         const { idsIndividuales } = req.body;
@@ -147,7 +211,6 @@ module.exports = (db) => {
         }
     });
 
-    // Rutas para editar y eliminar transacciones individuales (se mantienen por si se necesitan a futuro)
     router.post('/gestion/transaccion/editar', jsonParser, async (req, res) => {
         const { reservaId, transaccionId, nuevoMonto } = req.body;
         if (!reservaId || !transaccionId || nuevoMonto === undefined) {

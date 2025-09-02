@@ -260,6 +260,7 @@ module.exports = (db) => {
         }
         try {
             const detallesParseados = JSON.parse(detalles);
+            const individualIds = JSON.parse(idsIndividuales);
             const transaccionRef = db.collection('reservas').doc(reservaId).collection('transacciones').doc(transaccionId);
             
             if (req.file) {
@@ -276,13 +277,23 @@ module.exports = (db) => {
 
             await transaccionRef.update(detallesParseados);
             
-            const individualIds = JSON.parse(idsIndividuales);
             const batch = db.batch();
+            let hayPagoFinal = false;
 
-            if (detallesParseados.tipo === 'Pago Final') {
-                for(const id of individualIds) {
-                    const reservaRef = db.collection('reservas').doc(id);
+            for (const id of individualIds) {
+                const transaccionesSnapshot = await db.collection('reservas').doc(id).collection('transacciones').get();
+                if (transaccionesSnapshot.docs.some(doc => doc.data().tipo === 'Pago Final')) {
+                    hayPagoFinal = true;
+                    break;
+                }
+            }
+
+            for(const id of individualIds) {
+                const reservaRef = db.collection('reservas').doc(id);
+                if (hayPagoFinal) {
                     batch.update(reservaRef, { estadoGestion: 'Pendiente Boleta', pagado: true });
+                } else {
+                    batch.update(reservaRef, { estadoGestion: 'Pendiente Pago', pagado: false });
                 }
             }
             await batch.commit();

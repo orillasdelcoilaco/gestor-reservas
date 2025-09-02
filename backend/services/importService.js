@@ -188,7 +188,10 @@ async function processHistoricalBookings(db, fileBuffer) {
             fechaPago: null,
             pagado: false,
             pendiente: valorCLPCalculado,
-            boleta: false
+            boleta: false,
+            // --- INICIO DE LA MODIFICACIÓN ---
+            estadoGestion: 'Pendiente Bienvenida' // Se añade el estado inicial
+            // --- FIN DE LA MODIFICACIÓN ---
         };
 
         const reservaRef = db.collection('reservas').doc(idCompuesto);

@@ -4,7 +4,6 @@ const admin = require('firebase-admin');
 const csv = require('csv-parser');
 const stream = require('stream');
 const { getValorDolar } = require('./dolarService');
-// --- CORRECCIÓN: Importamos desde el archivo central de ayudantes ---
 const { cleanPhoneNumber, cleanCabanaName, parseDate, parseCurrency } = require('../utils/helpers');
 
 /**
@@ -178,6 +177,10 @@ async function processHistoricalBookings(db, fileBuffer) {
             monedaOriginal: 'USD',
             valorOriginal: valorOriginal,
             valorCLP: valorCLPCalculado,
+            correo: null,
+            // --- INICIO DE LA MODIFICACIÓN ---
+            telefono: phone, // Se añade el teléfono al documento de la reserva
+            // --- FIN DE LA MODIFICACIÓN ---
             pais: row['Booker country'] || null,
             valorDolarDia: valorDolarDia,
             comision: parseCurrency(row['Importe de la comisión'], 'USD'),
@@ -189,9 +192,7 @@ async function processHistoricalBookings(db, fileBuffer) {
             pagado: false,
             pendiente: valorCLPCalculado,
             boleta: false,
-            // --- INICIO DE LA MODIFICACIÓN ---
-            estadoGestion: 'Pendiente Bienvenida' // Se añade el estado inicial
-            // --- FIN DE LA MODIFICACIÓN ---
+            estadoGestion: 'Pendiente Bienvenida'
         };
 
         const reservaRef = db.collection('reservas').doc(idCompuesto);

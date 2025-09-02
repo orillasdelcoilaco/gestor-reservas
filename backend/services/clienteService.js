@@ -175,35 +175,39 @@ async function getAllClientsWithStats(db) {
     return clientsWithStats;
 }
 
+// --- FUNCIÓN MODIFICADA ---
 async function syncClientToGoogle(db, clientId) {
     const clientRef = db.collection('clientes').doc(clientId);
     const clientDoc = await clientRef.get();
-
     if (!clientDoc.exists) {
         throw new Error('El cliente no existe.');
     }
-
     const clientData = clientDoc.data();
-    
+
     const q = db.collection('reservas').where('clienteId', '==', clientId).orderBy('fechaReserva', 'desc').limit(1);
     const snapshot = await q.get();
-
     if (snapshot.empty) {
         throw new Error('No se encontraron reservas para este cliente, no se puede crear el nombre del contacto.');
     }
     const reservaData = snapshot.docs[0].data();
 
+    const contactName = `${reservaData.clienteNombre} ${reservaData.canal} ${reservaData.reservaIdOriginal}`;
     const contactPayload = {
-        name: `${reservaData.clienteNombre} ${reservaData.canal} ${reservaData.reservaIdOriginal}`,
+        name: contactName,
         phone: clientData.phone,
         email: clientData.email
     };
+
+    const contactExists = await findContactByName(db, contactName);
+    if (contactExists) {
+        return { success: false, alreadyExists: true, message: `El contacto "${contactName}" ya existe en Google Contacts.` };
+    }
     
     const syncSuccess = await createGoogleContact(db, contactPayload);
 
     if (syncSuccess) {
         await clientRef.update({ googleContactSynced: true });
-        return { success: true, message: 'Cliente sincronizado con Google Contacts.' };
+        return { success: true, message: 'Cliente sincronizado con éxito.', contactName: contactName };
     } else {
         throw new Error('Falló la sincronización con la API de Google. Revisa los logs del servidor.');
     }
@@ -296,5 +300,5 @@ module.exports = {
     getAllClientsWithStats,
     syncClientToGoogle,
     updateClientMaster,
-    findOrCreateClient // <-- Exportamos la nueva función
+    findOrCreateClient
 };

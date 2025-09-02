@@ -134,9 +134,12 @@
             const iconoValorManual = reserva.valorManual ? '✏️' : '';
             const iconoNombreManual = reserva.nombreManual ? '✏️' : '';
             const iconoTelefonoManual = reserva.telefonoManual ? '✏️' : '';
-            const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')} ${iconoValorManual}`;
+            const valorFormateado = `$${(reserva.valorCLP || 0).toLocaleString('es-CL')} ${iconoValorManual}`;
             const nombreFormateado = `${reserva.nombre} ${iconoNombreManual}`;
             const telefonoFormateado = `${reserva.telefono} ${iconoTelefonoManual}`;
+            
+            // --- INICIO DE LA MODIFICACIÓN ---
+            // Se añade el botón de sincronización. Usamos `data-cliente-id` que es el correcto.
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${nombreFormateado}</td>
@@ -148,15 +151,68 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${telefonoFormateado}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.estado}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}" data-reserva-id-original="${reserva.reservaIdOriginal}">Editar</button>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button class="edit-btn text-indigo-600 hover:text-indigo-900 text-xs" data-id="${reserva.id}" data-reserva-id-original="${reserva.reservaIdOriginal}">Editar</button>
+                    <button class="sync-btn text-blue-600 hover:text-blue-900 text-xs" data-cliente-id="${reserva.clienteId}">Sincronizar Google</button>
                 </td>`;
+            // --- FIN DE LA MODIFICACIÓN ---
+            
             reservasTableBody.appendChild(row);
         });
         document.querySelectorAll('.edit-btn').forEach(button => {
             button.addEventListener('click', handleEditClick);
         });
+        // --- INICIO DE LA MODIFICACIÓN ---
+        document.querySelectorAll('.sync-btn').forEach(button => {
+            button.addEventListener('click', handleSyncClick);
+        });
+        // --- FIN DE LA MODIFICACIÓN ---
     }
+
+    // --- INICIO DE LA NUEVA FUNCIÓN ---
+    async function handleSyncClick(event) {
+        const button = event.target;
+        const clienteId = button.dataset.clienteId;
+
+        button.disabled = true;
+        button.textContent = 'Verificando...';
+
+        try {
+            const result = await fetchAPI(`/api/clientes/${clienteId}/sincronizar-google`, { method: 'POST' });
+            
+            alert(result.message);
+
+            // Si la sincronización fue exitosa (ya sea porque se creó o porque ya existía),
+            // actualizamos la UI de forma dinámica sin recargar toda la tabla.
+            if (result.success) {
+                const parentTd = button.parentElement;
+                
+                // Guardamos los datos del botón de editar para no perderlos
+                const editBtn = parentTd.querySelector('.edit-btn');
+                const editBtnData = {
+                    id: editBtn.dataset.id,
+                    reservaIdOriginal: editBtn.dataset.reservaIdOriginal
+                };
+
+                // Reemplazamos el contenido de la celda de acciones
+                parentTd.innerHTML = `
+                    <button class="edit-btn text-indigo-600 hover:text-indigo-900 text-xs" data-id="${editBtnData.id}" data-reserva-id-original="${editBtnData.reservaIdOriginal}">Editar</button>
+                    <span class="text-xs text-green-600" title="Sincronizado con Google Contacts">✅ Sincronizado</span>`;
+                
+                // Es crucial volver a añadir el listener al botón de editar que acabamos de recrear
+                parentTd.querySelector('.edit-btn').addEventListener('click', handleEditClick);
+            } else {
+                // Si hubo un error que no fue de éxito (ej. API de Google falló), reactivamos el botón
+                button.disabled = false;
+                button.textContent = 'Sincronizar Google';
+            }
+        } catch (error) {
+            alert(`Error al sincronizar: ${error.message}`);
+            button.disabled = false;
+            button.textContent = 'Sincronizar Google';
+        }
+    }
+    // --- FIN DE LA NUEVA FUNCIÓN ---
 
     function updateTableView() {
         const searchTerm = searchInput.value.toLowerCase();

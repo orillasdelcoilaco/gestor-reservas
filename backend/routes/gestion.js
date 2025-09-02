@@ -105,7 +105,9 @@ module.exports = (db) => {
                 }
 
                 if (nuevoEstado) dataToUpdate.estadoGestion = nuevoEstado;
-                batch.update(reservaRef, dataToUpdate);
+                if (Object.keys(dataToUpdate).length > 0) {
+                    batch.update(reservaRef, dataToUpdate);
+                }
             }
 
             await batch.commit();

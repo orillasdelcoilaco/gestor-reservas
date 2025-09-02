@@ -40,7 +40,10 @@ module.exports = (db) => {
                     totalNoches: data.totalNoches || 0,
                     valorManual: data.valorManual || false,
                     nombreManual: data.nombreManual || false,
-                    telefonoManual: cliente.telefonoManual || false
+                    telefonoManual: cliente.telefonoManual || false,
+                    // --- INICIO DE LA MODIFICACIÓN ---
+                    estadoGestion: data.estadoGestion || 'N/A' // Se añade el campo para diagnóstico
+                    // --- FIN DE LA MODIFICACIÓN ---
                 });
             });
             res.status(200).json(todasLasReservas);
@@ -63,17 +66,13 @@ module.exports = (db) => {
             const originalData = doc.data();
             const clientId = originalData.clienteId;
             
-            // --- INICIO DE LA CORRECCIÓN CLAVE ---
-            // Buscamos los datos completos del cliente en Firestore para asegurar que tenemos el teléfono correcto
             const clienteRef = db.collection('clientes').doc(clientId);
             const clienteDoc = await clienteRef.get();
             const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
-            // --- FIN DE LA CORRECCIÓN CLAVE ---
 
             if (clienteNombre || telefono) {
                 const nameParts = clienteNombre ? clienteNombre.split(' ') : [];
                 
-                // Usamos el teléfono del body si viene, si no, usamos el que ya está en la base de datos.
                 const telefonoParaActualizar = telefono || clienteData.phone;
 
                 await updateClientMaster(db, clientId, {
@@ -110,11 +109,9 @@ module.exports = (db) => {
 
             const clienteId = snapshot.docs[0].data().clienteId;
 
-            // --- INICIO DE LA CORRECCIÓN CLAVE ---
             const clienteRef = db.collection('clientes').doc(clienteId);
             const clienteDoc = await clienteRef.get();
             const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
-             // --- FIN DE LA CORRECCIÓN CLAVE ---
 
             if (clienteNombre || telefono) {
                 const nameParts = clienteNombre ? clienteNombre.split(' ') : [];

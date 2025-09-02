@@ -60,6 +60,7 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado Gestión</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                             </tr>
@@ -134,9 +135,12 @@
             const iconoValorManual = reserva.valorManual ? '✏️' : '';
             const iconoNombreManual = reserva.nombreManual ? '✏️' : '';
             const iconoTelefonoManual = reserva.telefonoManual ? '✏️' : '';
-            const valorFormateado = `$${reserva.valorCLP.toLocaleString('es-CL')} ${iconoValorManual}`;
+            const valorFormateado = `$${(reserva.valorCLP || 0).toLocaleString('es-CL')} ${iconoValorManual}`;
             const nombreFormateado = `${reserva.nombre} ${iconoNombreManual}`;
             const telefonoFormateado = `${reserva.telefono} ${iconoTelefonoManual}`;
+            
+            // --- INICIO DE LA MODIFICACIÓN ---
+            // Se añade la celda para el estado de gestión
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${nombreFormateado}</td>
@@ -147,10 +151,13 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorFormateado}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${telefonoFormateado}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.estado}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-600">${reserva.estadoGestion}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}" data-reserva-id-original="${reserva.reservaIdOriginal}">Editar</button>
                 </td>`;
+            // --- FIN DE LA MODIFICACIÓN ---
+
             reservasTableBody.appendChild(row);
         });
         document.querySelectorAll('.edit-btn').forEach(button => {

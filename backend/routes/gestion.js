@@ -56,14 +56,13 @@ module.exports = (db) => {
 
             for (const id of individualIds) {
                 const reservaRef = db.collection('reservas').doc(id);
-                const dataToUpdate = {};
                 
                 switch (accion) {
                     case 'marcar_bienvenida_enviada':
-                        dataToUpdate.estadoGestion = 'Pendiente Cobro';
+                        batch.update(reservaRef, { estadoGestion: 'Pendiente Cobro' });
                         break;
                     case 'marcar_cobro_enviado':
-                        dataToUpdate.estadoGestion = 'Pendiente Pago';
+                        batch.update(reservaRef, { estadoGestion: 'Pendiente Pago' });
                         break;
                     case 'registrar_pago':
                         if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {
@@ -74,7 +73,7 @@ module.exports = (db) => {
                         
                         let montoIndividual;
                         if(individualIds.length > 1) {
-                            const reservaDoc = await reservaRef.get();
+                            const reservaDoc = await db.collection('reservas').doc(id).get();
                             const valorCabana = reservaDoc.data().valorCLP || 0;
                             const proporcion = totalValorGrupo > 0 ? valorCabana / totalValorGrupo : 1 / individualIds.length;
                             montoIndividual = Math.round(parseFloat(detallesParseados.monto) * proporcion);
@@ -91,20 +90,18 @@ module.exports = (db) => {
                         });
                         
                         if (detallesParseados.esPagoFinal) {
-                            dataToUpdate.estadoGestion = 'Pendiente Boleta';
-                            dataToUpdate.pagado = true;
+                            batch.update(reservaRef, { estadoGestion: 'Pendiente Boleta', pagado: true });
                         }
                         break;
                     case 'marcar_boleta_enviada':
-                        dataToUpdate.estadoGestion = 'Facturado';
-                        dataToUpdate.fechaBoletaEnviada = admin.firestore.FieldValue.serverTimestamp();
-                        dataToUpdate.boleta = true;
-                        if (publicUrl) dataToUpdate['documentos.enlaceBoleta'] = publicUrl;
+                        const boletaUpdate = {
+                            estadoGestion: 'Facturado',
+                            fechaBoletaEnviada: admin.firestore.FieldValue.serverTimestamp(),
+                            boleta: true
+                        };
+                        if (publicUrl) boletaUpdate['documentos.enlaceBoleta'] = publicUrl;
+                        batch.update(reservaRef, boletaUpdate);
                         break;
-                }
-
-                if (Object.keys(dataToUpdate).length > 0) {
-                    batch.update(reservaRef, dataToUpdate);
                 }
             }
 

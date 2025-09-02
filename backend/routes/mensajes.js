@@ -68,7 +68,9 @@ module.exports = (db) => {
       // Usamos un bucle for...of para poder usar await dentro
       for (const doc of snapshot.docs) {
         const data = doc.data();
+        // --- MODIFICACIÓN: AÑADIMOS EL ID DE CADA RESERVA INDIVIDUAL ---
         cabanas.push({
+          id: doc.id,
           alojamiento: data.alojamiento,
           valorCLP: data.valorCLP
         });
@@ -76,7 +78,7 @@ module.exports = (db) => {
 
         // --- LÓGICA PARA SUMAR ABONOS DE LA SUBCOLECCIÓN ---
         const transaccionesRef = doc.ref.collection('transacciones');
-        const transaccionesSnapshot = await transaccionesRef.where('tipo', '==', 'Abono').get();
+        const transaccionesSnapshot = await transaccionesRef.get();
         
         if (!transaccionesSnapshot.empty) {
           transaccionesSnapshot.forEach(transDoc => {

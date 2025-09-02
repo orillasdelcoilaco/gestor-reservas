@@ -96,18 +96,23 @@
         const isGestionPagosActive = statusInfo.level >= 2;
         const isGestionBoletaActive = statusInfo.level >= 4;
         
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // Se usará el ID de la primera reserva individual como referencia para la URL
         const idReferencia = grupo.reservasIndividuales[0].id;
         let accionParaMarcar = null;
         if (grupo.estadoGestion === 'Pendiente Bienvenida') accionParaMarcar = 'marcar_bienvenida_enviada';
         else if (grupo.estadoGestion === 'Pendiente Cobro') accionParaMarcar = 'marcar_cobro_enviado';
         
         let statusHtml;
-        if(accionParaMarcar){
-            statusHtml = `<button data-accion="${accionParaMarcar}" class="marcar-enviado-btn text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</button>`;
+        if (accionParaMarcar) {
+            // Se convierte en un enlace <a> que lleva a mensajes.html
+            const url = `mensajes.html?reservaId=${grupo.reservaIdOriginal}&reservaCompletaId=${idReferencia}&accion=${accionParaMarcar}`;
+            statusHtml = `<a href="${url}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</a>`;
         } else {
-             statusHtml = `<span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>`;
+            statusHtml = `<span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>`;
         }
-        
+        // --- FIN DE LA MODIFICACIÓN ---
+
         card.innerHTML = `
             <div class="flex items-center mb-2">
                 ${statusHtml}
@@ -134,31 +139,7 @@
             </div>`;
         card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));
         
-        const marcarBtn = card.querySelector('.marcar-enviado-btn');
-        if (marcarBtn) {
-            marcarBtn.addEventListener('click', () => handleMarcarComoEnviado(marcarBtn.dataset.accion, grupo));
-        }
-
         return card;
-    }
-
-    async function handleMarcarComoEnviado(accion, grupo) {
-        const formData = new FormData();
-        formData.append('accion', accion);
-        formData.append('idsIndividuales', JSON.stringify(grupo.reservasIndividuales.map(r => r.id)));
-        formData.append('reservaIdOriginal', grupo.reservaIdOriginal);
-        formData.append('detalles', JSON.stringify({ sinDocumento: true }));
-
-
-        try {
-            await fetchAPI(`/api/gestion/actualizar-estado`, {
-                method: 'POST',
-                body: formData
-            });
-            await loadGestion();
-        } catch (error) {
-            alert('Error al marcar como enviado: ' + error.message);
-        }
     }
 
     function openManagementModal(type, grupo) {

@@ -49,7 +49,6 @@
                             Marcar Acción como Completada y Volver al Panel
                         </button>
                     </div>
-
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="md:col-span-1">
                             <h3 class="text-lg font-medium text-gray-900">Detalles de la Reserva</h3>
@@ -119,16 +118,17 @@
             const btnGenerarBienvenida = document.getElementById('btn-generar-bienvenida');
             const btnCopiarBienvenida = document.getElementById('btn-copiar-bienvenida');
             const btnWhatsappBienvenida = document.getElementById('btn-whatsapp-bienvenida');
+            
             let reservaSeleccionada = null;
-            let reservaCompletaIdFromUrl = null;
+            let reservaIdOriginalFromUrl = null;
             let accionFromUrl = null;
             
             const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
             function formatDate(date) {
-                const day = date.getDate();
-                const month = monthNames[date.getMonth()];
-                const year = date.getFullYear();
+                const day = date.getUTCDate(); // Usar UTC para consistencia
+                const month = monthNames[date.getUTCMonth()];
+                const year = date.getUTCFullYear();
                 return `${month} - ${day} - ${year}`;
             }
 
@@ -140,6 +140,7 @@
                         reservaSeleccionada.info.llegada = new Date(reservaSeleccionada.info.llegada);
                         reservaSeleccionada.info.salida = new Date(reservaSeleccionada.info.salida);
                         
+                        // El abono ya viene sumado desde el backend
                         abonoInput.value = reservaSeleccionada.info.totalAbonado || 0;
                         
                         mostrarDetalles();
@@ -175,7 +176,6 @@
                     reservas.forEach(res => {
                         const option = document.createElement('option');
                         option.value = res.reservaIdOriginal;
-                        option.dataset.reservaCompletaId = res.id;
                         option.textContent = `${res.nombre} - Llegada: ${res.llegada} (ID: ${res.reservaIdOriginal})`;
                         reservaSelect.appendChild(option);
                     });
@@ -192,8 +192,6 @@
                     generadorSection.classList.add('hidden');
                     return;
                 }
-                const selectedOption = reservaSelect.options[reservaSelect.selectedIndex];
-                reservaCompletaIdFromUrl = selectedOption.dataset.reservaCompletaId; 
                 cargarDetalleReserva(reservaIdOriginal);
             });
             
@@ -204,8 +202,8 @@
                 detallesReservaDiv.innerHTML = `
                     <p><strong>Cliente:</strong> ${info.nombre}</p>
                     <p><strong>Teléfono:</strong> ${info.telefono}</p>
-                    <p><strong>Llegada:</strong> ${info.llegada.toLocaleDateString('es-CL')}</p>
-                    <p><strong>Salida:</strong> ${info.salida.toLocaleDateString('es-CL')}</p>
+                    <p><strong>Llegada:</strong> ${info.llegada.toLocaleDateString('es-CL', { timeZone: 'UTC' })}</p>
+                    <p><strong>Salida:</strong> ${info.salida.toLocaleDateString('es-CL', { timeZone: 'UTC' })}</p>
                     <p><strong>Total Noches:</strong> ${info.totalNoches}</p>
                     <p><strong>Valor Total:</strong> $${info.totalCLP.toLocaleString('es-CL')}</p>
                     <p><strong>Total Abonado:</strong> $${info.totalAbonado.toLocaleString('es-CL')}</p>
@@ -401,36 +399,42 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
                 linkElement.href = `https://api.whatsapp.com/send?phone=${telefono}&text=${texto}`;
             }
             
+            // --- LÓGICA MODIFICADA PARA MANEJAR LA NAVEGACIÓN DESDE gestion.html ---
             const urlParams = new URLSearchParams(window.location.search);
-            const reservaIdOriginalFromUrl = urlParams.get('reservaId');
-            reservaCompletaIdFromUrl = urlParams.get('reservaCompletaId');
+            reservaIdOriginalFromUrl = urlParams.get('reservaId');
             accionFromUrl = urlParams.get('accion');
 
-            if (reservaIdOriginalFromUrl && reservaCompletaIdFromUrl) {
-                seleccionSection.style.display = 'none';
-                marcarEnviadoContainer.classList.remove('hidden');
+            if (reservaIdOriginalFromUrl) {
+                seleccionSection.style.display = 'none'; // Ocultar selectores
+                marcarEnviadoContainer.classList.remove('hidden'); // Mostrar botón de confirmación
                 cargarDetalleReserva(reservaIdOriginalFromUrl);
             }
 
             btnMarcarEnviado.addEventListener('click', async () => {
-                if (!reservaCompletaIdFromUrl || !accionFromUrl) return;
+                if (!reservaSeleccionada || !accionFromUrl) return;
+                
                 btnMarcarEnviado.disabled = true;
                 btnMarcarEnviado.textContent = 'Procesando...';
 
-                // --- CORRECCIÓN APLICADA AQUÍ ---
+                // Construir el payload correcto para la API
                 const formData = new FormData();
+                const idsIndividuales = reservaSeleccionada.cabanas.map(c => c.id);
+                
                 formData.append('accion', accionFromUrl);
+                formData.append('idsIndividuales', JSON.stringify(idsIndividuales));
+                formData.append('reservaIdOriginal', reservaSeleccionada.info.reservaIdOriginal);
+                formData.append('detalles', JSON.stringify({ sinDocumento: true })); // Necesario para la ruta
 
                 try {
-                    await fetchAPI(`/api/gestion/actualizar-estado/${reservaCompletaIdFromUrl}`, {
+                    await fetchAPI(`/api/gestion/actualizar-estado`, {
                         method: 'POST',
-                        body: formData // Se envía como FormData, aunque no tenga archivos
+                        body: formData
                     });
-                    window.location.href = 'gestion.html';
+                    window.location.href = 'gestion.html'; // Volver al panel de gestión
                 } catch (error) {
                     alert('Error al marcar como enviado: ' + error.message);
                     btnMarcarEnviado.disabled = false;
-                    btnMarcarEnviado.textContent = 'Marcar Acción como Completada y Volver';
+                    btnMarcarEnviado.textContent = 'Marcar Acción como Completada y Volver al Panel';
                 }
             });
 

@@ -48,23 +48,22 @@ module.exports = (db) => {
             
             let totalValorGrupo = 0;
             if(accion === 'registrar_pago' && individualIds.length > 1){
-                for(const id of individualIds){
-                     const reservaDoc = await db.collection('reservas').doc(id).get();
-                     totalValorGrupo += reservaDoc.data().valorCLP || 0;
+                const docs = await db.getAll(...individualIds.map(id => db.collection('reservas').doc(id)));
+                for (const doc of docs) {
+                    totalValorGrupo += doc.data().valorCLP || 0;
                 }
             }
 
             for (const id of individualIds) {
                 const reservaRef = db.collection('reservas').doc(id);
                 const dataToUpdate = {};
-                let nuevoEstado = '';
                 
                 switch (accion) {
                     case 'marcar_bienvenida_enviada':
-                        nuevoEstado = 'Pendiente Cobro';
+                        dataToUpdate.estadoGestion = 'Pendiente Cobro';
                         break;
                     case 'marcar_cobro_enviado':
-                        nuevoEstado = 'Pendiente Pago';
+                        dataToUpdate.estadoGestion = 'Pendiente Pago';
                         break;
                     case 'registrar_pago':
                         if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {
@@ -92,19 +91,18 @@ module.exports = (db) => {
                         });
                         
                         if (detallesParseados.esPagoFinal) {
-                            nuevoEstado = 'Pendiente Boleta';
+                            dataToUpdate.estadoGestion = 'Pendiente Boleta';
                             dataToUpdate.pagado = true;
                         }
                         break;
                     case 'marcar_boleta_enviada':
-                        nuevoEstado = 'Facturado';
+                        dataToUpdate.estadoGestion = 'Facturado';
                         dataToUpdate.fechaBoletaEnviada = admin.firestore.FieldValue.serverTimestamp();
                         dataToUpdate.boleta = true;
                         if (publicUrl) dataToUpdate['documentos.enlaceBoleta'] = publicUrl;
                         break;
                 }
 
-                if (nuevoEstado) dataToUpdate.estadoGestion = nuevoEstado;
                 if (Object.keys(dataToUpdate).length > 0) {
                     batch.update(reservaRef, dataToUpdate);
                 }
@@ -210,10 +208,15 @@ module.exports = (db) => {
                 let totalActualGrupo = 0;
                 snapshot.docs.forEach(doc => totalActualGrupo += (doc.data().valorCLP || 0));
 
+                const descuentoTotal = totalActualGrupo - parseFloat(nuevoTotalCLP);
+
                 snapshot.docs.forEach(doc => {
                     const reservaActual = doc.data();
-                    const proporcion = totalActualGrupo > 0 ? (reservaActual.valorCLP || 0) / totalActualGrupo : 1 / snapshot.size;
-                    const nuevoValorIndividual = Math.round(parseFloat(nuevoTotalCLP) * proporcion);
+                    const valorOriginal = reservaActual.valorCLP || 0;
+                    const proporcionDescuento = totalActualGrupo > 0 ? valorOriginal / totalActualGrupo : 1 / snapshot.size;
+                    const descuentoIndividual = Math.round(descuentoTotal * proporcionDescuento);
+                    const nuevoValorIndividual = valorOriginal - descuentoIndividual;
+                    
                     batch.update(doc.ref, { valorCLP: nuevoValorIndividual, valorManual: true });
                 });
             }

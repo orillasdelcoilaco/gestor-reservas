@@ -49,6 +49,7 @@
                             Marcar Acción como Completada y Volver al Panel
                         </button>
                     </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div class="md:col-span-1">
                             <h3 class="text-lg font-medium text-gray-900">Detalles de la Reserva</h3>
@@ -65,8 +66,8 @@
                                 <div class="mt-2 flex space-x-2">
                                     <button id="btn-generar-cobro" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Generar</button>
                                     <button id="btn-copiar-cobro" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
-                                    <a id="btn-whatsapp-cobro" href="#" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600">Abrir WhatsApp</a>
-                                </div>
+                                    <button id="btn-whatsapp-cobro" class="bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600">Abrir WhatsApp</button>
+                                    </div>
                             </div>
                             <div>
                                 <h3 class="text-lg font-medium text-gray-900">Mensaje de Bienvenida</h3>
@@ -74,8 +75,8 @@
                                 <div class="mt-2 flex space-x-2">
                                     <button id="btn-generar-bienvenida" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Generar</button>
                                     <button id="btn-copiar-bienvenida" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
-                                    <a id="btn-whatsapp-bienvenida" href="#" target="_blank" class="bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600">Abrir WhatsApp</a>
-                                </div>
+                                    <button id="btn-whatsapp-bienvenida" class="bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600">Abrir WhatsApp</button>
+                                    </div>
                             </div>
                         </div>
                     </div>
@@ -118,7 +119,6 @@
             const btnGenerarBienvenida = document.getElementById('btn-generar-bienvenida');
             const btnCopiarBienvenida = document.getElementById('btn-copiar-bienvenida');
             const btnWhatsappBienvenida = document.getElementById('btn-whatsapp-bienvenida');
-            
             let reservaSeleccionada = null;
             let reservaIdOriginalFromUrl = null;
             let accionFromUrl = null;
@@ -126,7 +126,7 @@
             const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
 
             function formatDate(date) {
-                const day = date.getUTCDate(); // Usar UTC para consistencia
+                const day = date.getUTCDate();
                 const month = monthNames[date.getUTCMonth()];
                 const year = date.getUTCFullYear();
                 return `${month} - ${day} - ${year}`;
@@ -140,7 +140,6 @@
                         reservaSeleccionada.info.llegada = new Date(reservaSeleccionada.info.llegada);
                         reservaSeleccionada.info.salida = new Date(reservaSeleccionada.info.salida);
                         
-                        // El abono ya viene sumado desde el backend
                         abonoInput.value = reservaSeleccionada.info.totalAbonado || 0;
                         
                         mostrarDetalles();
@@ -389,24 +388,26 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
                 });
             }
 
-            function prepararLinkWhatsApp(linkElement, textarea) {
-                 if (!reservaSeleccionada || !textarea.value) {
-                    linkElement.href = '#';
+            // --- INICIO DE LA MODIFICACIÓN: Nueva función para abrir WhatsApp ---
+            function abrirWhatsApp(textarea) {
+                if (!reservaSeleccionada || !reservaSeleccionada.info || !reservaSeleccionada.info.telefono || !textarea.value) {
+                    alert('No hay suficiente información para abrir WhatsApp.');
                     return;
                 }
                 const telefono = reservaSeleccionada.info.telefono.replace(/\D/g, '');
                 const texto = encodeURIComponent(textarea.value);
-                linkElement.href = `https://api.whatsapp.com/send?phone=${telefono}&text=${texto}`;
+                const url = `https://api.whatsapp.com/send?phone=${telefono}&text=${texto}`;
+                window.open(url, '_blank');
             }
-            
-            // --- LÓGICA MODIFICADA PARA MANEJAR LA NAVEGACIÓN DESDE gestion.html ---
+            // --- FIN DE LA MODIFICACIÓN ---
+
             const urlParams = new URLSearchParams(window.location.search);
             reservaIdOriginalFromUrl = urlParams.get('reservaId');
             accionFromUrl = urlParams.get('accion');
 
             if (reservaIdOriginalFromUrl) {
-                seleccionSection.style.display = 'none'; // Ocultar selectores
-                marcarEnviadoContainer.classList.remove('hidden'); // Mostrar botón de confirmación
+                seleccionSection.style.display = 'none';
+                marcarEnviadoContainer.classList.remove('hidden');
                 cargarDetalleReserva(reservaIdOriginalFromUrl);
             }
 
@@ -416,21 +417,20 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
                 btnMarcarEnviado.disabled = true;
                 btnMarcarEnviado.textContent = 'Procesando...';
 
-                // Construir el payload correcto para la API
                 const formData = new FormData();
                 const idsIndividuales = reservaSeleccionada.cabanas.map(c => c.id);
                 
                 formData.append('accion', accionFromUrl);
                 formData.append('idsIndividuales', JSON.stringify(idsIndividuales));
                 formData.append('reservaIdOriginal', reservaSeleccionada.info.reservaIdOriginal);
-                formData.append('detalles', JSON.stringify({ sinDocumento: true })); // Necesario para la ruta
+                formData.append('detalles', JSON.stringify({ sinDocumento: true }));
 
                 try {
                     await fetchAPI(`/api/gestion/actualizar-estado`, {
                         method: 'POST',
                         body: formData
                     });
-                    window.location.href = 'gestion.html'; // Volver al panel de gestión
+                    window.location.href = 'gestion.html';
                 } catch (error) {
                     alert('Error al marcar como enviado: ' + error.message);
                     btnMarcarEnviado.disabled = false;
@@ -438,26 +438,22 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
                 }
             });
 
-            btnGenerarCobro.addEventListener('click', () => {
-                generarMensajeCobro();
-                prepararLinkWhatsApp(btnWhatsappCobro, mensajeCobroText);
-            });
-            btnGenerarBienvenida.addEventListener('click', () => {
-                generarMensajeBienvenida();
-                prepararLinkWhatsApp(btnWhatsappBienvenida, mensajeBienvenidaText);
-            });
+            btnGenerarCobro.addEventListener('click', generarMensajeCobro);
+            btnGenerarBienvenida.addEventListener('click', generarMensajeBienvenida);
 
             btnCopiarCobro.addEventListener('click', () => copiarTexto(mensajeCobroText, btnCopiarCobro));
             btnCopiarBienvenida.addEventListener('click', () => copiarTexto(mensajeBienvenidaText, btnCopiarBienvenida));
+
+            // --- INICIO DE LA MODIFICACIÓN: Se asigna la nueva función a los botones ---
+            btnWhatsappCobro.addEventListener('click', () => abrirWhatsApp(mensajeCobroText));
+            btnWhatsappBienvenida.addEventListener('click', () => abrirWhatsApp(mensajeBienvenidaText));
+            // --- FIN DE LA MODIFICACIÓN ---
             
             abonoInput.addEventListener('input', () => {
                 if (mensajeCobroText.value) {
                     generarMensajeCobro();
-                    prepararLinkWhatsApp(btnWhatsappCobro, mensajeCobroText);
                 }
             });
-            mensajeCobroText.addEventListener('input', () => prepararLinkWhatsApp(btnWhatsappCobro, mensajeCobroText));
-            mensajeBienvenidaText.addEventListener('input', () => prepararLinkWhatsApp(btnWhatsappBienvenida, mensajeBienvenidaText));
         }
     });
 </script>

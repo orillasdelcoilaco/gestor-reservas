@@ -32,7 +32,11 @@ async function getReservasPendientes(db) {
                 documentos: data.documentos || {},
                 reservasIndividuales: [],
                 valorCLP: 0,
-                abono: 0
+                abono: 0,
+                // --- INICIO DE LA MODIFICACIÓN ---
+                valorPotencialTotal: 0,
+                potencialCalculado: false 
+                // --- FIN DE LA MODIFICACIÓN ---
             });
         }
 
@@ -47,6 +51,14 @@ async function getReservasPendientes(db) {
 
         grupo.valorCLP += data.valorCLP || 0;
         grupo.abono += data.abono || 0;
+        
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // Sumamos el valor potencial y marcamos si al menos una reserva lo tiene
+        if (data.valorPotencialCLP && data.valorPotencialCLP > 0) {
+            grupo.valorPotencialTotal += data.valorPotencialCLP;
+            grupo.potencialCalculado = true;
+        }
+        // --- FIN DE LA MODIFICACIÓN ---
     });
 
     const reservas = Array.from(reservasAgrupadas.values());

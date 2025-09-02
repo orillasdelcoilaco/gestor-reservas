@@ -96,7 +96,6 @@
         const isGestionPagosActive = statusInfo.level >= 2;
         const isGestionBoletaActive = statusInfo.level >= 4;
         
-        const idReferencia = grupo.reservasIndividuales[0].id;
         let accionParaMarcar = null;
         if (grupo.estadoGestion === 'Pendiente Bienvenida') accionParaMarcar = 'marcar_bienvenida_enviada';
         else if (grupo.estadoGestion === 'Pendiente Cobro') accionParaMarcar = 'marcar_cobro_enviado';
@@ -108,15 +107,19 @@
         } else {
              statusHtml = `<span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>`;
         }
-        
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // Se añade el icono de la calculadora si el potencial ya fue calculado
-        const kpiIcon = grupo.potencialCalculado ? '<span class="ml-1" title="Valor Potencial ya calculado">🧮</span>' : '';
+
+        // --- INICIO DE LA MODIFICACIÓN: Se añade el botón de revertir ---
+        const revertButtonHtml = statusInfo.level > 1
+            ? `<button class="revert-btn ml-2 text-xl" title="Revertir estado">↩️</button>`
+            : '';
         // --- FIN DE LA MODIFICACIÓN ---
+        
+        const kpiIcon = grupo.potencialCalculado ? '<span class="ml-1" title="Valor Potencial ya calculado">🧮</span>' : '';
 
         card.innerHTML = `
             <div class="flex items-center mb-2">
                 ${statusHtml}
+                ${revertButtonHtml}
                 <p class="ml-4 text-lg font-bold text-gray-800">${grupo.clienteNombre}</p>
             </div>
             <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -140,8 +143,91 @@
             </div>`;
         card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));
         
+        // --- INICIO DE LA MODIFICACIÓN: Se añade el listener para el nuevo botón ---
+        const revertBtn = card.querySelector('.revert-btn');
+        if (revertBtn) {
+            revertBtn.addEventListener('click', () => openRevertModal(grupo));
+        }
+        // --- FIN DE LA MODIFICACIÓN ---
+
         return card;
     }
+
+    // --- INICIO DE LAS NUEVAS FUNCIONES ---
+    function openRevertModal(grupo) {
+        currentGrupo = grupo;
+        modalTitle.textContent = `Revertir Estado (Reserva ${grupo.reservaIdOriginal})`;
+
+        const estadosPosibles = [
+            { value: 'Pendiente Bienvenida', text: 'Pendiente Bienvenida' },
+            { value: 'Pendiente Cobro', text: 'Pendiente Cobro' },
+            { value: 'Pendiente Pago', text: 'Pendiente Pago' },
+            { value: 'Pendiente Boleta', text: 'Pendiente Boleta' }
+        ];
+
+        const estadoActualInfo = getStatusInfo(grupo.estadoGestion);
+        const opcionesHtml = estadosPosibles
+            .filter(estado => getStatusInfo(estado.value).level < estadoActualInfo.level)
+            .map(estado => `<option value="${estado.value}">${estado.text}</option>`)
+            .join('');
+
+        modalContent.innerHTML = `
+            <p>Estado Actual: <strong class="font-semibold">${grupo.estadoGestion}</strong></p>
+            <div>
+                <label for="revert-select" class="block text-sm font-medium text-gray-700">Selecciona el estado al que quieres volver:</label>
+                <select id="revert-select" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    ${opcionesHtml}
+                </select>
+            </div>
+            <div id="revert-status" class="text-sm"></div>
+            <div class="text-right">
+                <button id="revert-confirm-btn" class="px-6 py-2 bg-red-600 text-white rounded-md">Confirmar Reversión</button>
+            </div>
+        `;
+
+        modalContent.querySelector('#revert-confirm-btn').addEventListener('click', handleRevertState);
+        modal.classList.remove('hidden');
+    }
+
+    async function handleRevertState() {
+        const nuevoEstado = document.getElementById('revert-select').value;
+        const statusEl = document.getElementById('revert-status');
+        const confirmBtn = document.getElementById('revert-confirm-btn');
+
+        if (!nuevoEstado) {
+            statusEl.textContent = 'Debes seleccionar un estado.';
+            statusEl.className = 'text-sm text-red-600';
+            return;
+        }
+
+        if (!confirm(`¿Estás seguro de que quieres revertir el estado a "${nuevoEstado}"?`)) {
+            return;
+        }
+
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Procesando...';
+        statusEl.textContent = '';
+        
+        try {
+            await fetchAPI('/api/gestion/grupo/revertir-estado', {
+                method: 'POST',
+                body: {
+                    reservaIdOriginal: currentGrupo.reservaIdOriginal,
+                    nuevoEstado: nuevoEstado,
+                    idsIndividuales: currentGrupo.reservasIndividuales.map(r => r.id)
+                }
+            });
+            modal.classList.add('hidden');
+            await loadGestion(); // Recargar para mostrar el cambio
+        } catch (error) {
+            statusEl.textContent = `Error: ${error.message}`;
+            statusEl.className = 'text-sm text-red-600';
+        } finally {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Confirmar Reversión';
+        }
+    }
+    // --- FIN DE LAS NUEVAS FUNCIONES ---
     
     function openManagementModal(type, grupo) {
         currentGrupo = grupo;
@@ -195,14 +281,11 @@
 
         switch(tabName) {
             case 'kpi':
-                // --- INICIO DE LA MODIFICACIÓN ---
-                // Se muestra el valor potencial guardado si existe
                 const potencialGuardadoHtml = currentGrupo.potencialCalculado 
                     ? `<div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
                            <p class="text-sm font-semibold text-blue-800">Valor Potencial Guardado: ${formatCurrency(currentGrupo.valorPotencialTotal)}</p>
                        </div>` 
                     : '';
-                // --- FIN DE LA MODIFICACIÓN ---
 
                 contentContainer.innerHTML = `
                     <p class="text-sm text-gray-600 mb-3">Calcula el precio de lista (potencial) basado en el valor de cobro actual y un descuento. <strong>Esto no altera el valor a cobrar al cliente.</strong></p>
@@ -282,9 +365,8 @@
                     descuento: descuento
                 }
             });
-            // Recargamos los datos para que el modal y la tarjeta se actualicen
-            await loadGestion(); 
             modal.classList.add('hidden');
+            await loadGestion(); 
         } catch (error) {
             statusEl.textContent = `Error: ${error.message}`;
             statusEl.className = 'text-sm text-red-600';

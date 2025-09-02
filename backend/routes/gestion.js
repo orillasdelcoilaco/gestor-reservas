@@ -351,5 +351,27 @@ module.exports = (db) => {
         }
     });
 
+    // --- INICIO DE LA NUEVA RUTA ---
+    router.post('/gestion/grupo/revertir-estado', jsonParser, async (req, res) => {
+        const { reservaIdOriginal, nuevoEstado, idsIndividuales } = req.body;
+        if (!reservaIdOriginal || !nuevoEstado || !idsIndividuales || !Array.isArray(idsIndividuales)) {
+            return res.status(400).json({ error: 'Faltan datos para revertir el estado.' });
+        }
+
+        try {
+            const batch = db.batch();
+            for (const id of idsIndividuales) {
+                const reservaRef = db.collection('reservas').doc(id);
+                batch.update(reservaRef, { estadoGestion: nuevoEstado });
+            }
+            await batch.commit();
+            res.status(200).json({ message: `El estado del grupo ${reservaIdOriginal} se ha revertido a "${nuevoEstado}".` });
+        } catch (error) {
+            console.error(`Error al revertir el estado del grupo ${reservaIdOriginal}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+    // --- FIN DE LA NUEVA RUTA ---
+
     return router;
 };

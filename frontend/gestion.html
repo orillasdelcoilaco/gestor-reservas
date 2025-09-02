@@ -70,6 +70,7 @@
     let allGrupos = [];
     let currentGrupo = null;
     let currentAction = null;
+    let allTransacciones = [];
 
     function formatCurrency(value) { return `$${(value || 0).toLocaleString('es-CL')}`; }
     function formatDate(dateString) { return dateString ? new Date(dateString).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'; }
@@ -86,18 +87,26 @@
     
     function createGrupoCard(grupo) {
         const card = document.createElement('div');
+        card.id = `card-${grupo.reservaIdOriginal}`;
         card.className = 'p-4 border rounded-lg shadow-sm flex flex-col';
         const statusInfo = getStatusInfo(grupo.estadoGestion);
         const saldo = grupo.valorCLP - grupo.abono;
         const alojamientos = grupo.reservasIndividuales.map(r => r.alojamiento).join(', ');
-        const isGestionPagosActive = statusInfo.level >= 3;
+        
+        const isGestionPagosActive = statusInfo.level >= 2;
         const isGestionBoletaActive = statusInfo.level >= 4;
         
         const idReferencia = grupo.reservasIndividuales[0].id;
-        let actionUrl = `mensajes.html?reservaId=${grupo.reservaIdOriginal}&reservaCompletaId=${idReferencia}`;
-        if (grupo.estadoGestion === 'Pendiente Bienvenida') actionUrl += `&accion=marcar_bienvenida_enviada`;
-        else if (grupo.estadoGestion === 'Pendiente Cobro') actionUrl += `&accion=marcar_cobro_enviado`;
-        const statusHtml = `<a href="${actionUrl}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</a>`;
+        let accionParaMarcar = null;
+        if (grupo.estadoGestion === 'Pendiente Bienvenida') accionParaMarcar = 'marcar_bienvenida_enviada';
+        else if (grupo.estadoGestion === 'Pendiente Cobro') accionParaMarcar = 'marcar_cobro_enviado';
+        
+        let statusHtml;
+        if(accionParaMarcar){
+            statusHtml = `<button data-accion="${accionParaMarcar}" class="marcar-enviado-btn text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</button>`;
+        } else {
+             statusHtml = `<span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>`;
+        }
         
         card.innerHTML = `
             <div class="flex items-center mb-2">
@@ -123,7 +132,30 @@
                 </div>
             </div>`;
         card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));
+        
+        const marcarBtn = card.querySelector('.marcar-enviado-btn');
+        if (marcarBtn) {
+            marcarBtn.addEventListener('click', () => handleMarcarComoEnviado(marcarBtn.dataset.accion, grupo));
+        }
+
         return card;
+    }
+
+    async function handleMarcarComoEnviado(accion, grupo) {
+        const formData = new FormData();
+        formData.append('accion', accion);
+        formData.append('idsIndividuales', JSON.stringify(grupo.reservasIndividuales.map(r => r.id)));
+        formData.append('reservaIdOriginal', grupo.reservaIdOriginal);
+
+        try {
+            await fetchAPI(`/api/gestion/actualizar-estado`, {
+                method: 'POST',
+                body: formData
+            });
+            await loadGestion();
+        } catch (error) {
+            alert('Error al marcar como enviado: ' + error.message);
+        }
     }
 
     function openManagementModal(type, grupo) {
@@ -297,155 +329,6 @@
             saveBtn.textContent = 'Ajustar Monto Final';
         }
     }
-
-    function renderPagosModal() {
-        modalContent.innerHTML = `
-            <div id="lista-pagos" class="space-y-2 max-h-60 overflow-y-auto pr-2">Cargando pagos...</div>
-            <div class="border-t pt-4 mt-4">
-                <button id="btn-registrar-nuevo-pago" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">Registrar Nuevo Pago</button>
-            </div>`;
-        
-        modalContent.querySelector('#btn-registrar-nuevo-pago').addEventListener('click', () => {
-             showActionForm('registrar_pago');
-        });
-        
-        renderPagosList();
-    }
-    
-    async function renderPagosList() {
-        const listaPagosEl = modalContent.querySelector('#lista-pagos');
-        const ids = currentGrupo.reservasIndividuales.map(r => r.id);
-        const transacciones = await fetchAPI('/api/gestion/transacciones-grupo', { method: 'POST', body: { idsIndividuales: ids } });
-        
-        if (transacciones.length === 0) {
-            listaPagosEl.innerHTML = '<p class="text-sm text-center text-gray-500 p-4">No hay pagos registrados.</p>';
-            return;
-        }
-
-        const pagosAgrupados = transacciones.reduce((acc, t) => {
-            const key = t.fecha.seconds;
-            if (!acc[key]) acc[key] = { ...t, montoTotal: 0, count: 0 };
-            acc[key].montoTotal += t.monto;
-            acc[key].count++;
-            return acc;
-        }, {});
-        
-        listaPagosEl.innerHTML = Object.values(pagosAgrupados).map(p => `
-            <div class="p-2 border rounded-md flex justify-between items-center">
-                <div>
-                    <p class="font-semibold">${formatCurrency(p.montoTotal)} - <span class="font-normal text-gray-600">${p.tipo} (${p.medioDePago})</span></p>
-                    <p class="text-xs text-gray-500">Fecha: ${formatDate(p.fecha)}</p>
-                </div>
-            </div>`).join('');
-    }
-
-    function renderBoletaModal() {
-        showActionForm('marcar_boleta_enviada');
-    }
-
-    function showActionForm(action) {
-        currentAction = action;
-        let formTitle = action === 'registrar_pago' ? 'Registrar Nuevo Pago' : 'Subir Boleta/Factura';
-        
-        modalContent.innerHTML = `
-            <form id="modal-form-accion">
-                <h4 class="font-semibold text-lg mb-4">${formTitle}</h4>
-                <div class="${action === 'registrar_pago' ? '' : 'hidden'} space-y-4">
-                    <div><label class="block text-sm">Monto Total (CLP)</label><input type="number" id="monto-input" required class="mt-1 block w-full rounded-md border-gray-300"></div>
-                    <div><label class="block text-sm">Medio de Pago</label><select id="medio-pago-select" class="mt-1 block w-full rounded-md border-gray-300"><option>Transferencia</option><option>Efectivo</option><option>Tarjeta</option></select></div>
-                    <div class="flex items-center"><input id="pago-final-checkbox" type="checkbox" class="h-4 w-4 rounded"><label for="pago-final-checkbox" class="ml-2 text-sm">¿Es el pago final?</label></div>
-                </div>
-                <div class="mt-4">
-                    <label class="block text-sm">Comprobante (Opcional)</label>
-                    <input type="file" id="documento-input" class="hidden"/>
-                    <div id="paste-zone" class="paste-zone mt-1 rounded-md"><p class="text-gray-500">Selecciona o pega una imagen</p></div>
-                    <div id="preview-container" class="mt-2 hidden"><p class="text-sm">Vista Previa:</p><img id="thumbnail" class="w-24 h-24 object-cover rounded-md"></div>
-                    <div class="flex items-center mt-3"><input id="sin-documento-checkbox" type="checkbox" class="h-4 w-4"><label for="sin-documento-checkbox" class="ml-2 text-sm">Registrar sin documento</label></div>
-                </div>
-                <div id="modal-status" class="mt-2 text-sm text-red-600"></div>
-                <div class="mt-5 flex justify-end"><button type="submit" id="modal-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Guardar</button></div>
-            </form>`;
-        
-        const form = modalContent.querySelector('#modal-form-accion');
-        form.addEventListener('submit', handleGroupFormSubmit);
-
-        const docInput = form.querySelector('#documento-input');
-        const pasteZone = form.querySelector('#paste-zone');
-        const previewContainer = form.querySelector('#preview-container');
-        const thumbnail = form.querySelector('#thumbnail');
-        const sinDocCheckbox = form.querySelector('#sin-documento-checkbox');
-
-        pasteZone.addEventListener('click', () => docInput.click());
-        docInput.addEventListener('change', () => { if(docInput.files.length) showPreview(docInput.files[0], thumbnail, previewContainer); });
-        document.addEventListener('paste', e => handlePaste(e, docInput, thumbnail, previewContainer));
-        sinDocCheckbox.addEventListener('change', () => { pasteZone.style.display = sinDocCheckbox.checked ? 'none' : 'block'; });
-    }
-    
-    async function handleGroupFormSubmit(event) {
-        event.preventDefault();
-        const form = event.target;
-        const saveBtn = form.querySelector('#modal-save-btn');
-        const statusEl = form.querySelector('#modal-status');
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Guardando...';
-        statusEl.textContent = '';
-        
-        const formData = new FormData();
-        const detalles = {};
-        const idsIndividuales = currentGrupo.reservasIndividuales.map(r => r.id);
-
-        if (currentAction === 'registrar_pago') {
-            detalles.monto = form.querySelector('#monto-input').value;
-            detalles.medioDePago = form.querySelector('#medio-pago-select').value;
-            detalles.esPagoFinal = form.querySelector('#pago-final-checkbox').checked;
-            detalles.tipo = detalles.esPagoFinal ? 'Pago Final' : 'Abono';
-        }
-
-        detalles.sinDocumento = form.querySelector('#sin-documento-checkbox').checked;
-        const docInput = form.querySelector('#documento-input');
-        if (docInput && docInput.files.length > 0 && !detalles.sinDocumento) {
-            formData.append('documento', docInput.files[0]);
-        }
-
-        formData.append('accion', currentAction);
-        formData.append('detalles', JSON.stringify(detalles));
-        formData.append('idsIndividuales', JSON.stringify(idsIndividuales));
-        formData.append('reservaIdOriginal', currentGrupo.reservaIdOriginal);
-
-        try {
-            await fetchAPI(`/api/gestion/actualizar-estado`, { method: 'POST', body: formData });
-            modal.classList.add('hidden');
-            await loadGestion();
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Guardar';
-        }
-    }
-    
-    function showPreview(file, thumb, container) {
-        if (file.type.startsWith('image/')) {
-            thumb.src = URL.createObjectURL(file);
-            container.classList.remove('hidden');
-        }
-    }
-
-    function handlePaste(e, docInput, thumb, container) {
-        if (!modal.contains(e.target)) return;
-        const items = (e.clipboardData || window.clipboardData).items;
-        for (const item of items) {
-            if (item.type.indexOf('image') !== -1) {
-                e.preventDefault();
-                const blob = item.getAsFile();
-                const file = new File([blob], "captura.png", { type: blob.type });
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                docInput.files = dataTransfer.files;
-                showPreview(file, thumb, container);
-                break;
-            }
-        }
-    }
     
     function renderAjusteGrupo() {
         const contentContainer = document.getElementById('modal-tab-content') || modalContent;
@@ -487,6 +370,231 @@
         } catch (error) {
             statusEl.textContent = `Error: ${error.message}`;
             statusEl.className = 'text-sm text-red-600';
+        }
+    }
+    
+    function renderPagosModal() {
+        modalContent.innerHTML = `
+            <div id="pagos-summary" class="grid grid-cols-3 gap-4 font-semibold text-center w-full mb-4 p-2 bg-gray-50 rounded-md">
+            </div>
+            <div id="lista-pagos" class="space-y-2 max-h-48 overflow-y-auto pr-2 border-t border-b py-3">Cargando pagos...</div>
+            <div id="pagos-form-container" class="pt-4 mt-4">
+            </div>
+            <div class="mt-4">
+                 <button id="btn-registrar-nuevo-pago" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">Registrar Nuevo Pago</button>
+            </div>
+            `;
+        
+        modalContent.querySelector('#btn-registrar-nuevo-pago').addEventListener('click', () => {
+             showActionForm('registrar_pago');
+        });
+        
+        renderPagosList();
+    }
+    
+    async function renderPagosList() {
+        const listaPagosEl = modalContent.querySelector('#lista-pagos');
+        const summaryEl = modalContent.querySelector('#pagos-summary');
+
+        const ids = currentGrupo.reservasIndividuales.map(r => r.id);
+        allTransacciones = await fetchAPI('/api/gestion/transacciones-grupo', { method: 'POST', body: { idsIndividuales: ids } });
+        
+        const totalAbonado = allTransacciones.reduce((sum, t) => sum + t.monto, 0);
+        const valorTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + r.valorCLP, 0);
+        const saldo = valorTotal - totalAbonado;
+
+        summaryEl.innerHTML = `
+            <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(valorTotal)}</div>
+            <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(totalAbonado)}</div>
+            <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
+        `;
+        
+        if (allTransacciones.length === 0) {
+            listaPagosEl.innerHTML = '<p class="text-sm text-center text-gray-500 p-4">No hay pagos registrados.</p>';
+            return;
+        }
+        
+        listaPagosEl.innerHTML = allTransacciones.map(p => `
+            <div class="p-2 border rounded-md flex justify-between items-center">
+                <div>
+                    <p class="font-semibold">${formatCurrency(p.monto)} - <span class="font-normal text-gray-600">${p.tipo} (${p.medioDePago})</span></p>
+                    <p class="text-xs text-gray-500">Fecha: ${formatDate(p.fecha)}</p>
+                </div>
+                <div class="space-x-2">
+                    <button data-id="${p.id}" class="edit-pago-btn text-xs text-indigo-600 hover:text-indigo-900">Editar</button>
+                    <button data-id="${p.id}" data-reserva-id="${p.reservaId}" class="delete-pago-btn text-xs text-red-600 hover:text-red-900">Eliminar</button>
+                </div>
+            </div>`).join('');
+            
+        listaPagosEl.querySelectorAll('.edit-pago-btn').forEach(btn => btn.addEventListener('click', (e) => {
+            const transaccion = allTransacciones.find(t => t.id === e.target.dataset.id);
+            showActionForm('editar_pago', transaccion);
+        }));
+        listaPagosEl.querySelectorAll('.delete-pago-btn').forEach(btn => btn.addEventListener('click', (e) => handleDeleteTransaction(e.target.dataset.id, e.target.dataset.reservaId)));
+    }
+
+    function renderBoletaModal() {
+        showActionForm('marcar_boleta_enviada');
+    }
+
+    function showActionForm(action, transaccion = null) {
+        currentAction = action;
+        let formTitle = transaccion ? 'Editar Pago' : (action === 'registrar_pago' ? 'Registrar Nuevo Pago' : 'Subir Boleta/Factura');
+        const container = document.getElementById('pagos-form-container');
+        
+        container.innerHTML = `
+            <form id="modal-form-accion">
+                <h4 class="font-semibold text-lg mb-4">${formTitle}</h4>
+                <div class="${action.includes('pago') ? '' : 'hidden'} space-y-4">
+                    <div><label class="block text-sm">Monto (CLP)</label><input type="number" id="monto-input" required class="mt-1 block w-full rounded-md border-gray-300" value="${transaccion?.monto || ''}"></div>
+                    <div><label class="block text-sm">Medio de Pago</label><select id="medio-pago-select" class="mt-1 block w-full rounded-md border-gray-300"></select></div>
+                    <div class="flex items-center"><input id="pago-final-checkbox" type="checkbox" class="h-4 w-4 rounded" ${transaccion?.tipo === 'Pago Final' ? 'checked' : ''}><label for="pago-final-checkbox" class="ml-2 text-sm">¿Es el pago final?</label></div>
+                </div>
+                <div class="mt-4">
+                    <label class="block text-sm">Comprobante (Opcional)</label>
+                    <input type="file" id="documento-input" class="hidden"/>
+                    <div id="paste-zone" class="paste-zone mt-1 rounded-md"><p class="text-gray-500">Selecciona o pega una imagen</p></div>
+                    <div id="preview-container" class="mt-2 hidden"><p class="text-sm">Vista Previa:</p><img id="thumbnail" class="w-24 h-24 object-cover rounded-md"></div>
+                    <div class="flex items-center mt-3"><input id="sin-documento-checkbox" type="checkbox" class="h-4 w-4" ${transaccion?.enlaceComprobante === 'SIN_DOCUMENTO' ? 'checked' : ''}><label for="sin-documento-checkbox" class="ml-2 text-sm">Registrar sin documento</label></div>
+                </div>
+                <div id="modal-status" class="mt-2 text-sm text-red-600"></div>
+                <div class="mt-5 flex justify-end space-x-2">
+                    <button type="button" id="form-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md">Cancelar</button>
+                    <button type="submit" id="modal-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Guardar</button>
+                </div>
+            </form>`;
+        
+        const mediosDePago = ['Transferencia', 'Efectivo', 'Tarjeta'];
+        const select = container.querySelector('#medio-pago-select');
+        mediosDePago.forEach(medio => {
+            const option = document.createElement('option');
+            option.value = medio;
+            option.textContent = medio;
+            if (transaccion?.medioDePago === medio) option.selected = true;
+            select.appendChild(option);
+        });
+
+        const form = container.querySelector('#modal-form-accion');
+        form.addEventListener('submit', (e) => handleGroupFormSubmit(e, transaccion));
+
+        form.querySelector('#form-cancel-btn').addEventListener('click', () => {
+            container.innerHTML = '';
+            document.getElementById('btn-registrar-nuevo-pago').classList.remove('hidden');
+        });
+
+        const docInput = form.querySelector('#documento-input');
+        const pasteZone = form.querySelector('#paste-zone');
+        const previewContainer = form.querySelector('#preview-container');
+        const thumbnail = form.querySelector('#thumbnail');
+        const sinDocCheckbox = form.querySelector('#sin-documento-checkbox');
+        
+        if (transaccion?.enlaceComprobante && transaccion.enlaceComprobante !== 'SIN_DOCUMENTO') {
+            thumbnail.src = transaccion.enlaceComprobante;
+            previewContainer.classList.remove('hidden');
+        }
+
+        pasteZone.addEventListener('click', () => docInput.click());
+        docInput.addEventListener('change', () => { if(docInput.files.length) showPreview(docInput.files[0], thumbnail, previewContainer); });
+        document.addEventListener('paste', e => handlePaste(e, docInput, thumbnail, previewContainer));
+        sinDocCheckbox.addEventListener('change', () => { pasteZone.style.display = sinDocCheckbox.checked ? 'none' : 'block'; });
+
+        document.getElementById('btn-registrar-nuevo-pago').classList.add('hidden');
+    }
+    
+    async function handleGroupFormSubmit(event, transaccion = null) {
+        event.preventDefault();
+        const form = event.target;
+        const saveBtn = form.querySelector('#modal-save-btn');
+        const statusEl = form.querySelector('#modal-status');
+        saveBtn.disabled = true;
+        saveBtn.textContent = 'Guardando...';
+        statusEl.textContent = '';
+        
+        const formData = new FormData();
+        const detalles = {};
+        const idsIndividuales = currentGrupo.reservasIndividuales.map(r => r.id);
+
+        let endpoint;
+        let esPago = currentAction.includes('pago');
+        
+        if(esPago) {
+            detalles.monto = parseFloat(form.querySelector('#monto-input').value);
+            detalles.medioDePago = form.querySelector('#medio-pago-select').value;
+            detalles.tipo = form.querySelector('#pago-final-checkbox').checked ? 'Pago Final' : 'Abono';
+        }
+
+        detalles.sinDocumento = form.querySelector('#sin-documento-checkbox').checked;
+        const docInput = form.querySelector('#documento-input');
+        if (docInput && docInput.files.length > 0 && !detalles.sinDocumento) {
+            formData.append('documento', docInput.files[0]);
+        }
+        
+        if (transaccion) { // Editando
+            endpoint = '/api/gestion/transaccion/editar';
+            formData.append('reservaId', transaccion.reservaId);
+            formData.append('transaccionId', transaccion.id);
+        } else { // Creando
+            endpoint = '/api/gestion/actualizar-estado';
+            formData.append('accion', currentAction);
+        }
+        
+        formData.append('detalles', JSON.stringify(detalles));
+        formData.append('idsIndividuales', JSON.stringify(idsIndividuales));
+        formData.append('reservaIdOriginal', currentGrupo.reservaIdOriginal);
+
+        try {
+            await fetchAPI(endpoint, { method: 'POST', body: formData });
+            form.parentElement.innerHTML = '';
+            document.getElementById('btn-registrar-nuevo-pago').classList.remove('hidden');
+            await renderPagosList();
+            await loadGestion();
+        } catch (error) {
+            statusEl.textContent = `Error: ${error.message}`;
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = 'Guardar';
+        }
+    }
+
+    async function handleDeleteTransaction(transaccionId, reservaId) {
+        if (!confirm('¿Estás seguro de que quieres eliminar este pago?')) return;
+        try {
+            await fetchAPI('/api/gestion/transaccion/eliminar', {
+                method: 'POST',
+                body: {
+                    reservaId,
+                    transaccionId,
+                    idsIndividuales: currentGrupo.reservasIndividuales.map(r => r.id)
+                }
+            });
+            await renderPagosList();
+            await loadGestion();
+        } catch (error) {
+            alert(`Error al eliminar el pago: ${error.message}`);
+        }
+    }
+    
+    function showPreview(file, thumb, container) {
+        if (file.type.startsWith('image/')) {
+            thumb.src = URL.createObjectURL(file);
+            container.classList.remove('hidden');
+        }
+    }
+
+    function handlePaste(e, docInput, thumb, container) {
+        if (!modal.contains(e.target)) return;
+        const items = (e.clipboardData || window.clipboardData).items;
+        for (const item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                e.preventDefault();
+                const blob = item.getAsFile();
+                const file = new File([blob], "captura.png", { type: blob.type });
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                docInput.files = dataTransfer.files;
+                showPreview(file, thumb, container);
+                break;
+            }
         }
     }
     

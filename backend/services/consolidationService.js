@@ -139,11 +139,14 @@ async function processChannel(db, channel) {
                 dataToSave.pagado = existingReservation.pagado || false;
                 dataToSave.pendiente = existingReservation.pendiente === undefined ? dataToSave.valorCLP - dataToSave.abono : existingReservation.pendiente;
                 dataToSave.boleta = existingReservation.boleta || false;
+                
                 // --- INICIO DE LA MODIFICACIÓN ---
-                // Se asegura de que siempre haya un estado de gestión
+                // Se asegura de que siempre haya un estado de gestión, incluso en reservas ya existentes
                 dataToSave.estadoGestion = existingReservation.estadoGestion || 'Pendiente Bienvenida';
                 // --- FIN DE LA MODIFICACIÓN ---
+
             } else {
+                // Se asigna el estado inicial solo a las reservas completamente nuevas
                 dataToSave.estadoGestion = 'Pendiente Bienvenida';
             }
 

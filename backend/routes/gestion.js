@@ -102,6 +102,11 @@ module.exports = (db) => {
                         if (publicUrl) boletaUpdate['documentos.enlaceBoleta'] = publicUrl;
                         batch.update(reservaRef, boletaUpdate);
                         break;
+                    case 'gestionar_reserva':
+                        if (publicUrl) {
+                           batch.update(reservaRef, { 'documentos.enlaceReserva': publicUrl });
+                        }
+                        break;
                 }
             }
 

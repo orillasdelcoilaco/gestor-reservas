@@ -129,21 +129,28 @@ async function getAllClientsWithStats(db) {
     }
 
     const clientsWithStats = [];
-    // Usamos for...of para manejar correctamente las operaciones asíncronas internas
     for (const doc of clientsSnapshot.docs) {
         const clientData = doc.data();
         let totalReservas = 0;
         let primerCanal = 'N/A';
 
-        // Hacemos una consulta por cada cliente para obtener sus reservas
         const reservasQuery = db.collection('reservas').where('clienteId', '==', doc.id);
         const reservasSnapshot = await reservasQuery.get();
 
         if (!reservasSnapshot.empty) {
             totalReservas = reservasSnapshot.size;
-            // Ordenamos para encontrar la primera reserva y su canal
-            const primeraReserva = reservasSnapshot.docs.sort((a, b) => a.data().fechaReserva.toMillis() - b.data().fechaReserva.toMillis())[0];
-            primerCanal = primeraReserva.data().canal || 'Desconocido';
+            
+            // --- INICIO DE LA CORRECCIÓN ---
+            // Se añade una comprobación para manejar reservas sin fecha
+            const reservasConFecha = reservasSnapshot.docs.filter(d => d.data().fechaReserva && d.data().fechaReserva.toMillis);
+            if (reservasConFecha.length > 0) {
+                const primeraReserva = reservasConFecha.sort((a, b) => a.data().fechaReserva.toMillis() - b.data().fechaReserva.toMillis())[0];
+                primerCanal = primeraReserva.data().canal || 'Desconocido';
+            } else if (reservasSnapshot.size > 0) {
+                // Si ninguna tiene fecha, tomamos el canal de la primera que encuentre
+                primerCanal = reservasSnapshot.docs[0].data().canal || 'Desconocido';
+            }
+            // --- FIN DE LA CORRECCIÓN ---
         }
 
         clientsWithStats.push({

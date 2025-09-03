@@ -42,20 +42,39 @@ async function processChannel(db, channel) {
         const isSodc = channel === 'SODC';
         const isAirbnb = channel === 'Airbnb';
 
-        // --- INICIO DE LA LÓGICA PARA AIRBNB ---
         if (isAirbnb) {
-            if (rawData['Tipo'] !== 'Reservación') continue; // Solo procesamos las filas de tipo "Reservación"
+            if (rawData['Tipo'] !== 'Reservación') continue;
+
+            // --- INICIO DE LA MODIFICACIÓN: Lógica de parseo de fecha segura para Airbnb ---
+            const parseAirbnbDate = (dateStr) => {
+                if (!dateStr || typeof dateStr !== 'string' || !/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) {
+                    return null;
+                }
+                // El formato de Airbnb es MM/DD/YYYY
+                const [month, day, year] = dateStr.split('/');
+                const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00Z`;
+                const date = new Date(isoDate);
+                return !isNaN(date) ? date : null;
+            };
+
+            const fechaLlegada = parseAirbnbDate(rawData['Fecha de inicio']);
+            const fechaSalida = parseAirbnbDate(rawData['Fecha de finalización']);
+            const fechaReserva = parseAirbnbDate(rawData['Fecha de la reservación']);
 
             const reservaIdOriginal = rawData['Código de confirmación'];
             const cabana = extractCabanaNameFromAirbnb(rawData['Anuncio']);
-            if (!reservaIdOriginal || !cabana) continue;
+            
+            // Salta la fila si las fechas clave o los IDs no son válidos para evitar el crash
+            if (!fechaLlegada || !fechaSalida || !reservaIdOriginal || !cabana) {
+                console.warn(`Saltando fila de Airbnb por datos inválidos o fecha nula. Código: ${reservaIdOriginal}`);
+                continue;
+            }
+            // --- FIN DE LA MODIFICACIÓN ---
 
             const idCompuesto = `AIRBNB_${reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
-            if (allExistingReservations.has(idCompuesto)) continue; // Si ya existe, la saltamos
+            if (allExistingReservations.has(idCompuesto)) continue;
 
             reservasCreadas++;
-            
-            // Para Airbnb, como no hay teléfono, siempre creamos un nuevo cliente para evitar colisiones
             clientesNuevos++;
             const newClientRef = db.collection('clientes').doc();
             const clienteId = newClientRef.id;
@@ -75,21 +94,18 @@ async function processChannel(db, channel) {
                 phone: genericPhone,
                 googleContactSynced: syncSuccess
             });
-
-            const fechaLlegada = parseDate(rawData['Fecha de inicio']);
-            const fechaSalida = parseDate(rawData['Fecha de finalización']);
-
+            
             const dataToSave = {
                 reservaIdOriginal,
                 clienteId,
                 clienteNombre: nombreCompleto,
                 canal: 'Airbnb',
                 estado: 'Confirmada',
-                fechaReserva: parseDate(rawData['Fecha de la reservación']),
+                fechaReserva: fechaReserva ? admin.firestore.Timestamp.fromDate(fechaReserva) : null,
                 fechaLlegada: admin.firestore.Timestamp.fromDate(fechaLlegada),
                 fechaSalida: admin.firestore.Timestamp.fromDate(fechaSalida),
                 totalNoches: parseInt(rawData['Noches'] || 0),
-                invitados: 0, // El reporte no lo incluye
+                invitados: 0,
                 alojamiento: cabana,
                 monedaOriginal: 'CLP',
                 valorOriginal: parseCurrency(rawData['Ingresos brutos'], 'CLP'),

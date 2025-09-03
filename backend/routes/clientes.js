@@ -20,7 +20,6 @@ module.exports = (db) => {
         }
     });
 
-    // --- RUTA OPTIMIZADA ACTUALIZADA PARA PRESUPUESTOS ---
     router.get('/clientes/simplificado', async (req, res) => {
         try {
             const snapshot = await db.collection('clientes').get();
@@ -34,7 +33,7 @@ module.exports = (db) => {
                     nombre: `${data.firstname || ''} ${data.lastname || ''}`.trim(),
                     telefono: data.phone || '',
                     email: data.email || '',
-                    empresa: data.fuente || '' // Se añade el campo empresa/fuente
+                    empresa: data.fuente || ''
                 };
             });
             res.status(200).json(clientes);
@@ -44,7 +43,6 @@ module.exports = (db) => {
         }
     });
     
-    // --- RUTA MODIFICADA ---
     router.put('/clientes/:id', jsonParser, async (req, res) => {
         const { id } = req.params;
         const clientData = req.body;
@@ -53,7 +51,6 @@ module.exports = (db) => {
         }
         try {
             const result = await updateClientMaster(db, id, clientData);
-            // Se devuelve el objeto de resultado completo para consistencia
             res.status(200).json(result); 
         } catch (error) {
             console.error(`Error al actualizar el cliente ${id}:`, error);
@@ -87,6 +84,23 @@ module.exports = (db) => {
             res.status(500).json({ error: error.message });
         }
     });
+
+    // --- INICIO DE LA NUEVA RUTA DE ELIMINACIÓN ---
+    router.delete('/clientes/:id', async (req, res) => {
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ error: 'Se requiere el ID del cliente.' });
+        }
+        try {
+            const clientRef = db.collection('clientes').doc(id);
+            await clientRef.delete();
+            res.status(200).json({ message: 'Cliente eliminado exitosamente.' });
+        } catch (error) {
+            console.error(`Error al eliminar el cliente ${id}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor al eliminar el cliente.' });
+        }
+    });
+    // --- FIN DE LA NUEVA RUTA ---
 
     return router;
 };

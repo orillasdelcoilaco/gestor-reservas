@@ -62,7 +62,10 @@
 
     <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Cliente</h3>
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Cliente</h3>
+                <button type="button" id="delete-btn" class="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Eliminar Cliente</button>
+                </div>
             <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <form id="edit-form" class="space-y-4">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -121,6 +124,9 @@
     const modalStatus = document.getElementById('modal-status');
     const saveBtn = document.getElementById('save-btn');
     const cancelBtn = document.getElementById('cancel-btn');
+    // --- INICIO DE LA MODIFICACIÓN ---
+    const deleteBtn = document.getElementById('delete-btn');
+    // --- FIN DE LA MODIFICACIÓN ---
     
     let allClients = [];
     let editingClientId = null;
@@ -297,6 +303,40 @@
         }
     }
 
+    // --- INICIO DE LA NUEVA FUNCIÓN ---
+    async function handleDelete() {
+        if (!editingClientId) return;
+
+        const cliente = allClients.find(c => c.id === editingClientId);
+        if (!cliente) return;
+        
+        if (!confirm(`¿Estás SEGURO de que quieres eliminar a "${cliente.nombre}"? Esta acción no se puede deshacer.`)) {
+            return;
+        }
+        if (!confirm(`CONFIRMACIÓN FINAL: ¿Eliminar a "${cliente.nombre}" permanentemente?`)) {
+            return;
+        }
+
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Eliminando...';
+        modalStatus.textContent = '';
+
+        try {
+            const result = await fetchAPI(`/api/clientes/${editingClientId}`, { method: 'DELETE' });
+            alert(result.message);
+            modal.classList.add('hidden');
+            await loadClients();
+        } catch (error) {
+            modalStatus.textContent = `Error: ${error.message}`;
+            modalStatus.className = 'mt-2 text-sm text-red-600';
+        } finally {
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = 'Eliminar Cliente';
+            editingClientId = null;
+        }
+    }
+    // --- FIN DE LA NUEVA FUNCIÓN ---
+
     function updateTableView() {
         const searchTerm = searchInput.value.toLowerCase();
         const filteredClients = allClients.filter(c =>
@@ -338,6 +378,9 @@
             searchInput.addEventListener('input', updateTableView);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             saveBtn.addEventListener('click', handleSave);
+            // --- INICIO DE LA MODIFICACIÓN ---
+            deleteBtn.addEventListener('click', handleDelete);
+            // --- FIN DE LA MODIFICACIÓN ---
             loadClients();
         }
     });

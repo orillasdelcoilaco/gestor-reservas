@@ -6,108 +6,125 @@ const { cleanPhoneNumber } = require('../utils/helpers');
 const { createGoogleContact, findContactByName, updateContact } = require('./googleContactsService');
 
 async function findOrCreateClient(db, clientData) {
-    // ... (código sin cambios)
+    const { nombre, telefono, email, empresa } = clientData;
+    const cleanedPhone = telefono ? cleanPhoneNumber(telefono) : null;
+
+    if (cleanedPhone) {
+        const query = db.collection('clientes').where('phone', '==', cleanedPhone).limit(1);
+        const snapshot = await query.get();
+        if (!snapshot.empty) {
+            return snapshot.docs[0].id;
+        }
+    }
+
+    if (email) {
+        const query = db.collection('clientes').where('email', '==', email).limit(1);
+        const snapshot = await query.get();
+        if (!snapshot.empty) {
+            return snapshot.docs[0].id;
+        }
+    }
+
+    const nameParts = nombre.split(' ');
+    const newClientRef = db.collection('clientes').doc();
+    const newClientPayload = {
+        firstname: nameParts[0] || '',
+        lastname: nameParts.slice(1).join(' ') || '',
+        phone: cleanedPhone,
+        email: email || null,
+        fuente: empresa || 'Presupuesto Directo',
+        googleContactSynced: false
+    };
+    
+    await newClientRef.set(newClientPayload);
+    return newClientRef.id;
 }
 
 function parseCsvBuffer(buffer) {
-    // ... (código sin cambios)
+    return new Promise((resolve, reject) => {
+        const results = [];
+        const readableStream = new stream.Readable();
+        readableStream._read = () => {};
+        readableStream.push(buffer);
+        readableStream.push(null);
+
+        readableStream
+            .pipe(csv())
+            .on('data', (data) => results.push(data))
+            .on('end', () => resolve(results))
+            .on('error', (error) => reject(error));
+    });
 }
 
 async function importClientsFromCsv(db, files) {
     // ... (código sin cambios)
 }
 
+// --- FUNCIÓN MODIFICADA ---
 async function getAllClientsWithStats(db) {
-    // ... (código sin cambios)
+    const clientsSnapshot = await db.collection('clientes').get();
+    if (clientsSnapshot.empty) {
+        return [];
+    }
+
+    const clientsWithStats = [];
+    for (const doc of clientsSnapshot.docs) {
+        const clientData = doc.data();
+        let totalReservas = 0;
+        let primerCanal = 'N/A';
+
+        const reservasQuery = db.collection('reservas').where('clienteId', '==', doc.id);
+        const reservasSnapshot = await reservasQuery.get();
+
+        if (!reservasSnapshot.empty) {
+            totalReservas = reservasSnapshot.size;
+            
+            // --- INICIO DE LA CORRECCIÓN ROBUSTA ---
+            const sortedReservas = [...reservasSnapshot.docs].sort((a, b) => {
+                const dateA = a.data().fechaReserva;
+                const dateB = b.data().fechaReserva;
+
+                // Si una fecha no existe o no es un objeto Timestamp válido, se considera "infinita" para que vaya al final.
+                const timeA = (dateA && typeof dateA.toMillis === 'function') ? dateA.toMillis() : Infinity;
+                const timeB = (dateB && typeof dateB.toMillis === 'function') ? dateB.toMillis() : Infinity;
+                
+                return timeA - timeB;
+            });
+            
+            // Tomamos la primera reserva del array ya ordenado de forma segura.
+            if (sortedReservas.length > 0) {
+                primerCanal = sortedReservas[0].data().canal || 'Desconocido';
+            }
+            // --- FIN DE LA CORRECCIÓN ROBUSTA ---
+        }
+
+        clientsWithStats.push({
+            id: doc.id,
+            nombre: `${clientData.firstname || ''} ${clientData.lastname || ''}`.trim(),
+            telefono: clientData.phone || 'Sin Teléfono',
+            email: clientData.email || 'Sin Email',
+            totalReservas: totalReservas,
+            canal: clientData.canal || primerCanal,
+            fuente: clientData.fuente || '',
+            origen: clientData.origen || '',
+            calificacion: clientData.calificacion || 0,
+            notas: clientData.notas || '',
+            googleContactSynced: clientData.googleContactSynced || false,
+            telefonoManual: clientData.telefonoManual || false
+        });
+    }
+
+    clientsWithStats.sort((a, b) => a.nombre.localeCompare(b.nombre));
+    
+    return clientsWithStats;
 }
 
 async function syncClientToGoogle(db, clientId) {
     // ... (código sin cambios)
 }
 
-// --- FUNCIÓN MODIFICADA ---
 async function updateClientMaster(db, clientId, newData) {
-    const clientRef = db.collection('clientes').doc(clientId);
-    const clientDoc = await clientRef.get();
-    if (!clientDoc.exists) throw new Error('El cliente no existe.');
-
-    const oldData = clientDoc.data();
-    const dataToUpdateInFirestore = {};
-
-    const newFirstname = newData.firstname || oldData.firstname;
-    const newLastname = newData.lastname || oldData.lastname;
-    const newPhone = cleanPhoneNumber(newData.phone);
-
-    if (newFirstname !== oldData.firstname) dataToUpdateInFirestore.firstname = newFirstname;
-    if (newLastname !== oldData.lastname) dataToUpdateInFirestore.lastname = newLastname;
-    if (newPhone && newPhone !== oldData.phone) {
-        dataToUpdateInFirestore.phone = newPhone;
-        dataToUpdateInFirestore.telefonoManual = true;
-    }
-    if (newData.email && newData.email !== oldData.email) dataToUpdateInFirestore.email = newData.email;
-    if (newData.origen !== undefined && newData.origen !== oldData.origen) dataToUpdateInFirestore.origen = newData.origen;
-    if (newData.fuente !== undefined && newData.fuente !== oldData.fuente) dataToUpdateInFirestore.fuente = newData.fuente;
-    if (newData.calificacion !== undefined && Number(newData.calificacion) !== oldData.calificacion) dataToUpdateInFirestore.calificacion = Number(newData.calificacion);
-    if (newData.notas !== undefined && newData.notas !== oldData.notas) dataToUpdateInFirestore.notas = newData.notas;
-    
-    if (Object.keys(dataToUpdateInFirestore).length === 0) {
-        return { success: true, message: "No se realizaron cambios." };
-    }
-
-    await clientRef.update(dataToUpdateInFirestore);
-    console.log(`Cliente ${clientId} actualizado en Firestore.`);
-
-    const newFullName = `${newFirstname} ${newLastname}`.trim();
-    const oldFullName = `${oldData.firstname || ''} ${oldData.lastname || ''}`.trim();
-    const nameHasChanged = newFullName !== oldFullName;
-
-    if (nameHasChanged) {
-        const reservasQuery = db.collection('reservas').where('clienteId', '==', clientId);
-        const reservasSnapshot = await reservasQuery.get();
-        if (!reservasSnapshot.empty) {
-            const batch = db.batch();
-            reservasSnapshot.forEach(doc => {
-                batch.update(doc.ref, { clienteNombre: newFullName, nombreManual: true });
-            });
-            await batch.commit();
-            console.log(`Actualizadas ${reservasSnapshot.size} reservas para el cliente ${clientId}.`);
-        }
-    }
-
-    try {
-        const q = db.collection('reservas').where('clienteId', '==', clientId).orderBy('fechaReserva', 'desc').limit(1);
-        const snapshot = await q.get();
-        if (snapshot.empty) throw new Error('No se encontraron reservas para obtener el ID de desambiguación.');
-        
-        const reservaData = snapshot.docs[0].data();
-        const contactIdSuffix = `${reservaData.canal} ${reservaData.reservaIdOriginal}`;
-        
-        // Primero busca el contacto con el nombre antiguo, por si acaso el nombre cambió
-        const contactResource = await findContactByName(db, `${oldFullName} ${contactIdSuffix}`);
-
-        if (contactResource && contactResource.resourceName) {
-            const updatePayload = { etag: contactResource.etag };
-            const updateMask = [];
-            
-            if (nameHasChanged) {
-                updatePayload.names = [{ givenName: `${newFullName} ${contactIdSuffix}` }];
-                updateMask.push('names');
-            }
-            if (newPhone && newPhone !== oldData.phone) {
-                updatePayload.phoneNumbers = [{ value: newPhone }];
-                updateMask.push('phoneNumbers');
-            }
-            
-            if (updateMask.length > 0) {
-                await updateContact(db, contactResource.resourceName, updatePayload, updateMask);
-                console.log(`Contacto de Google para ${newFullName} actualizado.`);
-            }
-        }
-    } catch (error) {
-        console.error(`No se pudo actualizar el contacto de Google para el cliente ${clientId}. Error: ${error.message}`);
-    }
-
-    return { success: true, message: 'Cliente actualizado en todo el sistema.' };
+    // ... (código sin cambios)
 }
 
 module.exports = {

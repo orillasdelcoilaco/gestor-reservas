@@ -11,6 +11,8 @@
         .table-container { max-height: 70vh; }
         thead th { position: sticky; top: 0; z-index: 1; }
         #edit-modal { background-color: rgba(0, 0, 0, 0.5); }
+        .star { cursor: pointer; color: #d1d5db; font-size: 2rem; }
+        .star.selected { color: #f59e0b; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -59,26 +61,47 @@
     </div>
 
     <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Cliente</h3>
-            <form id="edit-form" class="mt-4 space-y-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="text" id="firstname-input" placeholder="Nombre" class="block w-full px-3 py-2 border rounded-md">
-                    <input type="text" id="lastname-input" placeholder="Apellido" class="block w-full px-3 py-2 border rounded-md">
-                </div>
-                <input type="tel" id="phone-input" placeholder="Teléfono" class="block w-full px-3 py-2 border rounded-md">
-                <input type="email" id="email-input" placeholder="Email" class="block w-full px-3 py-2 border rounded-md">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input type="text" id="origen-input" placeholder="Origen" class="block w-full px-3 py-2 border rounded-md">
-                    <input type="text" id="fuente-input" placeholder="Fuente" class="block w-full px-3 py-2 border rounded-md">
-                </div>
+            <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <form id="edit-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="text" id="firstname-input" placeholder="Nombre" class="block w-full px-3 py-2 border rounded-md">
+                        <input type="text" id="lastname-input" placeholder="Apellido" class="block w-full px-3 py-2 border rounded-md">
+                    </div>
+                    <input type="tel" id="phone-input" placeholder="Teléfono" class="block w-full px-3 py-2 border rounded-md">
+                    <input type="email" id="email-input" placeholder="Email" class="block w-full px-3 py-2 border rounded-md">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="fuente-select" class="block text-sm font-medium">Fuente</label>
+                            <select id="fuente-select" class="block w-full px-3 py-2 border rounded-md mt-1"></select>
+                        </div>
+                        <div>
+                            <label for="origen-select" class="block text-sm font-medium">Origen</label>
+                            <select id="origen-select" class="block w-full px-3 py-2 border rounded-md mt-1"></select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Calificación</label>
+                        <div id="calificacion-stars" class="flex items-center" data-rating="0">
+                            <span class="star" data-value="1">★</span>
+                            <span class="star" data-value="2">★</span>
+                            <span class="star" data-value="3">★</span>
+                            <span class="star" data-value="4">★</span>
+                            <span class="star" data-value="5">★</span>
+                        </div>
+                    </div>
+                    <textarea id="notas-input" rows="3" placeholder="Notas adicionales..." class="block w-full px-3 py-2 border rounded-md"></textarea>
+                    <div id="modal-status" class="mt-2 text-sm"></div>
+                </form>
+
                 <div>
-                    <label class="block text-sm font-medium">Calificación</label>
-                    <input type="number" id="calificacion-input" min="0" max="5" class="block w-full px-3 py-2 border rounded-md">
+                    <h4 class="text-md font-semibold text-gray-800 border-b pb-2 mb-2">Historial de Reservas</h4>
+                    <div id="historial-reservas-container" class="max-h-64 overflow-y-auto">
+                        <p class="text-gray-500">Cargando historial...</p>
+                    </div>
                 </div>
-                <textarea id="notas-input" rows="3" placeholder="Notas adicionales..." class="block w-full px-3 py-2 border rounded-md"></textarea>
-                <div id="modal-status" class="mt-2 text-sm"></div>
-            </form>
+            </div>
             <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
                 <button type="button" id="save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar Cambios</button>
                 <button type="button" id="cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0">Cancelar</button>
@@ -98,10 +121,37 @@
     const modalStatus = document.getElementById('modal-status');
     const saveBtn = document.getElementById('save-btn');
     const cancelBtn = document.getElementById('cancel-btn');
-    const editForm = document.getElementById('edit-form');
     
     let allClients = [];
     let editingClientId = null;
+
+    const fuentes = ['instagram', 'facebook', 'tiktok', 'google', 'ia', 'boca a boca'];
+    const origenes = ['booking', 'sodc', 'airbnb', 'otra'];
+
+    function populateDropdowns() {
+        const fuenteSelect = document.getElementById('fuente-select');
+        const origenSelect = document.getElementById('origen-select');
+        fuentes.forEach(f => fuenteSelect.add(new Option(f.charAt(0).toUpperCase() + f.slice(1), f)));
+        origenes.forEach(o => origenSelect.add(new Option(o.charAt(0).toUpperCase() + o.slice(1), o)));
+    }
+
+    function setupStars() {
+        const starsContainer = document.getElementById('calificacion-stars');
+        starsContainer.addEventListener('click', e => {
+            if (e.target.classList.contains('star')) {
+                const rating = e.target.dataset.value;
+                starsContainer.dataset.rating = rating;
+                updateStarDisplay(rating);
+            }
+        });
+    }
+
+    function updateStarDisplay(rating) {
+        const stars = document.querySelectorAll('#calificacion-stars .star');
+        stars.forEach(star => {
+            star.classList.toggle('selected', star.dataset.value <= rating);
+        });
+    }
 
     function renderTable(clients) {
         clientesTableBody.innerHTML = '';
@@ -156,7 +206,7 @@
         }
     }
 
-    function handleEditClick(event) {
+    async function handleEditClick(event) {
         editingClientId = event.target.dataset.id;
         const cliente = allClients.find(c => c.id === editingClientId);
         if (!cliente) return;
@@ -167,27 +217,66 @@
         document.getElementById('lastname-input').value = lastnameParts.join(' ') || '';
         document.getElementById('phone-input').value = cliente.telefono || '';
         document.getElementById('email-input').value = cliente.email || '';
-        document.getElementById('origen-input').value = cliente.origen || '';
-        document.getElementById('fuente-input').value = cliente.fuente || '';
-        document.getElementById('calificacion-input').value = cliente.calificacion || 0;
+        document.getElementById('origen-select').value = cliente.origen || 'otra';
+        document.getElementById('fuente-select').value = cliente.fuente || 'boca a boca';
+        document.getElementById('calificacion-stars').dataset.rating = cliente.calificacion || 0;
+        updateStarDisplay(cliente.calificacion || 0);
         document.getElementById('notas-input').value = cliente.notas || '';
         
         modalStatus.textContent = '';
         modal.classList.remove('hidden');
+
+        await loadHistorial(editingClientId);
+    }
+
+    async function loadHistorial(clienteId) {
+        const container = document.getElementById('historial-reservas-container');
+        container.innerHTML = '<p class="text-gray-500">Cargando historial...</p>';
+        try {
+            const historial = await fetchAPI(`/api/reservas/cliente/${clienteId}`);
+            if (historial.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">No hay reservas anteriores.</p>';
+                return;
+            }
+            container.innerHTML = `
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="p-2">Fechas</th>
+                            <th class="p-2">Cabaña</th>
+                            <th class="p-2">Canal</th>
+                            <th class="p-2">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${historial.map(r => `
+                            <tr class="border-b">
+                                <td class="p-2">${r.llegada} - ${r.salida}</td>
+                                <td class="p-2">${r.alojamiento}</td>
+                                <td class="p-2">${r.canal}</td>
+                                <td class="p-2">$${(r.valorCLP || 0).toLocaleString('es-CL')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } catch (error) {
+            container.innerHTML = `<p class="text-red-500">Error al cargar historial: ${error.message}</p>`;
+        }
     }
 
     async function handleSave() {
         if (!editingClientId) return;
 
         const payload = {
-            firstname: document.getElementById('firstname-input').value,
-            lastname: document.getElementById('lastname-input').value,
-            phone: document.getElementById('phone-input').value,
-            email: document.getElementById('email-input').value,
-            origen: document.getElementById('origen-input').value,
-            fuente: document.getElementById('fuente-input').value,
-            calificacion: document.getElementById('calificacion-input').value,
-            notas: document.getElementById('notas-input').value
+            firstname: document.getElementById('firstname-input').value.trim(),
+            lastname: document.getElementById('lastname-input').value.trim(),
+            phone: document.getElementById('phone-input').value.trim(),
+            email: document.getElementById('email-input').value.trim(),
+            origen: document.getElementById('origen-select').value,
+            fuente: document.getElementById('fuente-select').value,
+            calificacion: document.getElementById('calificacion-stars').dataset.rating,
+            notas: document.getElementById('notas-input').value.trim()
         };
 
         saveBtn.disabled = true;
@@ -244,6 +333,8 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
+            populateDropdowns();
+            setupStars();
             searchInput.addEventListener('input', updateTableView);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             saveBtn.addEventListener('click', handleSave);

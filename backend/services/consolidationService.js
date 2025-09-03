@@ -40,6 +40,15 @@ async function processChannel(db, channel) {
         if (clientData.phone) existingClientsByPhone.set(clientData.phone, doc.id);
     });
 
+    const airbnbReservationsByOriginalId = new Map();
+    if (channel === 'Airbnb') {
+        allExistingReservations.forEach((data, id) => {
+            if (data.canal === 'Airbnb') {
+                airbnbReservationsByOriginalId.set(data.reservaIdOriginal, { id, data });
+            }
+        });
+    }
+
     const batch = db.batch();
     const genericPhone = '56999999999';
 
@@ -53,41 +62,41 @@ async function processChannel(db, channel) {
             if (rawData['Tipo'] !== 'Reservación') continue;
 
             const parseAirbnbDate = (dateStr) => {
-                if (!dateStr || typeof dateStr !== 'string' || !/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) {
-                    return null;
-                }
+                if (!dateStr || typeof dateStr !== 'string' || !/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) return null;
                 const [month, day, year] = dateStr.split('/');
                 const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00Z`;
                 const date = new Date(isoDate);
                 return !isNaN(date) ? date : null;
             };
 
-            const fechaLlegada = parseAirbnbDate(rawData['Fecha de inicio']);
-            const fechaSalida = parseAirbnbDate(rawData['Fecha de finalización']);
-            const fechaReserva = parseAirbnbDate(rawData['Fecha de la reservación']);
             const reservaIdOriginal = rawData['Código de confirmación'];
             const cabanaCorrecta = extractCabanaNameFromAirbnb(rawData['Anuncio']);
-            
+            const fechaLlegada = parseAirbnbDate(rawData['Fecha de inicio']);
+            const fechaSalida = parseAirbnbDate(rawData['Fecha de finalización']);
+
             if (!fechaLlegada || !fechaSalida || !reservaIdOriginal || !cabanaCorrecta) {
                 console.warn(`Saltando fila de Airbnb por datos inválidos. Código: ${reservaIdOriginal}`);
                 continue;
             }
+            
+            const idCompuestoCorrecto = `AIRBNB_${reservaIdOriginal}_${cabanaCorrecta.replace(/\s+/g, '')}`;
+            const existingReservation = airbnbReservationsByOriginalId.get(reservaIdOriginal);
 
-            const idCompuesto = `AIRBNB_${reservaIdOriginal}_${cabanaCorrecta.replace(/\s+/g, '')}`;
-            const existingReservation = allExistingReservations.get(idCompuesto);
-
-            // --- INICIO DE LA MODIFICACIÓN: LÓGICA DE ACTUALIZACIÓN O CREACIÓN ---
             if (existingReservation) {
-                // La reserva ya existe, verificamos si el nombre de la cabaña es correcto
-                if (existingReservation.alojamiento !== cabanaCorrecta) {
-                    const reservaRef = db.collection('reservas').doc(idCompuesto);
-                    batch.update(reservaRef, { alojamiento: cabanaCorrecta });
+                const idCompuestoIncorrecto = existingReservation.id;
+                if (idCompuestoIncorrecto !== idCompuestoCorrecto) {
+                    console.log(`Moviendo reserva Airbnb ${reservaIdOriginal}: de ${idCompuestoIncorrecto} a ${idCompuestoCorrecto}`);
+                    
+                    const oldReservaRef = db.collection('reservas').doc(idCompuestoIncorrecto);
+                    batch.delete(oldReservaRef);
+
+                    const newReservaRef = db.collection('reservas').doc(idCompuestoCorrecto);
+                    const newData = { ...existingReservation.data, alojamiento: cabanaCorrecta };
+                    batch.set(newReservaRef, newData, { merge: true });
+
                     reservasActualizadas++;
-                    console.log(`Corrigiendo nombre de cabaña para reserva Airbnb: ${reservaIdOriginal}`);
                 }
-                // Si el nombre es correcto, no hacemos nada
             } else {
-                // La reserva no existe, la creamos
                 reservasCreadas++;
                 clientesNuevos++;
                 const newClientRef = db.collection('clientes').doc();
@@ -115,7 +124,7 @@ async function processChannel(db, channel) {
                     clienteNombre: nombreCompleto,
                     canal: 'Airbnb',
                     estado: 'Confirmada',
-                    fechaReserva: fechaReserva ? admin.firestore.Timestamp.fromDate(fechaReserva) : null,
+                    fechaReserva: parseAirbnbDate(rawData['Fecha de la reservación']),
                     fechaLlegada: admin.firestore.Timestamp.fromDate(fechaLlegada),
                     fechaSalida: admin.firestore.Timestamp.fromDate(fechaSalida),
                     totalNoches: parseInt(rawData['Noches'] || 0),
@@ -140,12 +149,11 @@ async function processChannel(db, channel) {
                     estadoGestion: 'Pendiente Bienvenida'
                 };
                 
-                const reservaRef = db.collection('reservas').doc(idCompuesto);
+                const reservaRef = db.collection('reservas').doc(idCompuestoCorrecto);
                 batch.set(reservaRef, dataToSave, { merge: true });
             }
-            // --- FIN DE LA MODIFICACIÓN ---
 
-        } else { // --- LÓGICA EXISTENTE PARA BOOKING Y SODC ---
+        } else {
             const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']);
             const alojamientosLimpios = (alojamientosRaw || "").toString().split(',').map(c => cleanCabanaName(c));
             const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre";

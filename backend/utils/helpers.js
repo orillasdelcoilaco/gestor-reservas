@@ -50,12 +50,20 @@ function parseDate(dateValue) {
  * Parsea un valor de moneda (string o number) a un número flotante.
  */
 function parseCurrency(value, currency = 'USD') {
-    if (typeof value === 'number') return value;
-    if (typeof value !== 'string') return 0;
+    if (typeof value === 'number') return Math.round(value);
+    if (typeof value !== 'string' || value.trim() === '') return 0;
+
+    // --- INICIO DE LA MODIFICACIÓN ---
     if (currency === 'CLP') {
-        const digitsOnly = value.replace(/\D/g, '');
+        // Tomamos solo la parte entera del número, antes del punto decimal.
+        const integerPart = value.split('.')[0];
+        // Luego, eliminamos cualquier caracter que no sea un dígito (como comas o símbolos de peso).
+        const digitsOnly = integerPart.replace(/\D/g, '');
         return parseInt(digitsOnly, 10) || 0;
     }
+    // --- FIN DE LA MODIFICACIÓN ---
+    
+    // La lógica para USD (que usa puntos como separador decimal) se mantiene igual.
     const numberString = value.replace(/[^\d.,]/g, '');
     const cleanedForFloat = numberString.replace(/,/g, '');
     return parseFloat(cleanedForFloat) || 0;

@@ -56,21 +56,24 @@ async function saveDataToFirestore(db, collectionName, data) {
 
 
 async function performDriveSync(db) {
-    // AÑADIDO: Log para confirmar que esta función inicia
     console.log('[DIAGNÓSTICO] La función performDriveSync ha comenzado.');
     try {
         console.log('Iniciando proceso de sincronización en segundo plano...');
         const drive = driveService.getDriveClient();
-        console.log('[DIAGNÓSTICO] Cliente de Google Drive inicializado correctamente.'); // AÑADIDO
+        console.log('[DIAGNÓSTICO] Cliente de Google Drive inicializado correctamente.');
         
         const folderId = config.DRIVE_FOLDER_ID;
 
-        const [sodcFile, bookingFile] = await Promise.all([
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // Se añade la búsqueda del archivo de Airbnb en paralelo
+        const [sodcFile, bookingFile, airbnbFile] = await Promise.all([
             driveService.findLatestFile(drive, folderId, config.SODC_FILE_PATTERN),
-            driveService.findLatestFile(drive, folderId, config.BOOKING_FILE_PATTERN)
+            driveService.findLatestFile(drive, folderId, config.BOOKING_FILE_PATTERN),
+            driveService.findLatestFile(drive, folderId, config.AIRBNB_FILE_PATTERN)
         ]);
+        // --- FIN DE LA MODIFICACIÓN ---
         
-        console.log('[DIAGNÓSTICO] Búsqueda de archivos completada.'); // AÑADIDO
+        console.log('[DIAGNÓSTICO] Búsqueda de archivos completada.');
 
         if (sodcFile) {
             console.log(`Descargando y procesando archivo SODC: ${sodcFile.name}`);
@@ -91,6 +94,20 @@ async function performDriveSync(db) {
         } else {
             console.log('No se encontró archivo nuevo de Booking.');
         }
+
+        // --- INICIO DE LA MODIFICACIÓN ---
+        // Se añade la lógica para procesar el archivo de Airbnb
+        if (airbnbFile) {
+            console.log(`Descargando y procesando archivo Airbnb: ${airbnbFile.name}`);
+            const fileStream = await driveService.downloadFile(drive, airbnbFile.id);
+            const airbnbData = await parseCsvStream(fileStream);
+            await saveDataToFirestore(db, 'reportes_airbnb_raw', airbnbData);
+            console.log(`Archivo ${airbnbFile.name} procesado. Se guardaron ${airbnbData.length} registros.`);
+        } else {
+            console.log('No se encontró archivo nuevo de Airbnb.');
+        }
+        // --- FIN DE LA MODIFICACIÓN ---
+
         console.log('--- Sincronización en segundo plano completada. ---');
     } catch (error) {
         console.error('Error fatal durante la sincronización en segundo plano:', error);
@@ -105,12 +122,11 @@ module.exports = (db) => {
             message: 'El proceso de sincronización ha comenzado en segundo plano. Revisa los logs del servidor para ver el progreso.'
         });
 
-        // AÑADIDO: Envolvemos la llamada en un setTimeout para asegurar que la respuesta se envíe antes de cualquier posible error.
         setTimeout(() => {
             performDriveSync(db).catch(err => {
                 console.error('[DIAGNÓSTICO] Error no capturado en performDriveSync:', err);
             });
-        }, 100); // 100ms de retraso
+        }, 100);
     });
 
     return router;

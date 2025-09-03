@@ -9,7 +9,10 @@ const config = {
 
   // Patrones para identificar los archivos de reporte.
   SODC_FILE_PATTERN: 'mphb-bookings',
-  BOOKING_FILE_PATTERN: 'Check-in con datos de contacto', // <-- ACTUALIZADO
+  BOOKING_FILE_PATTERN: 'Check-in con datos de contacto',
+  // --- INICIO DE LA MODIFICACIÓN ---
+  AIRBNB_FILE_PATTERN: 'airbnb_', // Se añade el nuevo patrón para Airbnb
+  // --- FIN DE LA MODIFICACIÓN ---
 };
 
 module.exports = config;

@@ -59,6 +59,8 @@ async function getContactPhoneByName(db, name) {
     }
 }
 
+// --- FUNCIÓN MODIFICADA ---
+// Ahora devuelve el objeto completo del contacto o null.
 async function findContactByName(db, nameQuery) {
     if (!nameQuery) return null;
     try {
@@ -85,16 +87,15 @@ async function findContactByName(db, nameQuery) {
 }
 
 async function createGoogleContact(db, contactData) {
+    // Esta función ahora asume que ya se verificó que el contacto no existe.
     if (!contactData || !contactData.name || !contactData.phone) {
+        console.warn('Datos insuficientes para crear contacto en Google.');
         return false;
     }
     try {
         const auth = await getAuthenticatedClient(db);
         const people = google.people({ version: 'v1', auth });
-        const contactExists = await findContactByName(db, contactData.name);
-        if (contactExists) {
-            return true;
-        }
+
         const resource = {
             names: [{ givenName: contactData.name }],
             phoneNumbers: [{ value: contactData.phone }]
@@ -103,8 +104,10 @@ async function createGoogleContact(db, contactData) {
             resource.emailAddresses = [{ value: contactData.email }];
         }
         await people.people.createContact({ resource });
+        console.log(`Contacto '${contactData.name}' creado exitosamente en Google Contacts.`);
         return true;
     } catch (err) {
+        console.error(`Error al crear el contacto '${contactData.name}' en Google:`, err.message);
         return false;
     }
 }
@@ -122,6 +125,7 @@ async function updateContact(db, resourceName, payload, updateMask) {
                 etag: payload.etag
             }
         });
+        console.log(`Contacto ${resourceName} actualizado exitosamente.`);
         return true;
     } catch (err) {
         console.error(`Error al actualizar el contacto ${resourceName}:`, err.message);

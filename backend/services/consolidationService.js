@@ -5,11 +5,18 @@ const { getValorDolar } = require('./dolarService');
 const { createGoogleContact, getContactPhoneByName } = require('./googleContactsService');
 const { cleanCabanaName, parseDate, parseCurrency, cleanPhoneNumber } = require('../utils/helpers');
 
-// --- NUEVA FUNCIÓN DE AYUDA ESPECÍFICA PARA AIRBNB ---
 function extractCabanaNameFromAirbnb(anuncio) {
     if (!anuncio || typeof anuncio !== 'string') return '';
+    const anuncioLower = anuncio.toLowerCase();
+
+    if (anuncioLower.includes('acogedora cabaña familiar')) return 'Cabaña 3';
+    if (anuncioLower.includes('cabaña 9')) return 'Cabaña 9';
+    if (anuncioLower.includes('cabaña para 8 personas')) return 'Cabaña 10';
+    if (anuncioLower.includes('cabañas 1')) return 'Cabaña 1';
+    if (anuncioLower.includes('hermosa cabaña rústica')) return 'Cabaña 2';
+    
     const match = anuncio.match(/Cabaña\s*\d+/i);
-    return match ? match[0] : anuncio; // Devuelve el anuncio completo si no encuentra el patrón
+    return match ? match[0] : anuncio;
 }
 
 async function processChannel(db, channel) {
@@ -45,12 +52,10 @@ async function processChannel(db, channel) {
         if (isAirbnb) {
             if (rawData['Tipo'] !== 'Reservación') continue;
 
-            // --- INICIO DE LA MODIFICACIÓN: Lógica de parseo de fecha segura para Airbnb ---
             const parseAirbnbDate = (dateStr) => {
                 if (!dateStr || typeof dateStr !== 'string' || !/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) {
                     return null;
                 }
-                // El formato de Airbnb es MM/DD/YYYY
                 const [month, day, year] = dateStr.split('/');
                 const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00Z`;
                 const date = new Date(isoDate);
@@ -60,74 +65,85 @@ async function processChannel(db, channel) {
             const fechaLlegada = parseAirbnbDate(rawData['Fecha de inicio']);
             const fechaSalida = parseAirbnbDate(rawData['Fecha de finalización']);
             const fechaReserva = parseAirbnbDate(rawData['Fecha de la reservación']);
-
             const reservaIdOriginal = rawData['Código de confirmación'];
-            const cabana = extractCabanaNameFromAirbnb(rawData['Anuncio']);
+            const cabanaCorrecta = extractCabanaNameFromAirbnb(rawData['Anuncio']);
             
-            // Salta la fila si las fechas clave o los IDs no son válidos para evitar el crash
-            if (!fechaLlegada || !fechaSalida || !reservaIdOriginal || !cabana) {
-                console.warn(`Saltando fila de Airbnb por datos inválidos o fecha nula. Código: ${reservaIdOriginal}`);
+            if (!fechaLlegada || !fechaSalida || !reservaIdOriginal || !cabanaCorrecta) {
+                console.warn(`Saltando fila de Airbnb por datos inválidos. Código: ${reservaIdOriginal}`);
                 continue;
             }
+
+            const idCompuesto = `AIRBNB_${reservaIdOriginal}_${cabanaCorrecta.replace(/\s+/g, '')}`;
+            const existingReservation = allExistingReservations.get(idCompuesto);
+
+            // --- INICIO DE LA MODIFICACIÓN: LÓGICA DE ACTUALIZACIÓN O CREACIÓN ---
+            if (existingReservation) {
+                // La reserva ya existe, verificamos si el nombre de la cabaña es correcto
+                if (existingReservation.alojamiento !== cabanaCorrecta) {
+                    const reservaRef = db.collection('reservas').doc(idCompuesto);
+                    batch.update(reservaRef, { alojamiento: cabanaCorrecta });
+                    reservasActualizadas++;
+                    console.log(`Corrigiendo nombre de cabaña para reserva Airbnb: ${reservaIdOriginal}`);
+                }
+                // Si el nombre es correcto, no hacemos nada
+            } else {
+                // La reserva no existe, la creamos
+                reservasCreadas++;
+                clientesNuevos++;
+                const newClientRef = db.collection('clientes').doc();
+                const clienteId = newClientRef.id;
+                const nombreCompleto = rawData['Huésped'] || 'Cliente Airbnb';
+
+                const contactData = {
+                    name: `${nombreCompleto} Airbnb ${reservaIdOriginal}`,
+                    phone: genericPhone,
+                    email: null
+                };
+                const syncSuccess = await createGoogleContact(db, contactData);
+
+                batch.set(newClientRef, {
+                    firstname: nombreCompleto.split(' ')[0],
+                    lastname: nombreCompleto.split(' ').slice(1).join(' '),
+                    email: null,
+                    phone: genericPhone,
+                    googleContactSynced: syncSuccess
+                });
+                
+                const dataToSave = {
+                    reservaIdOriginal,
+                    clienteId,
+                    clienteNombre: nombreCompleto,
+                    canal: 'Airbnb',
+                    estado: 'Confirmada',
+                    fechaReserva: fechaReserva ? admin.firestore.Timestamp.fromDate(fechaReserva) : null,
+                    fechaLlegada: admin.firestore.Timestamp.fromDate(fechaLlegada),
+                    fechaSalida: admin.firestore.Timestamp.fromDate(fechaSalida),
+                    totalNoches: parseInt(rawData['Noches'] || 0),
+                    invitados: 0,
+                    alojamiento: cabanaCorrecta,
+                    monedaOriginal: 'CLP',
+                    valorOriginal: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
+                    valorCLP: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
+                    correo: null,
+                    telefono: genericPhone,
+                    pais: null,
+                    valorDolarDia: null,
+                    comision: parseCurrency(rawData['Tarifa por servicio'], 'CLP'),
+                    iva: 0,
+                    valorConIva: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
+                    abono: 0,
+                    fechaAbono: null,
+                    fechaPago: null,
+                    pagado: false,
+                    pendiente: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
+                    boleta: false,
+                    estadoGestion: 'Pendiente Bienvenida'
+                };
+                
+                const reservaRef = db.collection('reservas').doc(idCompuesto);
+                batch.set(reservaRef, dataToSave, { merge: true });
+            }
             // --- FIN DE LA MODIFICACIÓN ---
-
-            const idCompuesto = `AIRBNB_${reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
-            if (allExistingReservations.has(idCompuesto)) continue;
-
-            reservasCreadas++;
-            clientesNuevos++;
-            const newClientRef = db.collection('clientes').doc();
-            const clienteId = newClientRef.id;
-            const nombreCompleto = rawData['Huésped'] || 'Cliente Airbnb';
-
-            const contactData = {
-                name: `${nombreCompleto} Airbnb ${reservaIdOriginal}`,
-                phone: genericPhone,
-                email: null
-            };
-            const syncSuccess = await createGoogleContact(db, contactData);
-
-            batch.set(newClientRef, {
-                firstname: nombreCompleto.split(' ')[0],
-                lastname: nombreCompleto.split(' ').slice(1).join(' '),
-                email: null,
-                phone: genericPhone,
-                googleContactSynced: syncSuccess
-            });
-            
-            const dataToSave = {
-                reservaIdOriginal,
-                clienteId,
-                clienteNombre: nombreCompleto,
-                canal: 'Airbnb',
-                estado: 'Confirmada',
-                fechaReserva: fechaReserva ? admin.firestore.Timestamp.fromDate(fechaReserva) : null,
-                fechaLlegada: admin.firestore.Timestamp.fromDate(fechaLlegada),
-                fechaSalida: admin.firestore.Timestamp.fromDate(fechaSalida),
-                totalNoches: parseInt(rawData['Noches'] || 0),
-                invitados: 0,
-                alojamiento: cabana,
-                monedaOriginal: 'CLP',
-                valorOriginal: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
-                valorCLP: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
-                correo: null,
-                telefono: genericPhone,
-                pais: null,
-                valorDolarDia: null,
-                comision: parseCurrency(rawData['Tarifa por servicio'], 'CLP'),
-                iva: 0,
-                valorConIva: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
-                abono: 0,
-                fechaAbono: null,
-                fechaPago: null,
-                pagado: false,
-                pendiente: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
-                boleta: false,
-                estadoGestion: 'Pendiente Bienvenida'
-            };
-            
-            const reservaRef = db.collection('reservas').doc(idCompuesto);
-            batch.set(reservaRef, dataToSave, { merge: true });
 
         } else { // --- LÓGICA EXISTENTE PARA BOOKING Y SODC ---
             const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']);

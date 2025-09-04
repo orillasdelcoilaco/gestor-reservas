@@ -57,10 +57,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin, ocupacionProyectada = 10
         };
     });
     const reservasPorCanalGeneral = {};
-    
-    // --- INICIO DE LA CORRECCIÓN: Se declara la variable antes de ser usada ---
     const reservasUnicasContadas = new Set();
-    // --- FIN DE LA CORRECCIÓN ---
 
     // 3. ANÁLISIS DÍA POR DÍA
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
@@ -99,30 +96,36 @@ async function calculateKPIs(db, fechaInicio, fechaFin, ocupacionProyectada = 10
         }
     }
     
+    // --- INICIO DE LA CORRECCIÓN: Se cambia el warning por un error ---
     allReservas.forEach(reserva => {
-         const nochesEnRango = Math.ceil((Math.min(getUTCDate(reserva.fechaSalida.toDate()), new Date(endDate.getTime() + 86400000)) - Math.max(startDate, getUTCDate(reserva.fechaLlegada.toDate()))) / (1000 * 60 * 60 * 24));
-         if(nochesEnRango <= 0) return;
+        if (!analisisPorCabaña[reserva.alojamiento]) {
+            throw new Error(`Error en la reserva con ID "${reserva.reservaIdOriginal}": La cabaña "${reserva.alojamiento}" no existe en la lista de cabañas activas. Por favor, corrige el nombre en la reserva o añade la cabaña desde el panel "Gestionar Cabañas".`);
+        }
+        
+        const nochesEnRango = Math.ceil((Math.min(getUTCDate(reserva.fechaSalida.toDate()), new Date(endDate.getTime() + 86400000)) - Math.max(startDate, getUTCDate(reserva.fechaLlegada.toDate()))) / (1000 * 60 * 60 * 24));
+        if(nochesEnRango <= 0) return;
 
-         const valorNocheReal = (reserva.valorCLP || 0) / reserva.totalNoches;
-         const ingresoRealReserva = valorNocheReal * nochesEnRango;
-         ingresoTotalReal += ingresoRealReserva;
-         analisisPorCabaña[reserva.alojamiento].ingresoRealTotal += ingresoRealReserva;
+        const valorNocheReal = (reserva.valorCLP || 0) / reserva.totalNoches;
+        const ingresoRealReserva = valorNocheReal * nochesEnRango;
+        ingresoTotalReal += ingresoRealReserva;
+        analisisPorCabaña[reserva.alojamiento].ingresoRealTotal += ingresoRealReserva;
 
-         if (reserva.valorPotencialCLP && reserva.valorPotencialCLP > 0) {
-            const valorNochePotencial = reserva.valorPotencialCLP / reserva.totalNoches;
-            const descuentoNoche = valorNochePotencial - valorNocheReal;
-            const descuentoReserva = descuentoNoche * nochesEnRango;
-            totalDescuentosReales += descuentoReserva;
-            analisisPorCabaña[reserva.alojamiento].descuentoTotal += descuentoReserva;
-            
-            const canal = reserva.canal;
-            if(!analisisPorCabaña[reserva.alojamiento].canales[canal]){
-                analisisPorCabaña[reserva.alojamiento].canales[canal] = { noches: 0, descuento: 0 };
-            }
-            analisisPorCabaña[reserva.alojamiento].canales[canal].noches += nochesEnRango;
-            analisisPorCabaña[reserva.alojamiento].canales[canal].descuento += descuentoReserva;
-         }
+        if (reserva.valorPotencialCLP && reserva.valorPotencialCLP > 0) {
+           const valorNochePotencial = reserva.valorPotencialCLP / reserva.totalNoches;
+           const descuentoNoche = valorNochePotencial - valorNocheReal;
+           const descuentoReserva = descuentoNoche * nochesEnRango;
+           totalDescuentosReales += descuentoReserva;
+           analisisPorCabaña[reserva.alojamiento].descuentoTotal += descuentoReserva;
+           
+           const canal = reserva.canal;
+           if(!analisisPorCabaña[reserva.alojamiento].canales[canal]){
+               analisisPorCabaña[reserva.alojamiento].canales[canal] = { noches: 0, descuento: 0 };
+           }
+           analisisPorCabaña[reserva.alojamiento].canales[canal].noches += nochesEnRango;
+           analisisPorCabaña[reserva.alojamiento].canales[canal].descuento += descuentoReserva;
+        }
     });
+    // --- FIN DE LA CORRECCIÓN ---
 
     // 4. CÁLCULO FINAL DE KPIS
     ingresoPotencialProyectado *= (ocupacionProyectada / 100);

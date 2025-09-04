@@ -6,6 +6,12 @@ function getTodayUTC() {
 }
 
 async function getReservasPendientes(db) {
+    const clientsSnapshot = await db.collection('clientes').get();
+    const clientsMap = new Map();
+    clientsSnapshot.forEach(doc => {
+        clientsMap.set(doc.id, doc.data());
+    });
+
     const snapshot = await db.collection('reservas')
         .where('estado', '==', 'Confirmada')
         .where('estadoGestion', '!=', 'Facturado')
@@ -22,10 +28,16 @@ async function getReservasPendientes(db) {
         const reservaId = data.reservaIdOriginal;
 
         if (!reservasAgrupadas.has(reservaId)) {
+            const clienteActual = clientsMap.get(data.clienteId);
+            const telefonoActualizado = clienteActual ? clienteActual.phone : data.telefono;
+
             reservasAgrupadas.set(reservaId, {
                 reservaIdOriginal: reservaId,
+                // --- INICIO DE LA MODIFICACIÓN ---
+                clienteId: data.clienteId, // Se añade el ID del cliente al grupo
+                // --- FIN DE LA MODIFICACIÓN ---
                 clienteNombre: data.clienteNombre,
-                telefono: data.telefono || 'N/A',
+                telefono: telefonoActualizado || 'N/A',
                 fechaLlegada: data.fechaLlegada ? data.fechaLlegada.toDate() : null,
                 fechaSalida: data.fechaSalida ? data.fechaSalida.toDate() : null,
                 estadoGestion: data.estadoGestion,
@@ -33,10 +45,8 @@ async function getReservasPendientes(db) {
                 reservasIndividuales: [],
                 valorCLP: 0,
                 abono: 0,
-                // --- INICIO DE LA MODIFICACIÓN ---
                 valorPotencialTotal: 0,
                 potencialCalculado: false 
-                // --- FIN DE LA MODIFICACIÓN ---
             });
         }
 
@@ -52,13 +62,10 @@ async function getReservasPendientes(db) {
         grupo.valorCLP += data.valorCLP || 0;
         grupo.abono += data.abono || 0;
         
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // Sumamos el valor potencial y marcamos si al menos una reserva lo tiene
         if (data.valorPotencialCLP && data.valorPotencialCLP > 0) {
             grupo.valorPotencialTotal += data.valorPotencialCLP;
             grupo.potencialCalculado = true;
         }
-        // --- FIN DE LA MODIFICACIÓN ---
     });
 
     const reservas = Array.from(reservasAgrupadas.values());

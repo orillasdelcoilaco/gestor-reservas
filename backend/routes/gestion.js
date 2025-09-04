@@ -351,8 +351,59 @@ module.exports = (db) => {
         }
     });
 
+    router.post('/gestion/grupo/revertir-estado', jsonParser, async (req, res) => {
+        const { reservaIdOriginal, nuevoEstado, idsIndividuales } = req.body;
+        if (!reservaIdOriginal || !nuevoEstado || !idsIndividuales || !Array.isArray(idsIndividuales)) {
+            return res.status(400).json({ error: 'Faltan datos para revertir el estado.' });
+        }
+
+        try {
+            const batch = db.batch();
+            for (const id of idsIndividuales) {
+                const reservaRef = db.collection('reservas').doc(id);
+                batch.update(reservaRef, { estadoGestion: nuevoEstado });
+            }
+            await batch.commit();
+            res.status(200).json({ message: `El estado del grupo ${reservaIdOriginal} se ha revertido a "${nuevoEstado}".` });
+        } catch (error) {
+            console.error(`Error al revertir el estado del grupo ${reservaIdOriginal}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
     router.post('/gestion/fix-missing-states', async (req, res) => {
-        // ... (Esta ruta no cambia) ...
+        try {
+            console.log('Iniciando proceso para reparar estados de gestión faltantes...');
+            const snapshot = await db.collection('reservas').get();
+            if (snapshot.empty) {
+                return res.status(200).json({ message: 'No hay reservas para verificar.', repairedCount: 0 });
+            }
+    
+            const batch = db.batch();
+            let repairedCount = 0;
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (!data.hasOwnProperty('estadoGestion') && data.estado === 'Confirmada') {
+                    const reservaRef = db.collection('reservas').doc(doc.id);
+                    batch.update(reservaRef, { estadoGestion: 'Pendiente Bienvenida' });
+                    repairedCount++;
+                }
+            });
+    
+            if (repairedCount > 0) {
+                await batch.commit();
+                console.log(`Proceso completado. Se repararon ${repairedCount} reservas.`);
+                res.status(200).json({ message: `Proceso completado. Se añadió el estado de gestión inicial a ${repairedCount} reservas.` });
+            } else {
+                console.log('No se encontraron reservas que necesitaran reparación.');
+                res.status(200).json({ message: 'No se encontraron reservas que necesitaran ser reparadas. Todo parece estar en orden.' });
+            }
+    
+        } catch (error) {
+            console.error("Error al reparar estados de gestión:", error);
+            res.status(500).json({ error: 'Error interno del servidor al reparar los estados.' });
+        }
     });
 
     router.post('/gestion/fix-missing-phones', async (req, res) => {
@@ -375,9 +426,7 @@ module.exports = (db) => {
 
                     if (!clientPhone) {
                         const clientDoc = await db.collection('clientes').doc(data.clienteId).get();
-                        // --- INICIO DE LA CORRECCIÓN ---
-                        if (clientDoc.exists && clientDoc.data().phone) { // Se cambia .exists() a .exists
-                        // --- FIN DE LA CORRECCIÓN ---
+                        if (clientDoc.exists && clientDoc.data().phone) {
                             clientPhone = clientDoc.data().phone;
                             clientsCache.set(data.clienteId, clientPhone);
                         }
@@ -403,6 +452,49 @@ module.exports = (db) => {
         } catch (error) {
             console.error("Error al reparar teléfonos de reservas:", error);
             res.status(500).json({ error: 'Error interno del servidor al reparar los teléfonos.' });
+        }
+    });
+    
+    router.get('/gestion/notas/:reservaIdOriginal', async (req, res) => {
+        const { reservaIdOriginal } = req.params;
+        try {
+            const snapshot = await db.collection('gestion_notas')
+                .where('reservaIdOriginal', '==', reservaIdOriginal)
+                .orderBy('fecha', 'desc')
+                .get();
+            
+            if (snapshot.empty) {
+                return res.status(200).json([]);
+            }
+            const notas = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                fecha: doc.data().fecha.toDate().toLocaleString('es-CL')
+            }));
+            res.status(200).json(notas);
+        } catch (error) {
+            console.error("Error al obtener notas:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    router.post('/gestion/notas', jsonParser, async (req, res) => {
+        const { reservaIdOriginal, texto, autor } = req.body;
+        if (!reservaIdOriginal || !texto || !autor) {
+            return res.status(400).json({ error: 'Faltan datos para guardar la nota.' });
+        }
+        try {
+            const nuevaNota = {
+                reservaIdOriginal,
+                texto,
+                autor,
+                fecha: admin.firestore.FieldValue.serverTimestamp()
+            };
+            const docRef = await db.collection('gestion_notas').add(nuevaNota);
+            res.status(201).json({ message: 'Nota guardada.', id: docRef.id });
+        } catch (error) {
+            console.error("Error al guardar la nota:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
     

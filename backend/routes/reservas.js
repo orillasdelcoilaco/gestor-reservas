@@ -1,9 +1,9 @@
-// backend/routes/reservas.js - CÓDIGO FINAL Y CENTRALIZADO
+// backend/routes/reservas.js - CÓDIGO ACTUALIZADO Y CENTRALIZADO
 
 const express = require('express');
 const router = express.Router();
+const admin = require('firebase-admin');
 const jsonParser = express.json();
-// Importamos la función maestra del servicio de clientes
 const { updateClientMaster } = require('../services/clienteService');
 
 module.exports = (db) => {
@@ -41,9 +41,7 @@ module.exports = (db) => {
                     valorManual: data.valorManual || false,
                     nombreManual: data.nombreManual || false,
                     telefonoManual: cliente.telefonoManual || false,
-                    // --- INICIO DE LA MODIFICACIÓN ---
-                    estadoGestion: data.estadoGestion || 'N/A' // Se añade el campo para diagnóstico
-                    // --- FIN DE LA MODIFICACIÓN ---
+                    estadoGestion: data.estadoGestion || 'N/A'
                 });
             });
             res.status(200).json(todasLasReservas);
@@ -53,42 +51,53 @@ module.exports = (db) => {
         }
     });
 
-    // --- ACTUALIZAR UNA RESERVA INDIVIDUAL (PUT) ---
+    // --- INICIO DE LA MODIFICACIÓN ---
+
+    // --- OBTENER DETALLES DE UNA RESERVA INDIVIDUAL (GET) ---
+    router.get('/reservas/detalles/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            const reservaRef = db.collection('reservas').doc(id);
+            const doc = await reservaRef.get();
+
+            if (!doc.exists) {
+                return res.status(404).json({ error: 'La reserva no existe.' });
+            }
+
+            const data = doc.data();
+            const reservaConFechasISO = {
+                ...data,
+                fechaLlegada: data.fechaLlegada.toDate().toISOString().split('T')[0],
+                fechaSalida: data.fechaSalida.toDate().toISOString().split('T')[0],
+                fechaReserva: data.fechaReserva ? data.fechaReserva.toDate().toISOString().split('T')[0] : null
+            };
+
+            res.status(200).json(reservaConFechasISO);
+        } catch (error) {
+            console.error("Error al obtener los detalles de la reserva:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    // --- ACTUALIZAR UNA RESERVA INDIVIDUAL (PUT) - MEJORADO ---
     router.put('/reservas/:id', jsonParser, async (req, res) => {
         try {
             const { id } = req.params;
-            const { valorCLP, clienteNombre, telefono } = req.body;
+            const datosActualizados = req.body;
 
             const reservaRef = db.collection('reservas').doc(id);
             const doc = await reservaRef.get();
             if (!doc.exists) return res.status(404).json({ error: 'La reserva no existe.' });
 
-            const originalData = doc.data();
-            const clientId = originalData.clienteId;
-            
-            const clienteRef = db.collection('clientes').doc(clientId);
-            const clienteDoc = await clienteRef.get();
-            const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
-
-            if (clienteNombre || telefono) {
-                const nameParts = clienteNombre ? clienteNombre.split(' ') : [];
-                
-                const telefonoParaActualizar = telefono || clienteData.phone;
-
-                await updateClientMaster(db, clientId, {
-                    firstname: nameParts.length > 0 ? nameParts[0] : clienteData.firstname,
-                    lastname: nameParts.length > 1 ? nameParts.slice(1).join(' ') : clienteData.lastname,
-                    phone: telefonoParaActualizar
-                });
+            // Convertir fechas de string a Timestamp de Firestore
+            if (datosActualizados.fechaLlegada) {
+                datosActualizados.fechaLlegada = admin.firestore.Timestamp.fromDate(new Date(datosActualizados.fechaLlegada));
+            }
+            if (datosActualizados.fechaSalida) {
+                datosActualizados.fechaSalida = admin.firestore.Timestamp.fromDate(new Date(datosActualizados.fechaSalida));
             }
 
-            if (valorCLP !== undefined) {
-                await reservaRef.update({
-                    valorCLP: valorCLP,
-                    valorOriginalCLP: originalData.valorCLP,
-                    valorManual: true
-                });
-            }
+            await reservaRef.update(datosActualizados);
 
             res.status(200).json({ message: 'Reserva actualizada correctamente.' });
         } catch (error) {
@@ -96,6 +105,24 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
+
+    // --- ELIMINAR UNA RESERVA INDIVIDUAL (DELETE) ---
+    router.delete('/reservas/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            if (!id) {
+                return res.status(400).json({ error: 'Se requiere el ID de la reserva.' });
+            }
+            const reservaRef = db.collection('reservas').doc(id);
+            await reservaRef.delete();
+            res.status(200).json({ message: 'Reserva eliminada exitosamente.' });
+        } catch (error) {
+            console.error(`Error al eliminar la reserva ${id}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor al eliminar la reserva.' });
+        }
+    });
+
+    // --- FIN DE LA MODIFICACIÓN ---
 
     // --- ACTUALIZAR UN GRUPO DE RESERVAS (PUT) ---
     router.put('/reservas/grupo/:reservaIdOriginal', jsonParser, async (req, res) => {
@@ -109,39 +136,28 @@ module.exports = (db) => {
 
             const clienteId = snapshot.docs[0].data().clienteId;
 
-            const clienteRef = db.collection('clientes').doc(clienteId);
-            const clienteDoc = await clienteRef.get();
-            const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
-
             if (clienteNombre || telefono) {
-                const nameParts = clienteNombre ? clienteNombre.split(' ') : [];
-                const telefonoParaActualizar = telefono || clienteData.phone;
-
-                await updateClientMaster(db, clienteId, {
-                    firstname: nameParts.length > 0 ? nameParts[0] : clienteData.firstname,
-                    lastname: nameParts.length > 1 ? nameParts.slice(1).join(' ') : clienteData.lastname,
-                    phone: telefonoParaActualizar
-                });
+                 const clienteRef = db.collection('clientes').doc(clienteId);
+                 const clienteDoc = await clienteRef.get();
+                 const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
+                 const nameParts = clienteNombre ? clienteNombre.split(' ') : [];
+                 const telefonoParaActualizar = telefono || clienteData.phone;
+                 await updateClientMaster(db, clienteId, {
+                     firstname: nameParts.length > 0 ? nameParts[0] : clienteData.firstname,
+                     lastname: nameParts.length > 1 ? nameParts.slice(1).join(' ') : clienteData.lastname,
+                     phone: telefonoParaActualizar
+                 });
             }
 
             if (nuevoTotalCLP !== undefined) {
                 const batch = db.batch();
                 let totalActualCLP = 0;
-                const reservasDelGrupo = [];
+                snapshot.forEach(doc => { totalActualCLP += doc.data().valorCLP; });
                 snapshot.forEach(doc => {
-                    const data = doc.data();
-                    totalActualCLP += data.valorCLP;
-                    reservasDelGrupo.push({ id: doc.id, valorCLP: data.valorCLP });
-                });
-                reservasDelGrupo.forEach(reserva => {
-                    const docRef = db.collection('reservas').doc(reserva.id);
-                    const proporcion = totalActualCLP > 0 ? reserva.valorCLP / totalActualCLP : 1 / reservasDelGrupo.length;
+                    const docRef = db.collection('reservas').doc(doc.id);
+                    const proporcion = totalActualCLP > 0 ? doc.data().valorCLP / totalActualCLP : 1 / snapshot.size;
                     const nuevoValorIndividual = Math.round(nuevoTotalCLP * proporcion);
-                    batch.update(docRef, {
-                        valorCLP: nuevoValorIndividual,
-                        valorOriginalCLP: reserva.valorCLP,
-                        valorManual: true
-                    });
+                    batch.update(docRef, { valorCLP: nuevoValorIndividual, valorManual: true });
                 });
                 await batch.commit();
             }
@@ -163,11 +179,9 @@ module.exports = (db) => {
             if (snapshot.empty) {
                 return res.status(200).json([]);
             }
-
-            const historial = [];
-            snapshot.forEach(doc => {
+            const historial = snapshot.docs.map(doc => {
                 const data = doc.data();
-                historial.push({
+                return {
                     id: doc.id,
                     llegada: data.fechaLlegada.toDate().toLocaleDateString('es-CL'),
                     salida: data.fechaSalida.toDate().toLocaleDateString('es-CL'),
@@ -175,7 +189,7 @@ module.exports = (db) => {
                     canal: data.canal,
                     valorCLP: data.valorCLP,
                     estado: data.estado
-                });
+                };
             });
             res.status(200).json(historial);
         } catch (error) {

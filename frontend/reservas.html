@@ -37,10 +37,10 @@
                         <input type="text" id="search-input" placeholder="Buscar por cliente, cabaña, canal..." class="w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                         <div>
                             <label for="page-size-select" class="text-sm font-medium text-gray-700 mr-2">Mostrar:</label>
-                            <select id="page-size-select" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                <option value="10" selected>10</option>
-                                <option value="50">50</option>
+                            <select id="page-size-select" class="rounded-md border-gray-300 shadow-sm">
+                                <option value="50" selected>50</option>
                                 <option value="100">100</option>
+                                <option value="200">200</option>
                                 <option value="-1">Todos</option>
                             </select>
                         </div>
@@ -54,12 +54,9 @@
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Reserva</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Llegada</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salida</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabaña</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Noches</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado Gestión</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -75,31 +72,76 @@
         </main>
     </div>
 
-    <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
-            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Reserva</h3>
-            <div class="mt-4 space-y-4">
-                <div>
-                    <label for="nombre-input" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
-                    <input type="text" id="nombre-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+    <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl my-8">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Reserva</h3>
+                <button type="button" id="delete-btn" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">Eliminar Reserva</button>
+            </div>
+            <form id="edit-form" class="mt-4 space-y-4 max-h-[70vh] overflow-y-auto pr-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium">ID Original</label>
+                        <input type="text" id="reservaIdOriginal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Nombre Cliente</label>
+                        <input type="text" id="clienteNombre" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
                 </div>
-                <div>
-                    <label for="telefono-input" class="block text-sm font-medium text-gray-700">Teléfono</label>
-                    <input type="text" id="telefono-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                     <div>
+                        <label class="block text-sm font-medium">Fecha Llegada</label>
+                        <input type="date" id="fechaLlegada" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Fecha Salida</label>
+                        <input type="date" id="fechaSalida" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
                 </div>
-                <div>
-                    <label for="valor-input" class="block text-sm font-medium text-gray-700" id="modal-label">Valor (CLP)</label>
-                    <input type="number" id="valor-input" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium">Cabaña (Alojamiento)</label>
+                        <select id="alojamiento" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Canal</label>
+                         <select id="canal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <option value="SODC">SODC</option>
+                            <option value="Booking">Booking</option>
+                            <option value="Airbnb">Airbnb</option>
+                         </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Estado</label>
+                         <select id="estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <option value="Confirmada">Confirmada</option>
+                            <option value="Cancelada">Cancelada</option>
+                         </select>
+                    </div>
+                </div>
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                    <div>
+                        <label class="block text-sm font-medium">Valor Final (CLP)</label>
+                        <input type="number" id="valorCLP" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium">Valor Potencial (CLP)</label>
+                        <input type="number" id="valorPotencialCLP" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Total Noches</label>
+                        <input type="number" id="totalNoches" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                    </div>
                 </div>
                 <div id="modal-status" class="mt-2 text-sm"></div>
-            </div>
+            </form>
             <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                <button type="button" id="save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar</button>
+                <button type="button" id="save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar Cambios</button>
                 <button type="button" id="cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0">Cancelar</button>
             </div>
         </div>
     </div>
-
     <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
@@ -109,22 +151,35 @@
     const pageSizeSelect = document.getElementById('page-size-select');
     const modal = document.getElementById('edit-modal');
     const modalTitle = document.getElementById('modal-title');
-    const modalLabel = document.getElementById('modal-label');
     const modalStatus = document.getElementById('modal-status');
-    const valorInput = document.getElementById('valor-input');
-    const nombreInput = document.getElementById('nombre-input');
-    const telefonoInput = document.getElementById('telefono-input');
     const saveBtn = document.getElementById('save-btn');
     const cancelBtn = document.getElementById('cancel-btn');
+    const deleteBtn = document.getElementById('delete-btn');
+    const cabanaSelect = document.getElementById('alojamiento');
 
     let allReservas = [];
-    let reservaParaEditar = null;
-    let reservasDelGrupo = [];
+    let reservaParaEditarId = null;
+
+    // --- INICIO DE LA MODIFICACIÓN: Cargar cabañas para el dropdown ---
+    async function loadCabanasIntoSelect() {
+        try {
+            const cabanas = await fetchAPI('/api/cabanas');
+            cabanaSelect.innerHTML = '';
+            cabanas.forEach(c => {
+                const option = new Option(c.nombre, c.nombre);
+                cabanaSelect.add(option);
+            });
+        } catch (error) {
+            console.error('No se pudieron cargar las cabañas', error);
+            cabanaSelect.innerHTML = '<option>Error al cargar</option>';
+        }
+    }
+    // --- FIN DE LA MODIFICACIÓN ---
 
     function renderTable(reservas) {
         reservasTableBody.innerHTML = '';
         if (reservas.length === 0) {
-            loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas que coincidan con la búsqueda.</p>';
+            loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas.</p>';
             loadingState.style.display = 'block';
             return;
         }
@@ -132,31 +187,20 @@
         reservas.forEach(reserva => {
             const row = document.createElement('tr');
             row.className = "hover:bg-gray-50";
-            const iconoValorManual = reserva.valorManual ? '✏️' : '';
-            const iconoNombreManual = reserva.nombreManual ? '✏️' : '';
-            const iconoTelefonoManual = reserva.telefonoManual ? '✏️' : '';
-            const valorFormateado = `$${(reserva.valorCLP || 0).toLocaleString('es-CL')} ${iconoValorManual}`;
-            const nombreFormateado = `${reserva.nombre} ${iconoNombreManual}`;
-            const telefonoFormateado = `${reserva.telefono} ${iconoTelefonoManual}`;
+            const valorFormateado = `$${(reserva.valorCLP || 0).toLocaleString('es-CL')}`;
             
-            // --- INICIO DE LA MODIFICACIÓN ---
-            // Se añade la celda para el estado de gestión
             row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${nombreFormateado}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${reserva.nombre}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.llegada}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.salida}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.alojamiento}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-800">${reserva.totalNoches}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorFormateado}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${telefonoFormateado}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.estado}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-600">${reserva.estadoGestion}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}" data-reserva-id-original="${reserva.reservaIdOriginal}">Editar</button>
+                    <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}">Editar</button>
                 </td>`;
-            // --- FIN DE LA MODIFICACIÓN ---
 
             reservasTableBody.appendChild(row);
         });
@@ -168,17 +212,12 @@
     function updateTableView() {
         const searchTerm = searchInput.value.toLowerCase();
         const pageSize = parseInt(pageSizeSelect.value);
-
         const filteredReservas = allReservas.filter(r =>
             (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
             (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
-            (r.telefono && r.telefono.toLowerCase().includes(searchTerm)) ||
-            (r.canal && r.canal.toLowerCase().includes(searchTerm)) ||
             (r.alojamiento && r.alojamiento.toLowerCase().includes(searchTerm))
         );
-
         const paginatedReservas = pageSize === -1 ? filteredReservas : filteredReservas.slice(0, pageSize);
-        
         renderTable(paginatedReservas);
     }
 
@@ -186,82 +225,98 @@
         loadingState.innerHTML = '<p class="text-gray-500">Cargando reservas...</p>';
         try {
             allReservas = await fetchAPI('/api/reservas');
-            updateTableView(); // Llama a la función que filtra y pagina
+            updateTableView();
         } catch (error) {
-            console.error('Error al cargar las reservas:', error);
-            loadingState.innerHTML = `<p class="text-red-500 font-semibold">No se pudieron cargar las reservas: ${error.message}</p>`;
+            loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar las reservas: ${error.message}</p>`;
         }
     }
 
-    function handleEditClick(event) {
+    // --- INICIO DE LA MODIFICACIÓN: Lógica de edición completa ---
+    async function handleEditClick(event) {
+        reservaParaEditarId = event.target.dataset.id;
         modalStatus.innerHTML = '';
-        const button = event.target;
-        const id = button.dataset.id;
-        const reservaIdOriginal = button.dataset.reservaIdOriginal;
-        reservaParaEditar = allReservas.find(r => r.id === id);
-        reservasDelGrupo = allReservas.filter(r => r.reservaIdOriginal === reservaIdOriginal);
-        nombreInput.value = reservaParaEditar.nombre;
-        telefonoInput.value = reservaParaEditar.telefono;
-        if (reservasDelGrupo.length > 1) {
-            const totalGrupo = reservasDelGrupo.reduce((sum, r) => sum + r.valorCLP, 0);
-            modalTitle.textContent = `Editar Grupo de Reserva N° ${reservaIdOriginal}`;
-            modalLabel.textContent = `Valor TOTAL del Grupo (CLP)`;
-            valorInput.value = totalGrupo;
-            reservaParaEditar.esGrupo = true;
-        } else {
-            modalTitle.textContent = `Editar Reserva N° ${reservaIdOriginal}`;
-            modalLabel.textContent = `Valor (CLP)`;
-            valorInput.value = reservaParaEditar.valorCLP;
-            reservaParaEditar.esGrupo = false;
-        }
+        document.getElementById('edit-form').reset();
+        modalTitle.textContent = `Cargando datos de la reserva...`;
         modal.classList.remove('hidden');
+
+        try {
+            const reserva = await fetchAPI(`/api/reservas/detalles/${reservaParaEditarId}`);
+            modalTitle.textContent = `Editando Reserva N° ${reserva.reservaIdOriginal}`;
+            
+            document.getElementById('reservaIdOriginal').value = reserva.reservaIdOriginal || '';
+            document.getElementById('clienteNombre').value = reserva.clienteNombre || '';
+            document.getElementById('fechaLlegada').value = reserva.fechaLlegada;
+            document.getElementById('fechaSalida').value = reserva.fechaSalida;
+            document.getElementById('alojamiento').value = reserva.alojamiento;
+            document.getElementById('canal').value = reserva.canal;
+            document.getElementById('estado').value = reserva.estado;
+            document.getElementById('valorCLP').value = reserva.valorCLP || 0;
+            document.getElementById('valorPotencialCLP').value = reserva.valorPotencialCLP || 0;
+            document.getElementById('totalNoches').value = reserva.totalNoches || 0;
+
+        } catch (error) {
+            modalTitle.textContent = 'Error';
+            modalStatus.innerHTML = `<p class="text-red-500">No se pudieron cargar los detalles: ${error.message}</p>`;
+        }
     }
 
     async function handleSave() {
-        const nuevoValor = parseInt(valorInput.value);
-        const nuevoNombre = nombreInput.value.trim();
-        const nuevoTelefono = telefonoInput.value.trim();
-        const bodyPayload = {};
-        let endpoint;
-        
-        if (reservaParaEditar.esGrupo) {
-            endpoint = `/api/reservas/grupo/${reservaParaEditar.reservaIdOriginal}`;
-            const totalActualGrupo = reservasDelGrupo.reduce((s, r) => s + r.valorCLP, 0);
-            if (!isNaN(nuevoValor) && nuevoValor !== totalActualGrupo) bodyPayload.nuevoTotalCLP = nuevoValor;
-            if (nuevoNombre && nuevoNombre !== reservaParaEditar.nombre) bodyPayload.clienteNombre = nuevoNombre;
-            if (nuevoTelefono && nuevoTelefono !== reservaParaEditar.telefono) bodyPayload.telefono = nuevoTelefono;
-        } else {
-            endpoint = `/api/reservas/${reservaParaEditar.id}`;
-            if (!isNaN(nuevoValor) && nuevoValor !== reservaParaEditar.valorCLP) bodyPayload.valorCLP = nuevoValor;
-            if (nuevoNombre && nuevoNombre !== reservaParaEditar.nombre) bodyPayload.clienteNombre = nuevoNombre;
-            if (nuevoTelefono && nuevoTelefono !== reservaParaEditar.telefono) bodyPayload.telefono = nuevoTelefono;
-        }
+        if (!reservaParaEditarId) return;
 
-        if (Object.keys(bodyPayload).length === 0) {
-            modalStatus.textContent = 'No hay cambios para guardar.';
-            modalStatus.className = 'mt-2 text-sm text-yellow-600';
-            return;
-        }
+        const payload = {
+            reservaIdOriginal: document.getElementById('reservaIdOriginal').value,
+            clienteNombre: document.getElementById('clienteNombre').value,
+            fechaLlegada: document.getElementById('fechaLlegada').value,
+            fechaSalida: document.getElementById('fechaSalida').value,
+            alojamiento: document.getElementById('alojamiento').value,
+            canal: document.getElementById('canal').value,
+            estado: document.getElementById('estado').value,
+            valorCLP: parseInt(document.getElementById('valorCLP').value) || 0,
+            valorPotencialCLP: parseInt(document.getElementById('valorPotencialCLP').value) || 0,
+            totalNoches: parseInt(document.getElementById('totalNoches').value) || 0
+        };
 
         saveBtn.disabled = true;
         saveBtn.textContent = 'Guardando...';
         modalStatus.textContent = '';
         
         try {
-            await fetchAPI(endpoint, {
-                method: 'PUT',
-                body: bodyPayload
-            });
-            await loadReservas(); // Recarga y actualiza la tabla
+            await fetchAPI(`/api/reservas/${reservaParaEditarId}`, { method: 'PUT', body: payload });
             modal.classList.add('hidden');
+            await loadReservas();
         } catch (error) {
             modalStatus.textContent = `Error al guardar: ${error.message}`;
             modalStatus.className = 'mt-2 text-sm text-red-600';
         } finally {
             saveBtn.disabled = false;
-            saveBtn.textContent = 'Guardar';
+            saveBtn.textContent = 'Guardar Cambios';
+            reservaParaEditarId = null;
         }
     }
+
+    async function handleDelete() {
+        if (!reservaParaEditarId) return;
+        if (!confirm('¿Estás SEGURO de que quieres eliminar esta reserva? Esta acción no se puede deshacer.')) return;
+        if (!confirm('CONFIRMACIÓN FINAL: ¿Eliminar esta reserva permanentemente?')) return;
+
+        deleteBtn.disabled = true;
+        deleteBtn.textContent = 'Eliminando...';
+        modalStatus.textContent = '';
+        
+        try {
+            await fetchAPI(`/api/reservas/${reservaParaEditarId}`, { method: 'DELETE' });
+            modal.classList.add('hidden');
+            await loadReservas();
+        } catch (error) {
+            modalStatus.textContent = `Error al eliminar: ${error.message}`;
+            modalStatus.className = 'mt-2 text-sm text-red-600';
+        } finally {
+            deleteBtn.disabled = false;
+            deleteBtn.textContent = 'Eliminar Reserva';
+            reservaParaEditarId = null;
+        }
+    }
+    // --- FIN DE LA MODIFICACIÓN ---
 
     document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
@@ -278,10 +333,12 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
+            loadCabanasIntoSelect(); // Cargar cabañas al iniciar
             searchInput.addEventListener('input', updateTableView);
             pageSizeSelect.addEventListener('change', updateTableView);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             saveBtn.addEventListener('click', handleSave);
+            deleteBtn.addEventListener('click', handleDelete);
             loadReservas();
         }
     });

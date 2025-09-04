@@ -1,170 +1,158 @@
 const admin = require('firebase-admin');
-const { getValorDolar, updateTodaysDolarValue } = require('./dolarService');
+const { getValorDolar } = require('./dolarService');
 
 function getUTCDate(dateStr) {
+    // Helper para asegurar que trabajamos con fechas UTC
     const date = new Date(dateStr);
     return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
-async function calculateKPIs(db, fechaInicio, fechaFin) {
-    console.log(`[KPI Service] Iniciando cálculo de KPIs desde ${fechaInicio} hasta ${fechaFin}`);
+// --- INICIO DE LA MODIFICACIÓN: La función ahora acepta el porcentaje de ocupación ---
+async function calculateKPIs(db, fechaInicio, fechaFin, ocupacionProyectada = 100) {
+    console.log(`[KPI Service] Iniciando cálculo de KPIs desde ${fechaInicio} hasta ${fechaFin} con una proyección de ocupación del ${ocupacionProyectada}%`);
     
     const startDate = getUTCDate(fechaInicio);
     const endDate = getUTCDate(fechaFin);
 
-    // --- OPTIMIZACIÓN CLAVE: OBTENER EL VALOR DEL DÓLAR UNA SOLA VEZ ---
-    console.log('[KPI Service] Obteniendo valor del dólar actual para cálculos...');
-    const valorDolarHoy = await updateTodaysDolarValue(db);
-    console.log(`[KPI Service] Valor del dólar para hoy obtenido: ${valorDolarHoy}`);
-    
-    const reservasSnapshot = await db.collection('reservas')
-        .where('fechaLlegada', '<=', admin.firestore.Timestamp.fromDate(new Date(fechaFin + 'T23:59:59Z')))
-        .get();
-    
-    // Usamos un bucle for...of para manejar las llamadas asíncronas de forma controlada
-    const allReservas = [];
-    for (const doc of reservasSnapshot.docs) {
-        const data = doc.data();
-        const fechaSalidaReserva = getUTCDate(data.fechaSalida.toDate());
-        
-        if (data.estado !== 'Cancelada' && fechaSalidaReserva > startDate) {
-            // La conversión a CLP se hace aquí, de forma más eficiente
-            if (data.canal === 'Booking' && data.monedaOriginal === 'USD') {
-                const valorDolarReserva = await getValorDolar(db, data.fechaLlegada.toDate());
-                data.valorCLP = Math.round(data.valorOriginal * valorDolarReserva * 1.19);
-            }
-            allReservas.push({ id: doc.id, ...data });
-        }
+    // 1. OBTENER DATOS BASE (CABAÑAS, RESERVAS, TARIFAS)
+    const cabanasSnapshot = await db.collection('cabanas').get();
+    if (cabanasSnapshot.empty) {
+        throw new Error("No se encontraron cabañas en la base de datos. No se pueden calcular los KPIs.");
     }
+    const cabañasDisponibles = cabanasSnapshot.docs.map(doc => doc.data().nombre);
+    console.log(`[KPI Service] Cabañas activas: ${cabañasDisponibles.join(', ')}`);
 
     const tarifasSnapshot = await db.collection('tarifas').get();
     const allTarifas = tarifasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    const cabañasDisponibles = ['Cabaña 1', 'Cabaña 2', 'Cabaña 3', 'Cabaña 9', 'Cabaña 10'];
-    const daysInRange = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1;
-    const totalNochesDisponibles = cabañasDisponibles.length * daysInRange;
-
-    let ingresoTotalReal = 0;
-    let ingresoPotencialTotalGeneral = 0;
-    let totalNochesOcupadas = 0;
-    const analisisTemporal = {};
-    const reservasPorCanalGeneral = {};
-    const reservasUnicasContadas = new Set();
+    const reservasSnapshot = await db.collection('reservas')
+        .where('fechaLlegada', '<=', admin.firestore.Timestamp.fromDate(new Date(fechaFin + 'T23:59:59Z')))
+        .get();
     
-    allReservas.forEach(reserva => {
-        const uniqueId = `${reserva.reservaIdOriginal}|${reserva.canal}`;
-        const cabañaNombre = cabañasDisponibles.find(c => c.toLowerCase() === reserva.alojamiento.toLowerCase());
-        if (!cabañaNombre) return;
-        
-        if (!analisisTemporal[cabañaNombre]) {
-            analisisTemporal[cabañaNombre] = { nombre: cabañaNombre, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0, canales: {} };
+    const allReservas = [];
+    for (const doc of reservasSnapshot.docs) {
+        const data = doc.data();
+        const fechaSalidaReserva = getUTCDate(data.fechaSalida.toDate());
+        if (data.estado !== 'Cancelada' && fechaSalidaReserva > startDate && getUTCDate(data.fechaLlegada.toDate()) <= endDate) {
+            allReservas.push({ id: doc.id, ...data });
         }
-        
-        const uniqueKeyForCabin = `${uniqueId}|${cabañaNombre}`;
-        if (!reservasUnicasContadas.has(uniqueKeyForCabin)) {
-            analisisTemporal[cabañaNombre].totalReservas++;
-            reservasUnicasContadas.add(uniqueKeyForCabin);
+    }
 
-            if(!reservasUnicasContadas.has(uniqueId)){
-                 if (!reservasPorCanalGeneral[reserva.canal]) reservasPorCanalGeneral[reserva.canal] = 0;
-                 reservasPorCanalGeneral[reserva.canal]++;
-                 reservasUnicasContadas.add(uniqueId);
-            }
-        }
+    // 2. INICIALIZAR VARIABLES Y ESTRUCTURAS DE DATOS
+    const daysInRange = (endDate - startDate) / (1000 * 60 * 60 * 24) + 1;
+    const totalNochesDisponiblesPeriodo = cabañasDisponibles.length * daysInRange;
+    
+    let ingresoTotalReal = 0;
+    let totalNochesOcupadas = 0;
+    let ingresoPotencialProyectado = 0;
+    let totalDescuentosReales = 0;
+
+    const analisisPorCabaña = {};
+    cabañasDisponibles.forEach(nombre => {
+        analisisPorCabaña[nombre] = {
+            nombre: nombre,
+            nochesOcupadas: 0,
+            nochesDisponibles: daysInRange,
+            ingresoRealTotal: 0,
+            descuentoTotal: 0,
+            canales: {} // Para el desglose
+        };
     });
+    const reservasPorCanalGeneral = {};
 
+    // 3. ANÁLISIS DÍA POR DÍA
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const currentDate = getUTCDate(d);
 
-        for (const cabaña of cabañasDisponibles) {
+        for (const cabañaNombre of cabañasDisponibles) {
+            // CÁLCULO DEL INGRESO POTENCIAL (PROYECCIÓN)
+            const tarifaPotencialDelDia = allTarifas.find(t => 
+                t.nombreCabaña.toLowerCase() === cabañaNombre.toLowerCase() && 
+                getUTCDate(t.fechaInicio.toDate()) <= currentDate && 
+                getUTCDate(t.fechaTermino.toDate()) >= currentDate
+            );
+
+            // --- INICIO DE LA MODIFICACIÓN: Validación de tarifas faltantes ---
+            if (!tarifaPotencialDelDia || !tarifaPotencialDelDia.tarifasPorCanal['SODC']) {
+                throw new Error(`Falta definir la tarifa del canal SODC para la cabaña "${cabañaNombre}" en la fecha ${currentDate.toISOString().split('T')[0]}.`);
+            }
+            ingresoPotencialProyectado += tarifaPotencialDelDia.tarifasPorCanal['SODC'].valor;
+            // --- FIN DE LA MODIFICACIÓN ---
+
+            // ANÁLISIS DE RESERVAS REALES
             const reservaDelDia = allReservas.find(r => 
-                r.alojamiento.toLowerCase() === cabaña.toLowerCase() &&
+                r.alojamiento.toLowerCase() === cabañaNombre.toLowerCase() &&
                 getUTCDate(r.fechaLlegada.toDate()) <= currentDate &&
                 getUTCDate(r.fechaSalida.toDate()) > currentDate
             );
 
             if (reservaDelDia) {
-                totalNochesOcupadas++;
-                const valorNocheReal = reservaDelDia.valorCLP / reservaDelDia.totalNoches;
-                ingresoTotalReal += valorNocheReal;
+                const cabañaData = analisisPorCabaña[cabañaNombre];
+                cabañaData.nochesOcupadas++;
 
-                if (!analisisTemporal[cabaña]) {
-                    analisisTemporal[cabaña] = { nombre: cabaña, totalReservas: 0, nochesOcupadas: 0, ingresoRealTotal: 0, canales: {} };
+                // Solo contamos la reserva una vez por cabaña para el conteo de canales
+                const reservaCanalKey = `${reservaDelDia.reservaIdOriginal}|${cabañaNombre}`;
+                if (!reservasUnicasContadas.has(reservaCanalKey)) {
+                    reservasUnicasContadas.add(reservaCanalKey);
+                    const canal = reservaDelDia.canal;
+                    if (!reservasPorCanalGeneral[canal]) reservasPorCanalGeneral[canal] = 0;
+                    reservasPorCanalGeneral[canal]++;
                 }
-                analisisTemporal[cabaña].nochesOcupadas++;
-                analisisTemporal[cabaña].ingresoRealTotal += valorNocheReal;
-                const canal = reservaDelDia.canal;
-
-                if (!analisisTemporal[cabaña].canales[canal]) {
-                    analisisTemporal[cabaña].canales[canal] = { totalReservas: 0, noches: 0, ingresoReal: 0, ingresoPotencial: 0 };
-                }
-                analisisTemporal[cabaña].canales[canal].noches++;
-                analisisTemporal[cabaña].canales[canal].ingresoReal += valorNocheReal;
-
-                const tarifaDelDia = allTarifas.find(t =>
-                    t.nombreCabaña.toLowerCase() === cabaña.toLowerCase() &&
-                    getUTCDate(t.fechaInicio.toDate()) <= currentDate &&
-                    getUTCDate(t.fechaTermino.toDate()) >= currentDate
-                );
-                
-                if (tarifaDelDia && tarifaDelDia.tarifasPorCanal[canal]) {
-                    if (!analisisTemporal[cabaña].ingresoPotencialTotal) analisisTemporal[cabaña].ingresoPotencialTotal = 0;
-                    
-                    let valorNochePotencial = tarifaDelDia.tarifasPorCanal[canal].valor;
-                    if (tarifaDelDia.tarifasPorCanal[canal].moneda === 'USD') {
-                         const valorDolar = await getValorDolar(db, reservaDelDia.fechaLlegada.toDate());
-                         valorNochePotencial = Math.round(valorNochePotencial * valorDolar * 1.19);
-                    }
-                    
-                    analisisTemporal[cabaña].ingresoPotencialTotal += valorNochePotencial;
-                    analisisTemporal[cabaña].canales[canal].ingresoPotencial += valorNochePotencial;
-                }
-            } 
-            
-            const tarifaPotencialDelDia = allTarifas.find(t => t.nombreCabaña.toLowerCase() === cabaña.toLowerCase() && getUTCDate(t.fechaInicio.toDate()) <= currentDate && getUTCDate(t.fechaTermino.toDate()) >= currentDate);
-            if (tarifaPotencialDelDia && tarifaPotencialDelDia.tarifasPorCanal['SODC']) { 
-                ingresoPotencialTotalGeneral += tarifaPotencialDelDia.tarifasPorCanal['SODC'].valor;
             }
         }
     }
 
-    const rankingCabañas = Object.values(analisisTemporal).filter(c => c.nochesOcupadas > 0);
+    const reservasUnicasContadas = new Set();
+    allReservas.forEach(reserva => {
+         const nochesEnRango = Math.round((Math.min(endDate, getUTCDate(reserva.fechaSalida.toDate())) - Math.max(startDate, getUTCDate(reserva.fechaLlegada.toDate()))) / (1000 * 60 * 60 * 24));
+         if(nochesEnRango <= 0) return;
 
-    rankingCabañas.forEach(cabañaData => {
-        cabañaData.ingresoRealTotal = Math.round(cabañaData.ingresoRealTotal);
-        if (cabañaData.ingresoPotencialTotal) {
-            cabañaData.ingresoPotencialTotal = Math.round(cabañaData.ingresoPotencialTotal);
-            cabañaData.descuentoTotal = cabañaData.ingresoPotencialTotal - cabañaData.ingresoRealTotal;
-            for(const canal in cabañaData.canales){
-                const canalData = cabañaData.canales[canal];
-                canalData.ingresoReal = Math.round(canalData.ingresoReal);
-                canalData.ingresoPotencial = Math.round(canalData.ingresoPotencial);
-                canalData.descuento = canalData.ingresoPotencial - canalData.ingresoReal;
-            }
-        }
+         const valorNocheReal = (reserva.valorCLP || 0) / reserva.totalNoches;
+         ingresoTotalReal += valorNocheReal * nochesEnRango;
+         
+         // --- INICIO DE LA MODIFICACIÓN: Cálculo de descuentos reales ---
+         if (reserva.valorPotencialCLP && reserva.valorPotencialCLP > 0) {
+            const valorNochePotencial = reserva.valorPotencialCLP / reserva.totalNoches;
+            const descuentoNoche = valorNochePotencial - valorNocheReal;
+            totalDescuentosReales += descuentoNoche * nochesEnRango;
+         }
+         // --- FIN DE LA MODIFICACIÓN ---
     });
 
-    rankingCabañas.sort((a, b) => b.totalReservas - a.totalReservas);
 
-    const tasaOcupacion = totalNochesDisponibles > 0 ? (totalNochesOcupadas / totalNochesDisponibles) * 100 : 0;
+    // 4. CÁLCULO FINAL DE KPIS
+    ingresoPotencialProyectado *= (ocupacionProyectada / 100);
+    totalNochesOcupadas = Object.values(analisisPorCabaña).reduce((sum, c) => sum + c.nochesOcupadas, 0);
+
+    const tasaOcupacion = totalNochesDisponiblesPeriodo > 0 ? (totalNochesOcupadas / totalNochesDisponiblesPeriodo) * 100 : 0;
     const adr = totalNochesOcupadas > 0 ? ingresoTotalReal / totalNochesOcupadas : 0;
-    const revPar = totalNochesDisponibles > 0 ? ingresoTotalReal / totalNochesDisponibles : 0;
+    const revPar = totalNochesDisponiblesPeriodo > 0 ? ingresoTotalReal / totalNochesDisponiblesPeriodo : 0;
+    
+    // --- INICIO DE LA MODIFICACIÓN: Preparar datos para la tabla del frontend ---
+    const rankingCabañas = Object.values(analisisPorCabaña).map(c => ({
+        ...c,
+        nochesFaltantes: c.nochesDisponibles - c.nochesOcupadas,
+        ingresoRealTotal: Math.round(c.ingresoRealTotal),
+        descuentoTotal: Math.round(c.descuentoTotal)
+    })).sort((a, b) => b.nochesOcupadas - a.nochesOcupadas);
+    // --- FIN DE LA MODIFICACIÓN ---
 
     const results = {
         kpisGenerales: {
             ingresoTotal: Math.round(ingresoTotalReal),
-            ingresoPotencialTotal: Math.round(ingresoPotencialTotalGeneral),
+            ingresoPotencialProyectado: Math.round(ingresoPotencialProyectado),
+            descuentosTotalesReales: Math.round(totalDescuentosReales),
             tasaOcupacion: parseFloat(tasaOcupacion.toFixed(2)),
             adr: Math.round(adr),
             revPar: Math.round(revPar),
             nochesOcupadas: totalNochesOcupadas,
-            nochesDisponibles: totalNochesDisponibles,
+            nochesDisponibles: totalNochesDisponiblesPeriodo,
             reservasPorCanal: reservasPorCanalGeneral
         },
         rankingCabañas: rankingCabañas
     };
     
-    console.log('[KPI Service] Cálculo finalizado (versión optimizada):', JSON.stringify(results, null, 2));
+    console.log('[KPI Service] Cálculo finalizado (nueva lógica):', JSON.stringify(results, null, 2));
     
     return results;
 }

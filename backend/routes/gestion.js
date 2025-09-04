@@ -460,18 +460,28 @@ module.exports = (db) => {
         try {
             const snapshot = await db.collection('gestion_notas')
                 .where('reservaIdOriginal', '==', reservaIdOriginal)
-                .orderBy('fecha', 'desc')
-                .get();
+                .get(); // Se elimina el .orderBy()
             
             if (snapshot.empty) {
                 return res.status(200).json([]);
             }
+
+            // Se mapean y luego se ordenan en el servidor
             const notas = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data(),
-                fecha: doc.data().fecha.toDate().toLocaleString('es-CL')
             }));
-            res.status(200).json(notas);
+
+            // Ordenamos por fecha descendente
+            notas.sort((a, b) => b.fecha.toMillis() - a.fecha.toMillis());
+
+            // Formateamos la fecha después de ordenar
+            const formattedNotas = notas.map(nota => ({
+                ...nota,
+                fecha: nota.fecha.toDate().toLocaleString('es-CL')
+            }));
+
+            res.status(200).json(formattedNotas);
         } catch (error) {
             console.error("Error al obtener notas:", error);
             res.status(500).json({ error: 'Error interno del servidor.' });

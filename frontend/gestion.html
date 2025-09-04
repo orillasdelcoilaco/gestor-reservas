@@ -52,8 +52,7 @@
     <div id="bitacora-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
             <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="bitacora-modal-title">Bitácora de Gestión</h3>
-            <div id="bitacora-list" class="max-h-60 overflow-y-auto space-y-3 mb-4 pr-2">
-                </div>
+            <div id="bitacora-list" class="max-h-60 overflow-y-auto space-y-3 mb-4 pr-2"></div>
             <div class="border-t pt-4">
                 <textarea id="bitacora-new-note" rows="3" class="w-full p-2 border rounded-md" placeholder="Añadir nueva nota..."></textarea>
                 <div id="bitacora-status" class="text-sm mt-2"></div>
@@ -69,6 +68,7 @@
 <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
     
+    // --- Referencias a elementos del DOM ---
     const loader = document.getElementById('loader');
     const appContent = document.getElementById('app-content');
     const authInfo = document.getElementById('auth-info');
@@ -138,7 +138,7 @@
             : '';
         
         const kpiIcon = grupo.potencialCalculado ? '<span class="ml-1" title="Valor Potencial ya calculado">🧮</span>' : '';
-        const clienteLink = `<a href="clientes.html?openModalFor=${grupo.clienteId}" target="_blank" class="ml-4 text-lg font-bold text-gray-800 hover:text-indigo-600" title="Abrir ficha del cliente">${grupo.clienteNombre}</a>`;
+        const clienteLink = `<a href="clientes.html?openModalFor=${grupo.clienteId}" class="ml-4 text-lg font-bold text-gray-800 hover:text-indigo-600" title="Abrir ficha del cliente">${grupo.clienteNombre}</a>`;
 
         card.innerHTML = `
             <div class="flex items-center mb-2">
@@ -159,11 +159,11 @@
                     <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
                 </div>
                 <div class="mt-3 md:mt-0 flex flex-wrap gap-2 justify-center">
-                    <button data-gestion="bitacora" class="gestion-btn px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-md hover:bg-gray-200">Bitácora 🗂️</button>
                     <button data-gestion="gestionar_reserva" class="gestion-btn px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-md hover:bg-blue-200">Gestionar Reserva</button>
                     <button data-gestion="ajuste_tarifa" class="gestion-btn px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-md hover:bg-yellow-200">Ajustar Tarifa ${kpiIcon}</button>
                     <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
                     <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
+                    <button data-gestion="bitacora" class="gestion-btn px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-md hover:bg-gray-200">Bitácora 🗂️</button>
                 </div>
             </div>`;
         card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));
@@ -186,17 +186,17 @@
 
         modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')} (Reserva ${grupo.reservaIdOriginal})`;
         
-        if (type === 'ajuste_tarifa') {
-            renderAjusteTarifaModal();
-        } else if (type === 'pagos') {
-            renderPagosModal();
-        } else if (type === 'boleta') {
-            renderBoletaModal();
-        } else if (type === 'gestionar_reserva') {
-            renderGestionReservaModal();
+        const actionMap = {
+            'ajuste_tarifa': renderAjusteTarifaModal,
+            'pagos': renderPagosModal,
+            'boleta': renderBoletaModal,
+            'gestionar_reserva': renderGestionReservaModal
+        };
+
+        if (actionMap[type]) {
+            actionMap[type]();
+            modal.classList.remove('hidden');
         }
-        
-        modal.classList.remove('hidden');
     }
 
     async function openBitacoraModal(grupo) {
@@ -258,8 +258,8 @@
             bitacoraSaveBtn.textContent = 'Guardar Nota';
         }
     }
-
-        function openRevertModal(grupo) {
+    
+    function openRevertModal(grupo) {
         currentGrupo = grupo;
         modalTitle.textContent = `Revertir Estado (Reserva ${grupo.reservaIdOriginal})`;
 
@@ -294,7 +294,7 @@
         modal.classList.remove('hidden');
     }
 
-   async function handleRevertState() {
+    async function handleRevertState() {
         const nuevoEstado = document.getElementById('revert-select').value;
         const statusEl = document.getElementById('revert-status');
         const confirmBtn = document.getElementById('revert-confirm-btn');
@@ -323,7 +323,7 @@
                 }
             });
             modal.classList.add('hidden');
-            await loadGestion(); // Recargar para mostrar el cambio
+            await loadGestion();
         } catch (error) {
             statusEl.textContent = `Error: ${error.message}`;
             statusEl.className = 'text-sm text-red-600';
@@ -332,7 +332,7 @@
             confirmBtn.textContent = 'Confirmar Reversión';
         }
     }
- 
+
     function renderAjusteTarifaModal() {
         modalContent.innerHTML = `
             <div class="border-b border-gray-200">
@@ -846,7 +846,6 @@
             
             searchInput.addEventListener('input', updateFilteredView);
             modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-
             bitacoraCancelBtn.addEventListener('click', () => bitacoraModal.classList.add('hidden'));
             bitacoraSaveBtn.addEventListener('click', saveNote);
             

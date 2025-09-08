@@ -143,8 +143,8 @@
                                 .then(events => successCallback(events))
                                 .catch(error => failureCallback(error));
                         },
-                        viewDidMount: function(view) {
-                            const currentDate = calendarInstance.getDate(); // Usar la instancia del calendario
+                        datesSet: function(dateInfo) {
+                            const currentDate = calendarInstance.getDate();
                             currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
                         },
                         eventContent: arg => ({ html: `<b>${arg.event.title}</b>` }),

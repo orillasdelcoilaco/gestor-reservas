@@ -270,8 +270,8 @@
              return 0;
         }
 
-        const llegada = new Date(llegadaStr.split('/').reverse().join('-') + 'T00:00:00Z');
-        const salida = new Date(salidaStr.split('/').reverse().join('-') + 'T00:00:00Z');
+        const llegada = new Date(llegadaStr.split('-').reverse().join('-') + 'T00:00:00Z');
+        const salida = new Date(salidaStr.split('-').reverse().join('-') + 'T00:00:00Z');
         const inicio = new Date(inicioFiltro + 'T00:00:00Z');
         const fin = new Date(finFiltro + 'T00:00:00Z');
         
@@ -295,8 +295,8 @@
         const pageSize = parseInt(document.getElementById('page-size-select').value);
 
         const filteredReservas = allReservas.filter(r => {
-            const llegadaDate = new Date(r.llegada.split('/').reverse().join('-') + 'T00:00:00Z');
-            const salidaDate = new Date(r.salida.split('/').reverse().join('-') + 'T00:00:00Z');
+            const llegadaDate = new Date(r.llegada.split('-').reverse().join('-') + 'T00:00:00Z');
+            const salidaDate = new Date(r.salida.split('-').reverse().join('-') + 'T00:00:00Z');
 
             const matchFechas = (!fechaInicio || !fechaFin) || (llegadaDate < new Date(fechaFin + 'T00:00:00Z') && salidaDate > new Date(fechaInicio + 'T00:00:00Z'));
             const matchCanal = selectedCanales.length === 0 || selectedCanales.includes(r.canal);
@@ -323,7 +323,13 @@
     async function loadReservas() {
         loadingState.innerHTML = '<p class="text-gray-500">Cargando reservas...</p>';
         try {
-            allReservas = await fetchAPI('/api/reservas');
+            const rawReservas = await fetchAPI('/api/reservas');
+            allReservas = rawReservas.map(r => ({
+                ...r,
+                // Aseguramos que el formato sea consistente para el split
+                llegada: r.llegada.replace(/\//g, '-'),
+                salida: r.salida.replace(/\//g, '-')
+            }));
             updateTableView();
         } catch (error) {
             loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar las reservas: ${error.message}</p>`;

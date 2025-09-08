@@ -261,7 +261,7 @@
         const pageSize = parseInt(document.getElementById('page-size-select').value);
 
         const filteredReservas = allReservas.filter(r => {
-            const llegadaDate = new Date(r.llegada.split('/').reverse().join('-') + 'T00:00:00Z');
+            const llegadaDate = new Date(r.llegada.split('-').reverse().join('-') + 'T00:00:00Z');
             
             const matchFechaInicio = !fechaInicio || llegadaDate >= new Date(fechaInicio + 'T00:00:00Z');
             const matchFechaFin = !fechaFin || llegadaDate <= new Date(fechaFin + 'T00:00:00Z');

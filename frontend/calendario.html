@@ -112,12 +112,9 @@
                         const option = new Option(r.title, r.id);
                         cabanaFilter.add(option);
                     });
-
-                    // --- INICIO DE LA CORRECCIÓN: Se define la licencia ANTES de inicializar ---
-                    FullCalendar.globalOptions.schedulerLicenseKey = 'GPL-My-Project-Is-Open-Source';
-                    // --- FIN DE LA CORRECCIÓN ---
-
+                    
                     calendarInstance = new FullCalendar.Calendar(calendarEl, {
+                        schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
                         initialView: 'resourceTimelineMonth',
                         locale: 'es',
                         headerToolbar: false,

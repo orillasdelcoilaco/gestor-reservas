@@ -3,144 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendario de Ocupación - Gestor de Reservas</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <title>Calendario (Prueba Mínima)</title>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        #calendario { height: 80vh; }
-        .fc-event.canal-sodc { background-color: #10B981; border-color: #059669; }
-        .fc-event.canal-booking { background-color: #3B82F6; border-color: #2563EB; }
-        .fc-event.canal-airbnb { background-color: #EF4444; border-color: #DC2626; }
-        .fc-event.canal-desconocido { background-color: #6B7280; border-color: #4B5563; }
+        body { font-family: sans-serif; padding: 20px; }
+        #calendario { border: 1px solid #ccc; }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div id="loader" class="text-center p-8">
-        <p class="text-gray-500">Verificando sesión...</p>
-    </div>
-
-    <div id="app-content" class="min-h-screen hidden">
-        <nav class="bg-white shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16">
-                    <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
-                    <div id="auth-info" class="flex items-center space-x-4"></div>
-                </div>
-            </div>
-        </nav>
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                    <h2 class="text-2xl font-semibold text-gray-900">Calendario de Ocupación</h2>
-                    <div id="calendar-navigation" class="flex items-center space-x-2 mt-4 md:mt-0">
-                        <button id="prev-month-btn" class="px-3 py-1 bg-gray-200 rounded-md">&lt; Mes Anterior</button>
-                        <h3 id="current-month-year" class="text-lg font-medium text-gray-800 w-48 text-center"></h3>
-                        <button id="next-month-btn" class="px-3 py-1 bg-gray-200 rounded-md">Mes Siguiente &gt;</button>
-                    </div>
-                </div>
-                <div id="calendar-container" class="border rounded-lg p-2">
-                    <div id="calendario"></div>
-                </div>
-            </div>
-        </main>
-    </div>
+<body>
+    <h1>Prueba de Calendario de Recursos</h1>
+    <div id="calendario" style="height: 80vh;"></div>
 
 <script type="module">
-    import { checkSession, logout, fetchAPI } from './api.js';
+    import { checkSession, fetchAPI } from './api.js';
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const loader = document.getElementById('loader');
-        const appContent = document.getElementById('app-content');
-        const authInfo = document.getElementById('auth-info');
-
+    document.addEventListener('DOMContentLoaded', async () => {
+        const calendarEl = document.getElementById('calendario');
+        
+        // Verificar sesión primero
         const session = checkSession();
-        if (session) {
-            loader.style.display = 'none';
-            appContent.classList.remove('hidden');
-            authInfo.innerHTML = `
-                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
-                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-            `;
-            document.getElementById('logout-btn').addEventListener('click', logout);
+        if (!session) {
+            calendarEl.innerHTML = '<p style="color:red;">Error: Sesión no válida.</p>';
+            return;
+        }
 
-            const calendarEl = document.getElementById('calendario');
-            const currentMonthYearEl = document.getElementById('current-month-year');
-            const prevBtn = document.getElementById('prev-month-btn');
-            const nextBtn = document.getElementById('next-month-btn');
-            
-            let calendarInstance = null;
+        try {
+            // 1. Obtener los "recursos" (las cabañas)
+            const cabanas = await fetchAPI('/api/cabanas');
+            const resources = cabanas.map(c => ({ id: c.nombre, title: c.nombre }));
 
-            function getCanalClassName(canal) {
-                if (!canal) return 'canal-desconocido';
-                const canalLower = canal.toLowerCase();
-                if (canalLower.includes('booking')) return 'canal-booking';
-                if (canalLower.includes('sodc')) return 'canal-sodc';
-                if (canalLower.includes('airbnb')) return 'canal-airbnb';
-                return 'canal-desconocido';
-            }
+            // 2. Obtener los "eventos" (las reservas) para el mes actual
+            const today = new Date();
+            const anio = today.getFullYear();
+            const mes = today.getMonth() + 1;
+            const events = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
 
-            async function initializeCalendar() {
-                try {
-                    const cabanas = await fetchAPI('/api/cabanas');
-                    const resources = cabanas.map(c => ({ id: c.nombre, title: c.nombre }));
-                    
-                    calendarInstance = new FullCalendar.Calendar(calendarEl, {
-                        schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
-                        initialView: 'resourceTimelineMonth',
-                        locale: 'es',
-                        headerToolbar: false, 
-                        editable: false,
-                        timeZone: 'UTC', 
-                        resources: resources,
-                        resourceAreaHeaderContent: 'Cabañas',
-                        
-                        events: async function(fetchInfo, successCallback, failureCallback) {
-                            try {
-                                const anio = fetchInfo.start.getUTCFullYear();
-                                const mes = fetchInfo.start.getUTCMonth() + 1;
-                                const events = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
-                                successCallback(events);
-                            } catch (error) {
-                                failureCallback(error);
-                            }
-                        },
-
-                        viewDidMount: function(view) {
-                            const currentDate = view.calendar.getDate();
-                            currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { 
-                                month: 'long', 
-                                year: 'numeric', 
-                                timeZone: 'UTC' 
-                            });
-                        },
-
-                        eventContent: arg => ({ html: `<b>${arg.event.title}</b>` }),
-                        
-                        eventDidMount: info => {
-                            const { canal, reservaIdOriginal } = info.event.extendedProps;
-                            info.el.classList.add(getCanalClassName(canal));
-                            info.el.title = `Cliente: ${info.event.title}\nCanal: ${canal}\nID: ${reservaIdOriginal}`;
-                        }
-                    });
-
-                    calendarInstance.render();
-
-                } catch (error) {
-                    calendarEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-8">Error al inicializar el calendario: ${error.message}</p>`;
-                }
-            }
-            
-            prevBtn.addEventListener('click', () => {
-                if(calendarInstance) calendarInstance.prev();
+            // 3. Inicializar el calendario con la configuración mínima necesaria
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
+                initialView: 'resourceTimelineMonth',
+                locale: 'es',
+                timeZone: 'UTC',
+                headerToolbar: { // Barra de herramientas básica para navegar
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: ''
+                },
+                resources: resources,
+                events: events
             });
 
-            nextBtn.addEventListener('click', () => {
-                if(calendarInstance) calendarInstance.next();
-            });
-            
-            initializeCalendar();
+            // 4. Renderizar el calendario
+            calendar.render();
+
+        } catch (error) {
+            calendarEl.innerHTML = `<p style="color:red; font-weight:bold;">Error al inicializar el calendario: ${error.message}</p>`;
+            console.error(error);
         }
     });
 </script>

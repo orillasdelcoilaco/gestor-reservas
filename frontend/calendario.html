@@ -85,27 +85,24 @@
 
             async function initializeCalendar() {
                 try {
-                    const cabanas = await fetchAPI('/api/cabanas');
-                    const resources = cabanas.map(c => ({ id: c.nombre, title: c.nombre }));
-
+                    // --- INICIO DE LA MODIFICACIÓN DE PRUEBA ---
+                    console.log("Inicializando calendario de prueba (dayGridMonth)...");
                     calendarInstance = new FullCalendar.Calendar(calendarEl, {
-                        schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
-                        initialView: 'resourceTimelineMonth',
+                        initialView: 'dayGridMonth', // Vista simple, sin recursos
                         locale: 'es',
                         headerToolbar: false,
                         editable: false,
-                        resources: resources,
-                        resourceAreaHeaderContent: 'Cabañas',
                         events: [],
                         eventContent: function(arg) {
-                            return { html: `<b>${arg.event.title}</b>` };
+                            return { html: `<b>${arg.event.extendedProps.alojamiento}:</b> ${arg.event.title}` };
                         },
                         eventDidMount: function(info) {
                             const canal = info.event.extendedProps.canal;
                             info.el.classList.add(getCanalClassName(canal));
-                            info.el.title = `Cliente: ${info.event.title}\nCanal: ${canal}\nID: ${info.event.extendedProps.reservaIdOriginal}`;
+                            info.el.title = `Cliente: ${info.event.title}\nCabaña: ${info.event.extendedProps.alojamiento}\nCanal: ${canal}`;
                         }
                     });
+                    // --- FIN DE LA MODIFICACIÓN DE PRUEBA ---
 
                     calendarInstance.render();
                     updateCalendar();
@@ -125,7 +122,16 @@
                 currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
                 
                 try {
-                    const events = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
+                    // La API devuelve datos con 'resourceId', que ahora usaremos en 'extendedProps'
+                    const rawEvents = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
+                    const events = rawEvents.map(e => ({
+                        ...e,
+                        extendedProps: {
+                            ...e.extendedProps,
+                            alojamiento: e.resourceId // Guardamos el nombre de la cabaña aquí
+                        }
+                    }));
+                    
                     calendarInstance.getEventSourceById('reservas')?.remove();
                     calendarInstance.addEventSource({ id: 'reservas', events: events });
                 } catch (error) {

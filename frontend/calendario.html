@@ -6,25 +6,19 @@
     <title>Calendario de Ocupación - Gestor de Reservas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         #calendario { height: 80vh; }
-
-        /* --- INICIO DE MEJORAS VISUALES --- */
-        .fc-day-today {
-            background-color: #fef9c3 !important; /* Color para el día actual */
-        }
-
+        .fc-day-today { background-color: #fef9c3 !important; }
         .fc .fc-col-header-cell-cushion {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 2px 4px; /* Ajusta el padding para reducir el ancho */
+            padding: 2px 4px;
         }
-        /* --- FIN DE MEJORAS VISUALES --- */
-        
         .fc-event.canal-sodc { background-color: #10B981; border-color: #059669; }
         .fc-event.canal-booking { background-color: #3B82F6; border-color: #2563EB; }
         .fc-event.canal-airbnb { background-color: #EF4444; border-color: #DC2626; }
@@ -137,24 +131,20 @@
                         timeZone: 'UTC',
                         resources: allResources,
                         resourceAreaHeaderContent: 'Cabañas',
-                        // Funcionalidad 3: Formato de cabecera de días
                         dayHeaderContent: function(arg) {
                            const dayOfWeek = arg.date.toLocaleDateString('es-ES', { weekday: 'short', timeZone: 'UTC' });
                            const dayOfMonth = arg.date.getUTCDate();
                            return { html: `<span style="font-size: 0.8em;">${dayOfWeek}</span><br><b>${dayOfMonth}</b>` };
                         },
-                        events: async function(fetchInfo, successCallback, failureCallback) {
-                            try {
-                                const anio = fetchInfo.start.getUTCFullYear();
-                                const mes = fetchInfo.start.getUTCMonth() + 1;
-                                const events = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
-                                successCallback(events);
-                            } catch (error) {
-                                failureCallback(error);
-                            }
+                        events: function(fetchInfo, successCallback, failureCallback) {
+                            const anio = fetchInfo.start.getUTCFullYear();
+                            const mes = fetchInfo.start.getUTCMonth() + 1;
+                            fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`)
+                                .then(events => successCallback(events))
+                                .catch(error => failureCallback(error));
                         },
                         viewDidMount: function(view) {
-                            const currentDate = view.calendar.getDate();
+                            const currentDate = calendarInstance.getDate(); // Usar la instancia del calendario
                             currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
                         },
                         eventContent: arg => ({ html: `<b>${arg.event.title}</b>` }),
@@ -163,7 +153,6 @@
                             info.el.classList.add(getCanalClassName(canal));
                             info.el.title = `Cliente: ${info.event.title}\nCanal: ${canal}\nID: ${reservaIdOriginal}`;
                         },
-                        // Funcionalidad 2: Clic para ver disponibilidad
                         dateClick: handleDateClick
                     });
 
@@ -210,11 +199,11 @@
             });
 
             prevBtn.addEventListener('click', () => {
-                calendarInstance.prev();
+                if(calendarInstance) calendarInstance.prev();
             });
 
             nextBtn.addEventListener('click', () => {
-                calendarInstance.next();
+                if(calendarInstance) calendarInstance.next();
             });
             
             disponibilidadModalCloseBtn.addEventListener('click', () => disponibilidadModal.classList.add('hidden'));

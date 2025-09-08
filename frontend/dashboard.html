@@ -84,13 +84,14 @@
             
             <div class="bg-white p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
                     <a href="gestion.html" class="bg-red-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-700 transition shadow"><span class="text-3xl">!</span><p class="mt-2">Gestión Diaria</p></a>
-                    <a href="sincronizar.html" class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow"><p class="mt-2">Sincronizar Datos</p></a>
-                    <a href="procesar.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow"><p class="mt-2">Procesar y Consolidar</p></a>
-                    <a href="mensajes.html" class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow"><p class="mt-2">Generar Mensajes</p></a>
+                    <a href="calendario.html" class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow flex items-center justify-center"><p>Calendario de Ocupación</p></a>
+                    <a href="sincronizar.html" class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow flex items-center justify-center"><p>Sincronizar Datos</p></a>
+                    <a href="procesar.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow flex items-center justify-center"><p>Procesar y Consolidar</p></a>
+                    <a href="mensajes.html" class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow flex items-center justify-center"><p>Generar Mensajes</p></a>
                 </div>
-            </div>
+                </div>
             <div class="bg-white p-8 rounded-lg shadow mt-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas y Configuración</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -137,7 +138,7 @@
     <script type="module">
       import { checkSession, logout, fetchAPI } from './api.js';
 
-      let canalChartInstance = null; 
+      let canalChartInstance = null;
       let fullKpiResults = null;
       let ingresoPotencialBase = 0;
 
@@ -148,14 +149,12 @@
       function updateProjectedValues(proyeccion) {
           if (!fullKpiResults) return;
           
-          // Actualizar tarjeta de Ingreso Proyectado
           const nuevoIngresoProyectado = ingresoPotencialBase * (proyeccion / 100);
           const ingresoProyectadoEl = document.getElementById('ingreso-proyectado-valor');
           if (ingresoProyectadoEl) {
               ingresoProyectadoEl.textContent = formatCurrency(nuevoIngresoProyectado);
           }
 
-          // Actualizar tabla de Ranking
           fullKpiResults.rankingCabañas.forEach((cabaña, index) => {
               const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccion / 100);
               const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);

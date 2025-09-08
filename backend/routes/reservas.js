@@ -1,4 +1,4 @@
-// backend/routes/reservas.js - CÓDIGO ACTUALIZADO Y CENTRALIZADO
+// backend/routes/reservas.js - CÓDIGO FINAL Y CENTRALIZADO
 
 const express = require('express');
 const router = express.Router();
@@ -19,30 +19,24 @@ module.exports = (db) => {
                 clientsMap.set(doc.id, doc.data());
             });
 
-            const todasLasReservas = [];
-            snapshot.forEach(doc => {
+            const todasLasReservas = snapshot.docs.map(doc => {
                 const data = doc.data();
                 const cliente = clientsMap.get(data.clienteId) || {};
-                const llegada = data.fechaLlegada ? data.fechaLlegada.toDate().toLocaleDateString('es-CL') : 'N/A';
-                const salida = data.fechaSalida ? data.fechaSalida.toDate().toLocaleDateString('es-CL') : 'N/A';
-                todasLasReservas.push({
+                return {
                     id: doc.id,
                     reservaIdOriginal: data.reservaIdOriginal || 'N/A',
                     clienteId: data.clienteId,
                     nombre: data.clienteNombre || 'Sin Nombre',
                     telefono: cliente.phone || 'Sin Teléfono',
-                    llegada: llegada,
-                    salida: salida,
+                    llegada: data.fechaLlegada ? data.fechaLlegada.toDate().toLocaleDateString('es-CL') : 'N/A',
+                    salida: data.fechaSalida ? data.fechaSalida.toDate().toLocaleDateString('es-CL') : 'N/A',
                     estado: data.estado || 'N/A',
                     alojamiento: data.alojamiento || 'N/A',
                     canal: data.canal || 'N/A',
                     valorCLP: data.valorCLP || 0,
                     totalNoches: data.totalNoches || 0,
-                    valorManual: data.valorManual || false,
-                    nombreManual: data.nombreManual || false,
-                    telefonoManual: cliente.telefonoManual || false,
                     estadoGestion: data.estadoGestion || 'N/A'
-                });
+                };
             });
             res.status(200).json(todasLasReservas);
         } catch (error) {
@@ -51,19 +45,13 @@ module.exports = (db) => {
         }
     });
 
-    // --- INICIO DE LA MODIFICACIÓN ---
-
     // --- OBTENER DETALLES DE UNA RESERVA INDIVIDUAL (GET) ---
     router.get('/reservas/detalles/:id', async (req, res) => {
         try {
             const { id } = req.params;
-            const reservaRef = db.collection('reservas').doc(id);
-            const doc = await reservaRef.get();
-
-            if (!doc.exists) {
-                return res.status(404).json({ error: 'La reserva no existe.' });
-            }
-
+            const doc = await db.collection('reservas').doc(id).get();
+            if (!doc.exists) return res.status(404).json({ error: 'La reserva no existe.' });
+            
             const data = doc.data();
             const reservaConFechasISO = {
                 ...data,
@@ -71,7 +59,6 @@ module.exports = (db) => {
                 fechaSalida: data.fechaSalida.toDate().toISOString().split('T')[0],
                 fechaReserva: data.fechaReserva ? data.fechaReserva.toDate().toISOString().split('T')[0] : null
             };
-
             res.status(200).json(reservaConFechasISO);
         } catch (error) {
             console.error("Error al obtener los detalles de la reserva:", error);
@@ -79,26 +66,21 @@ module.exports = (db) => {
         }
     });
 
-    // --- ACTUALIZAR UNA RESERVA INDIVIDUAL (PUT) - MEJORADO ---
+    // --- ACTUALIZAR UNA RESERVA INDIVIDUAL (PUT) ---
     router.put('/reservas/:id', jsonParser, async (req, res) => {
         try {
             const { id } = req.params;
             const datosActualizados = req.body;
-
             const reservaRef = db.collection('reservas').doc(id);
-            const doc = await reservaRef.get();
-            if (!doc.exists) return res.status(404).json({ error: 'La reserva no existe.' });
 
-            // Convertir fechas de string a Timestamp de Firestore
             if (datosActualizados.fechaLlegada) {
-                datosActualizados.fechaLlegada = admin.firestore.Timestamp.fromDate(new Date(datosActualizados.fechaLlegada));
+                datosActualizados.fechaLlegada = admin.firestore.Timestamp.fromDate(new Date(datosActualizados.fechaLlegada + 'T00:00:00Z'));
             }
             if (datosActualizados.fechaSalida) {
-                datosActualizados.fechaSalida = admin.firestore.Timestamp.fromDate(new Date(datosActualizados.fechaSalida));
+                datosActualizados.fechaSalida = admin.firestore.Timestamp.fromDate(new Date(datosActualizados.fechaSalida + 'T00:00:00Z'));
             }
 
             await reservaRef.update(datosActualizados);
-
             res.status(200).json({ message: 'Reserva actualizada correctamente.' });
         } catch (error) {
             console.error("Error al actualizar la reserva:", error);
@@ -110,19 +92,13 @@ module.exports = (db) => {
     router.delete('/reservas/:id', async (req, res) => {
         try {
             const { id } = req.params;
-            if (!id) {
-                return res.status(400).json({ error: 'Se requiere el ID de la reserva.' });
-            }
-            const reservaRef = db.collection('reservas').doc(id);
-            await reservaRef.delete();
+            await db.collection('reservas').doc(id).delete();
             res.status(200).json({ message: 'Reserva eliminada exitosamente.' });
         } catch (error) {
             console.error(`Error al eliminar la reserva ${id}:`, error);
-            res.status(500).json({ error: 'Error interno del servidor al eliminar la reserva.' });
+            res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-
-    // --- FIN DE LA MODIFICACIÓN ---
 
     // --- ACTUALIZAR UN GRUPO DE RESERVAS (PUT) ---
     router.put('/reservas/grupo/:reservaIdOriginal', jsonParser, async (req, res) => {
@@ -194,6 +170,53 @@ module.exports = (db) => {
             res.status(200).json(historial);
         } catch (error) {
             console.error("Error al obtener el historial del cliente:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+    
+    // --- NUEVO ENDPOINT PARA EL CALENDARIO ---
+    router.get('/reservas/calendario', async (req, res) => {
+        const { anio, mes } = req.query;
+        if (!anio || !mes) {
+            return res.status(400).json({ error: 'Se requieren el año y el mes.' });
+        }
+
+        try {
+            const anioNum = parseInt(anio);
+            const mesNum = parseInt(mes) - 1; // Mes en JS es 0-11
+
+            const primerDia = new Date(Date.UTC(anioNum, mesNum, 1));
+            const ultimoDia = new Date(Date.UTC(anioNum, mesNum + 1, 0, 23, 59, 59));
+            
+            const startTimestamp = admin.firestore.Timestamp.fromDate(primerDia);
+            const endTimestamp = admin.firestore.Timestamp.fromDate(ultimoDia);
+            
+            const querySnapshot = await db.collection('reservas')
+                .where('fechaLlegada', '<=', endTimestamp)
+                .get();
+
+            const reservasDelMes = [];
+            querySnapshot.forEach(doc => {
+                const data = doc.data();
+                if (data.fechaSalida >= startTimestamp && data.estado !== 'Cancelada') {
+                    reservasDelMes.push({
+                        id: doc.id,
+                        title: data.clienteNombre,
+                        start: data.fechaLlegada.toDate().toISOString(),
+                        end: data.fechaSalida.toDate().toISOString(),
+                        resourceId: data.alojamiento,
+                        extendedProps: {
+                            canal: data.canal,
+                            reservaIdOriginal: data.reservaIdOriginal
+                        }
+                    });
+                }
+            });
+            
+            res.status(200).json(reservasDelMes);
+
+        } catch (error) {
+            console.error("Error al obtener datos para el calendario:", error);
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });

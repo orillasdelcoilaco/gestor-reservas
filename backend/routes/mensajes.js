@@ -101,7 +101,7 @@ module.exports = (db) => {
         totalCLP: cabanas.reduce((sum, c) => sum + c.valorCLP, 0),
         totalAbonado: totalAbonado, // <-- Se añade el total calculado
         canal: primeraReserva.canal,
-        valorOriginalUSD: primeraReserva.monedaOriginal === 'USD' ? primeraReserva.valorOriginal * cabanas.length : null,
+        valorOriginalUSD: primeraReserva.monedaOriginal === 'USD' ? (primeraReserva.valorOriginal * cabanas.length) * 1.19 : null,
         valorDolarDia: primeraReserva.valorDolarDia || null
       };
 

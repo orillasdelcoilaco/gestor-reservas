@@ -1,4 +1,4 @@
-// backend/routes/reservas.js - CÓDIGO FINAL Y CENTRALIZADO
+// backend/routes/reservas.js - CÓDIGO ACTUALIZADO Y CENTRALIZADO
 
 const express = require('express');
 const router = express.Router();
@@ -174,7 +174,7 @@ module.exports = (db) => {
         }
     });
     
-    // --- NUEVO ENDPOINT PARA EL CALENDARIO ---
+    // --- ENDPOINT PARA EL CALENDARIO ---
     router.get('/reservas/calendario', async (req, res) => {
         const { anio, mes } = req.query;
         if (!anio || !mes) {
@@ -183,7 +183,7 @@ module.exports = (db) => {
 
         try {
             const anioNum = parseInt(anio);
-            const mesNum = parseInt(mes) - 1; // Mes en JS es 0-11
+            const mesNum = parseInt(mes) - 1;
 
             const primerDia = new Date(Date.UTC(anioNum, mesNum, 1));
             const ultimoDia = new Date(Date.UTC(anioNum, mesNum + 1, 0, 23, 59, 59));
@@ -220,6 +220,54 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
+
+    // --- INICIO DE LA MODIFICACIÓN: Nuevo endpoint para disponibilidad ---
+    router.get('/reservas/disponibilidad', async (req, res) => {
+        const { fechaDesde } = req.query;
+        if (!fechaDesde) {
+            return res.status(400).json({ error: 'Se requiere una fecha de inicio.' });
+        }
+
+        try {
+            const startTimestamp = admin.firestore.Timestamp.fromDate(new Date(fechaDesde + 'T00:00:00Z'));
+
+            // Obtener todas las cabañas activas
+            const cabanasSnapshot = await db.collection('cabanas').get();
+            const cabanasActivas = cabanasSnapshot.docs.map(doc => doc.data().nombre);
+
+            // Obtener todas las reservas futuras desde la fecha indicada
+            const reservasFuturasSnapshot = await db.collection('reservas')
+                .where('fechaLlegada', '>=', startTimestamp)
+                .where('estado', '!=', 'Cancelada')
+                .orderBy('fechaLlegada', 'asc')
+                .get();
+            
+            const proximaReservaPorCabana = new Map();
+
+            // Encontrar la primera reserva futura para cada cabaña
+            reservasFuturasSnapshot.forEach(doc => {
+                const reserva = doc.data();
+                if (!proximaReservaPorCabana.has(reserva.alojamiento)) {
+                    proximaReservaPorCabana.set(reserva.alojamiento, reserva.fechaLlegada.toDate());
+                }
+            });
+
+            // Construir el resultado final
+            const disponibilidad = cabanasActivas.map(nombreCabana => {
+                return {
+                    cabana: nombreCabana,
+                    proximaReserva: proximaReservaPorCabana.get(nombreCabana)?.toISOString().split('T')[0] || null
+                };
+            });
+
+            res.status(200).json(disponibilidad);
+
+        } catch (error) {
+            console.error("Error al calcular la disponibilidad:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+    // --- FIN DE LA MODIFICACIÓN ---
 
     return router;
 };

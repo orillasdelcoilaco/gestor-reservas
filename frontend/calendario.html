@@ -9,14 +9,12 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
-        #calendario {
-            height: 80vh;
-        }
-        /* Colores para los canales */
+        #calendario { height: 80vh; }
         .fc-event.canal-sodc { background-color: #10B981; border-color: #059669; }
         .fc-event.canal-booking { background-color: #3B82F6; border-color: #2563EB; }
         .fc-event.canal-airbnb { background-color: #EF4444; border-color: #DC2626; }
         .fc-event.canal-desconocido { background-color: #6B7280; border-color: #4B5563; }
+        #disponibilidad-modal { background-color: rgba(0, 0, 0, 0.5); }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -37,12 +35,19 @@
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
                     <h2 class="text-2xl font-semibold text-gray-900">Calendario de Ocupación</h2>
-                    <div id="calendar-navigation" class="flex items-center space-x-2 mt-4 md:mt-0">
-                        <button id="prev-month-btn" class="px-3 py-1 bg-gray-200 rounded-md">&lt; Mes Anterior</button>
-                        <h3 id="current-month-year" class="text-lg font-medium text-gray-800 w-48 text-center"></h3>
-                        <button id="next-month-btn" class="px-3 py-1 bg-gray-200 rounded-md">Mes Siguiente &gt;</button>
+                    <div id="calendar-controls" class="flex items-center space-x-4 mt-4 md:mt-0">
+                        <div>
+                            <select id="cabana-filter" class="rounded-md border-gray-300 shadow-sm">
+                                <option value="all">Todas las cabañas</option>
+                            </select>
+                        </div>
+                        <div id="calendar-navigation" class="flex items-center space-x-2">
+                            <button id="prev-month-btn" class="px-3 py-1 bg-gray-200 rounded-md">&lt; Mes Anterior</button>
+                            <h3 id="current-month-year" class="text-lg font-medium text-gray-800 w-48 text-center"></h3>
+                            <button id="next-month-btn" class="px-3 py-1 bg-gray-200 rounded-md">Mes Siguiente &gt;</button>
+                        </div>
                     </div>
-                </div>
+                    </div>
                 <div id="calendar-container" class="border rounded-lg p-2">
                     <div id="calendario"></div>
                 </div>
@@ -50,7 +55,14 @@
         </main>
     </div>
 
-<script type="module">
+    <div id="disponibilidad-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="disponibilidad-modal-title">Disponibilidad</h3>
+            <div id="disponibilidad-modal-content" class="max-h-80 overflow-y-auto"></div>
+            <button type="button" id="disponibilidad-modal-close-btn" class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
+        </div>
+    </div>
+    <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -72,7 +84,14 @@
             const currentMonthYearEl = document.getElementById('current-month-year');
             const prevBtn = document.getElementById('prev-month-btn');
             const nextBtn = document.getElementById('next-month-btn');
+            const cabanaFilter = document.getElementById('cabana-filter');
+            const disponibilidadModal = document.getElementById('disponibilidad-modal');
+            const disponibilidadModalTitle = document.getElementById('disponibilidad-modal-title');
+            const disponibilidadModalContent = document.getElementById('disponibilidad-modal-content');
+            const disponibilidadModalCloseBtn = document.getElementById('disponibilidad-modal-close-btn');
+            
             let calendarInstance = null;
+            let allResources = [];
 
             function getCanalClassName(canal) {
                 if (!canal) return 'canal-desconocido';
@@ -85,30 +104,38 @@
 
             async function initializeCalendar() {
                 try {
-                    // --- INICIO DE LA MODIFICACIÓN DE PRUEBA ---
-                    console.log("Inicializando calendario de prueba (dayGridMonth)...");
+                    const cabanas = await fetchAPI('/api/cabanas');
+                    allResources = cabanas.map(c => ({ id: c.nombre, title: c.nombre }));
+                    
+                    // Llenar el filtro de cabañas
+                    allResources.forEach(r => {
+                        const option = new Option(r.title, r.id);
+                        cabanaFilter.add(option);
+                    });
+
                     calendarInstance = new FullCalendar.Calendar(calendarEl, {
-                        initialView: 'dayGridMonth', // Vista simple, sin recursos
+                        schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
+                        initialView: 'resourceTimelineMonth',
                         locale: 'es',
                         headerToolbar: false,
                         editable: false,
+                        resources: allResources,
+                        resourceAreaHeaderContent: 'Cabañas',
                         events: [],
-                        eventContent: function(arg) {
-                            return { html: `<b>${arg.event.extendedProps.alojamiento}:</b> ${arg.event.title}` };
-                        },
-                        eventDidMount: function(info) {
-                            const canal = info.event.extendedProps.canal;
+                        eventContent: arg => ({ html: `<b>${arg.event.title}</b>` }),
+                        eventDidMount: info => {
+                            const { canal, reservaIdOriginal } = info.event.extendedProps;
                             info.el.classList.add(getCanalClassName(canal));
-                            info.el.title = `Cliente: ${info.event.title}\nCabaña: ${info.event.extendedProps.alojamiento}\nCanal: ${canal}`;
-                        }
+                            info.el.title = `Cliente: ${info.event.title}\nCanal: ${canal}\nID: ${reservaIdOriginal}`;
+                        },
+                        dateClick: handleDateClick // Nueva función para la disponibilidad
                     });
-                    // --- FIN DE LA MODIFICACIÓN DE PRUEBA ---
 
                     calendarInstance.render();
                     updateCalendar();
 
                 } catch (error) {
-                    calendarEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-8">Error al inicializar el calendario: ${error.message}</p>`;
+                    calendarEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-8">Error: ${error.message}</p>`;
                 }
             }
 
@@ -122,16 +149,7 @@
                 currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
                 
                 try {
-                    // La API devuelve datos con 'resourceId', que ahora usaremos en 'extendedProps'
-                    const rawEvents = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
-                    const events = rawEvents.map(e => ({
-                        ...e,
-                        extendedProps: {
-                            ...e.extendedProps,
-                            alojamiento: e.resourceId // Guardamos el nombre de la cabaña aquí
-                        }
-                    }));
-                    
+                    const events = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
                     calendarInstance.getEventSourceById('reservas')?.remove();
                     calendarInstance.addEventSource({ id: 'reservas', events: events });
                 } catch (error) {
@@ -139,6 +157,41 @@
                 }
             }
             
+            async function handleDateClick(info) {
+                const fechaDesde = info.dateStr.split('T')[0];
+                disponibilidadModalTitle.textContent = `Disponibilidad desde el ${new Date(info.dateStr).toLocaleDateString('es-CL')}`;
+                disponibilidadModalContent.innerHTML = '<p>Calculando...</p>';
+                disponibilidadModal.classList.remove('hidden');
+
+                try {
+                    const disponibilidad = await fetchAPI(`/api/reservas/disponibilidad?fechaDesde=${fechaDesde}`);
+                    
+                    let contentHtml = '<ul class="space-y-2">';
+                    disponibilidad.forEach(item => {
+                        const hasta = item.proximaReserva 
+                            ? `hasta el ${new Date(item.proximaReserva).toLocaleDateString('es-CL')}`
+                            : 'indefinidamente';
+                        contentHtml += `<li class="p-2 border-b"><strong>${item.cabana}:</strong> Disponible ${hasta}</li>`;
+                    });
+                    contentHtml += '</ul>';
+                    disponibilidadModalContent.innerHTML = contentHtml;
+
+                } catch (error) {
+                    disponibilidadModalContent.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+                }
+            }
+
+            cabanaFilter.addEventListener('change', () => {
+                const selectedCabanaId = cabanaFilter.value;
+                calendarInstance.getResources().forEach(res => res.remove());
+                if (selectedCabanaId === 'all') {
+                    allResources.forEach(res => calendarInstance.addResource(res));
+                } else {
+                    const resource = allResources.find(r => r.id === selectedCabanaId);
+                    if(resource) calendarInstance.addResource(resource);
+                }
+            });
+
             prevBtn.addEventListener('click', () => {
                 calendarInstance.prev();
                 updateCalendar();
@@ -148,6 +201,8 @@
                 calendarInstance.next();
                 updateCalendar();
             });
+            
+            disponibilidadModalCloseBtn.addEventListener('click', () => disponibilidadModal.classList.add('hidden'));
 
             initializeCalendar();
         }

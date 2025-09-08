@@ -7,8 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/6.1.11/index.global.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/fullcalendar-scheduler/6.1.11/index.global.min.js"></script>
+    <script src='https://unpkg.com/fullcalendar@6.1.11/index.global.min.js'></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         #calendario { height: 80vh; }
@@ -107,6 +106,17 @@
 
             async function initializeCalendar() {
                 try {
+                    // --- INICIO DEL CÓDIGO DE DIAGNÓSTICO ---
+                    console.log("--- INICIANDO DIAGNÓSTICO DE FULLCALENDAR ---");
+                    if (window.FullCalendar) {
+                        console.log("Objeto FullCalendar encontrado:", window.FullCalendar);
+                        console.log("Plugins disponibles:", window.FullCalendar.globalPlugins);
+                    } else {
+                        console.error("¡ERROR CRÍTICO! El objeto FullCalendar no se encontró en la página.");
+                    }
+                    console.log("--- FIN DEL DIAGNÓSTICO ---");
+                    // --- FIN DEL CÓDIGO DE DIAGNÓSTICO ---
+
                     const cabanas = await fetchAPI('/api/cabanas');
                     allResources = cabanas.map(c => ({ id: c.nombre, title: c.nombre }));
                     

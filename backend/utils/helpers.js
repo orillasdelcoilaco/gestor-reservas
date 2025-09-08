@@ -17,9 +17,13 @@ function cleanPhoneNumber(phone) {
  */
 function cleanCabanaName(cabanaName) {
     if (!cabanaName || typeof cabanaName !== 'string') return '';
-    const normalizedName = cabanaName.trim().toLowerCase().replace(/\s+/g, ' ');
-    if (normalizedName === 'cabaña 9 1') return 'cabaña 9';
-    if (normalizedName === 'cabaña 10 1') return 'cabaña 10';
+    const trimmedLower = cabanaName.trim().toLowerCase();
+
+    // Corregir casos específicos devolviendo el formato correcto
+    if (trimmedLower === 'cabaña 9 1') return 'Cabaña 9';
+    if (trimmedLower === 'cabaña 10 1') return 'Cabaña 10';
+    
+    // Para los demás casos, solo limpiar espacios en blanco, manteniendo la capitalización original.
     return cabanaName.trim();
 }
 

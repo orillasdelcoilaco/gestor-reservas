@@ -455,6 +455,59 @@ module.exports = (db) => {
         }
     });
     
+    router.post('/gestion/fix-cabana-names', async (req, res) => {
+        try {
+            console.log('Iniciando proceso para corregir nombres de cabañas...');
+
+            const cabanasSnapshot = await db.collection('cabanas').get();
+            const correctNamesMap = new Map();
+            cabanasSnapshot.forEach(doc => {
+                const name = doc.data().nombre;
+                correctNamesMap.set(name.toLowerCase(), name);
+            });
+
+            if (correctNamesMap.size === 0) {
+                return res.status(500).json({ error: 'No se encontraron cabañas en la colección de cabañas para usar como referencia.' });
+            }
+
+            const reservasSnapshot = await db.collection('reservas').get();
+            if (reservasSnapshot.empty) {
+                return res.status(200).json({ message: 'No hay reservas para verificar.', repairedCount: 0 });
+            }
+    
+            const batch = db.batch();
+            let repairedCount = 0;
+            
+            reservasSnapshot.forEach(doc => {
+                const data = doc.data();
+                const currentName = data.alojamiento;
+                if (currentName) {
+                    const correctName = correctNamesMap.get(currentName.toLowerCase());
+                    if (correctName && correctName !== currentName) {
+                        const reservaRef = db.collection('reservas').doc(doc.id);
+                        batch.update(reservaRef, { alojamiento: correctName });
+                        repairedCount++;
+                    }
+                }
+            });
+    
+            if (repairedCount > 0) {
+                await batch.commit();
+                const message = `Proceso completado. Se corrigieron los nombres de ${repairedCount} registros de reservas.`;
+                console.log(message);
+                res.status(200).json({ message: message });
+            } else {
+                const message = 'No se encontraron nombres de cabañas que necesitaran ser corregidos. Todo parece estar en orden.';
+                console.log(message);
+                res.status(200).json({ message: message });
+            }
+    
+        } catch (error) {
+            console.error("Error al corregir nombres de cabañas:", error);
+            res.status(500).json({ error: 'Error interno del servidor al realizar la corrección.' });
+        }
+    });
+    
     router.get('/gestion/notas/:reservaIdOriginal', async (req, res) => {
         const { reservaIdOriginal } = req.params;
         try {

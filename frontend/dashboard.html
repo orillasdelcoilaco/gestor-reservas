@@ -122,6 +122,13 @@
                         </button>
                         <div id="repair-phones-status" class="mt-4 p-4 rounded-md hidden"></div>
                     </div>
+                    <div class="border-t pt-4 mt-4">
+                        <p class="text-gray-600 mb-2">Si los nombres de las cabañas en las reservas aparecen en minúsculas (ej: cabaña 9), usa este botón para estandarizarlos al formato correcto (ej: Cabaña 9).</p>
+                        <button id="repair-cabana-names-btn" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-800">
+                            Corregir Nombres de Cabañas
+                        </button>
+                        <div id="repair-cabana-names-status" class="mt-4 p-4 rounded-md hidden"></div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -305,6 +312,9 @@
           
           const repairPhonesBtn = document.getElementById('repair-phones-btn');
           const repairPhonesStatus = document.getElementById('repair-phones-status');
+          
+          const repairCabanaNamesBtn = document.getElementById('repair-cabana-names-btn');
+          const repairCabanaNamesStatus = document.getElementById('repair-cabana-names-status');
 
           const detailModal = document.getElementById('detail-modal');
           const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
@@ -364,6 +374,23 @@
               } finally {
                   repairPhonesBtn.disabled = false;
                   repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
+              }
+          });
+          
+          repairCabanaNamesBtn.addEventListener('click', async () => {
+              if (!confirm('Esta acción revisará todas las reservas y corregirá los nombres de cabañas que estén en minúsculas. ¿Deseas continuar?')) { return; }
+              repairCabanaNamesBtn.disabled = true;
+              repairCabanaNamesBtn.textContent = 'Corrigiendo...';
+              repairCabanaNamesStatus.classList.remove('hidden');
+              repairCabanaNamesStatus.textContent = 'Iniciando corrección...';
+              try {
+                  const result = await fetchAPI('/api/gestion/fix-cabana-names', { method: 'POST' });
+                  repairCabanaNamesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+              } catch (error) {
+                  repairCabanaNamesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+              } finally {
+                  repairCabanaNamesBtn.disabled = false;
+                  repairCabanaNamesBtn.textContent = 'Corregir Nombres de Cabañas';
               }
           });
 

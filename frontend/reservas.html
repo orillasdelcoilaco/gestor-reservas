@@ -31,10 +31,10 @@
 
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Listado de Reservas Consolidadas</h2>
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Análisis de Reservas</h2>
                 
-                <div class="space-y-4 md:space-y-0 md:flex md:items-end md:justify-between p-4 border rounded-md bg-gray-50 mb-6">
-                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 w-full">
+                <div class="space-y-4 p-4 border rounded-md bg-gray-50 mb-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div>
                             <label for="fecha-inicio-filter" class="block text-sm font-medium text-gray-700">Desde</label>
                             <input type="date" id="fecha-inicio-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
@@ -44,10 +44,6 @@
                             <input type="date" id="fecha-fin-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                         </div>
                         <div>
-                            <label for="canal-filter" class="block text-sm font-medium text-gray-700">Canal</label>
-                            <select id="canal-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
-                        </div>
-                        <div>
                             <label for="estado-filter" class="block text-sm font-medium text-gray-700">Estado</label>
                             <select id="estado-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
                         </div>
@@ -55,16 +51,21 @@
                             <label for="estado-gestion-filter" class="block text-sm font-medium text-gray-700">Gestión</label>
                             <select id="estado-gestion-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
                         </div>
+                        <div class="w-full">
+                            <label for="search-input" class="block text-sm font-medium text-gray-700">Búsqueda Rápida</label>
+                            <input type="text" id="search-input" placeholder="Nombre, ID..." class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                        </div>
                     </div>
-                     <div class="w-full md:w-auto md:ml-4">
-                        <label for="search-input" class="block text-sm font-medium text-gray-700">Búsqueda Rápida</label>
-                        <input type="text" id="search-input" placeholder="Nombre, ID..." class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                     <div class="border-t pt-4 mt-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Canal</label>
+                        <div id="canal-filter-container" class="flex flex-wrap gap-x-6 gap-y-2">
+                        </div>
                     </div>
                 </div>
 
                 <div class="flex justify-between items-center mb-4">
                     <div class="text-lg font-semibold text-gray-800">
-                        Total Seleccionado: <span id="total-sum" class="text-blue-600"></span>
+                        Ingreso Real del Período: <span id="total-sum" class="text-blue-600"></span>
                     </div>
                     <div>
                         <label for="page-size-select" class="text-sm font-medium text-gray-700 mr-2">Mostrar:</label>
@@ -81,13 +82,12 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Reserva</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Llegada</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabaña</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Noches</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado Gestión</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Noches Tot.</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Total</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingreso en Período</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                             </tr>
@@ -169,7 +169,7 @@
             </div>
         </div>
     </div>
-    <script type="module">
+<script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
     // Referencias a elementos del DOM
@@ -184,11 +184,11 @@
     const totalSumEl = document.getElementById('total-sum');
 
     // Referencias a filtros
-    const filterInputs = document.querySelectorAll('.filter-input');
+    const filterInputs = document.querySelectorAll('.filter-input, .canal-checkbox');
     
     // Opciones para los filtros
-    const canales = ['Todos', 'SODC', 'Booking', 'Airbnb'];
-    const estados = ['Todos', 'Confirmada', 'Cancelada'];
+    const canales = ['SODC', 'Booking', 'Airbnb'];
+    const estados = ['Todos', 'Confirmada', 'Cancelada', 'no_show'];
     const estadosGestion = ['Todos', 'Pendiente Bienvenida', 'Pendiente Cobro', 'Pendiente Pago', 'Pendiente Boleta', 'Facturado'];
 
     let allReservas = [];
@@ -201,6 +201,16 @@
             const optionEl = new Option(opt, opt);
             select.add(optionEl);
         });
+    }
+
+    function populateCanalCheckboxes() {
+        const container = document.getElementById('canal-filter-container');
+        container.innerHTML = canales.map(canal => `
+            <div class="flex items-center">
+                <input id="canal-${canal}" type="checkbox" value="${canal}" class="canal-checkbox filter-input h-4 w-4 text-indigo-600 border-gray-300 rounded" checked>
+                <label for="canal-${canal}" class="ml-2 text-sm text-gray-600">${canal}</label>
+            </div>
+        `).join('');
     }
 
     async function loadCabanasIntoSelect() {
@@ -217,7 +227,7 @@
         }
     }
 
-    function renderTable(reservas) {
+    function renderTable(reservas, fechaInicioFilter, fechaFinFilter) {
         reservasTableBody.innerHTML = '';
         if (reservas.length === 0) {
             loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas con los filtros aplicados.</p>';
@@ -229,16 +239,20 @@
         reservas.forEach(reserva => {
             const row = document.createElement('tr');
             row.className = "hover:bg-gray-50";
-            const valorFormateado = `$${(reserva.valorCLP || 0).toLocaleString('es-CL')}`;
-            
+            const valorTotalFormateado = `$${(reserva.valorCLP || 0).toLocaleString('es-CL')}`;
+
+            const valorPorNoche = (reserva.valorCLP && reserva.totalNoches) ? reserva.valorCLP / reserva.totalNoches : 0;
+            const nochesEnPeriodo = calcularNochesEnPeriodo(reserva.llegada, reserva.salida, fechaInicioFilter, fechaFinFilter);
+            const ingresoEnPeriodo = nochesEnPeriodo * valorPorNoche;
+            const ingresoEnPeriodoFormateado = `(${nochesEnPeriodo} - $${Math.round(ingresoEnPeriodo).toLocaleString('es-CL')})`;
+
             row.innerHTML = `
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${reserva.nombre}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.llegada}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.alojamiento}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-800">${reserva.totalNoches}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorFormateado}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-600">${reserva.estadoGestion}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorTotalFormateado}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${ingresoEnPeriodoFormateado}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}">Editar</button>
@@ -251,35 +265,59 @@
         });
     }
 
+    function calcularNochesEnPeriodo(llegadaStr, salidaStr, inicioFiltro, finFiltro) {
+        if (!inicioFiltro || !finFiltro) {
+             return 0;
+        }
+
+        const llegada = new Date(llegadaStr.split('/').reverse().join('-') + 'T00:00:00Z');
+        const salida = new Date(salidaStr.split('/').reverse().join('-') + 'T00:00:00Z');
+        const inicio = new Date(inicioFiltro + 'T00:00:00Z');
+        const fin = new Date(finFiltro + 'T00:00:00Z');
+        
+        const start = new Date(Math.max(llegada, inicio));
+        const end = new Date(Math.min(salida, fin));
+
+        if (end <= start) {
+            return 0;
+        }
+        
+        return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    }
+
     function updateTableView() {
         const fechaInicio = document.getElementById('fecha-inicio-filter').value;
         const fechaFin = document.getElementById('fecha-fin-filter').value;
-        const canal = document.getElementById('canal-filter').value;
+        const selectedCanales = Array.from(document.querySelectorAll('.canal-checkbox:checked')).map(cb => cb.value);
         const estado = document.getElementById('estado-filter').value;
         const estadoGestion = document.getElementById('estado-gestion-filter').value;
         const searchTerm = document.getElementById('search-input').value.toLowerCase();
         const pageSize = parseInt(document.getElementById('page-size-select').value);
 
         const filteredReservas = allReservas.filter(r => {
-            const llegadaDate = new Date(r.llegada.split('-').reverse().join('-') + 'T00:00:00Z');
-            
-            const matchFechaInicio = !fechaInicio || llegadaDate >= new Date(fechaInicio + 'T00:00:00Z');
-            const matchFechaFin = !fechaFin || llegadaDate <= new Date(fechaFin + 'T00:00:00Z');
-            const matchCanal = canal === 'Todos' || r.canal === canal;
+            const llegadaDate = new Date(r.llegada.split('/').reverse().join('-') + 'T00:00:00Z');
+            const salidaDate = new Date(r.salida.split('/').reverse().join('-') + 'T00:00:00Z');
+
+            const matchFechas = (!fechaInicio || !fechaFin) || (llegadaDate < new Date(fechaFin + 'T00:00:00Z') && salidaDate > new Date(fechaInicio + 'T00:00:00Z'));
+            const matchCanal = selectedCanales.length === 0 || selectedCanales.includes(r.canal);
             const matchEstado = estado === 'Todos' || r.estado === estado;
             const matchEstadoGestion = estadoGestion === 'Todos' || r.estadoGestion === estadoGestion;
             const matchSearch = !searchTerm || 
                                 (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
                                 (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm));
             
-            return matchFechaInicio && matchFechaFin && matchCanal && matchEstado && matchEstadoGestion && matchSearch;
+            return matchFechas && matchCanal && matchEstado && matchEstadoGestion && matchSearch;
         });
 
-        const total = filteredReservas.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
-        totalSumEl.textContent = `$${total.toLocaleString('es-CL')}`;
+        const total = filteredReservas.reduce((sum, r) => {
+            const valorPorNoche = (r.valorCLP && r.totalNoches) ? r.valorCLP / r.totalNoches : 0;
+            const nochesEnPeriodo = calcularNochesEnPeriodo(r.llegada, r.salida, fechaInicio, fechaFin);
+            return sum + (nochesEnPeriodo * valorPorNoche);
+        }, 0);
+        totalSumEl.textContent = `$${Math.round(total).toLocaleString('es-CL')}`;
 
         const paginatedReservas = pageSize === -1 ? filteredReservas : filteredReservas.slice(0, pageSize);
-        renderTable(paginatedReservas);
+        renderTable(paginatedReservas, fechaInicio, fechaFin);
     }
 
     async function loadReservas() {
@@ -387,17 +425,17 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
-            // Poblar dropdowns de filtros y modal
-            populateSelect('canal-filter', canales);
+            populateCanalCheckboxes();
             populateSelect('estado-filter', estados);
             populateSelect('estado-gestion-filter', estadosGestion);
-            populateSelect('canal', canales.slice(1));
+            populateSelect('canal', canales);
             populateSelect('estado', estados.slice(1));
             populateSelect('estadoGestion', estadosGestion.slice(1));
 
             loadCabanasIntoSelect();
             
-            filterInputs.forEach(input => input.addEventListener('input', updateTableView));
+            document.querySelectorAll('.filter-input').forEach(input => input.addEventListener('input', updateTableView));
+            document.getElementById('canal-filter-container').addEventListener('change', updateTableView);
             
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             saveBtn.addEventListener('click', handleSave);

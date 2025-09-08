@@ -6,15 +6,13 @@
     <title>Calendario de Ocupación - Gestor de Reservas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         #calendario { height: 80vh; }
-
-        .fc-day-today {
-            background-color: #fef9c3 !important;
-        }
-
+        .fc-day-today { background-color: #fef9c3 !important; }
         .fc .fc-col-header-cell-cushion {
             display: flex;
             flex-direction: column;
@@ -22,7 +20,6 @@
             justify-content: center;
             padding: 2px 4px;
         }
-        
         .fc-event.canal-sodc { background-color: #10B981; border-color: #059669; }
         .fc-event.canal-booking { background-color: #3B82F6; border-color: #2563EB; }
         .fc-event.canal-airbnb { background-color: #EF4444; border-color: #DC2626; }
@@ -147,7 +144,6 @@
                                 const events = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
                                 successCallback(events);
                             } catch (error) {
-                                console.error("Error al cargar eventos:", error);
                                 failureCallback(error);
                             }
                         },

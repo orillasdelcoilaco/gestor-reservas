@@ -47,7 +47,7 @@
                             <button id="next-month-btn" class="px-3 py-1 bg-gray-200 rounded-md">Mes Siguiente &gt;</button>
                         </div>
                     </div>
-                    </div>
+                </div>
                 <div id="calendar-container" class="border rounded-lg p-2">
                     <div id="calendario"></div>
                 </div>
@@ -62,7 +62,8 @@
             <button type="button" id="disponibilidad-modal-close-btn" class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
         </div>
     </div>
-    <script type="module">
+
+<script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
     document.addEventListener('DOMContentLoaded', async () => {
@@ -107,14 +108,16 @@
                     const cabanas = await fetchAPI('/api/cabanas');
                     allResources = cabanas.map(c => ({ id: c.nombre, title: c.nombre }));
                     
-                    // Llenar el filtro de cabañas
                     allResources.forEach(r => {
                         const option = new Option(r.title, r.id);
                         cabanaFilter.add(option);
                     });
 
+                    // --- INICIO DE LA CORRECCIÓN: Se define la licencia ANTES de inicializar ---
+                    FullCalendar.globalOptions.schedulerLicenseKey = 'GPL-My-Project-Is-Open-Source';
+                    // --- FIN DE LA CORRECCIÓN ---
+
                     calendarInstance = new FullCalendar.Calendar(calendarEl, {
-                        schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
                         initialView: 'resourceTimelineMonth',
                         locale: 'es',
                         headerToolbar: false,
@@ -128,14 +131,14 @@
                             info.el.classList.add(getCanalClassName(canal));
                             info.el.title = `Cliente: ${info.event.title}\nCanal: ${canal}\nID: ${reservaIdOriginal}`;
                         },
-                        dateClick: handleDateClick // Nueva función para la disponibilidad
+                        dateClick: handleDateClick
                     });
 
                     calendarInstance.render();
                     updateCalendar();
 
                 } catch (error) {
-                    calendarEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-8">Error: ${error.message}</p>`;
+                    calendarEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-8">Error al inicializar el calendario: ${error.message}</p>`;
                 }
             }
 
@@ -169,7 +172,7 @@
                     let contentHtml = '<ul class="space-y-2">';
                     disponibilidad.forEach(item => {
                         const hasta = item.proximaReserva 
-                            ? `hasta el ${new Date(item.proximaReserva).toLocaleDateString('es-CL')}`
+                            ? `hasta el ${new Date(item.proximaReserva + 'T00:00:00Z').toLocaleDateString('es-CL', { timeZone: 'UTC' })}`
                             : 'indefinidamente';
                         contentHtml += `<li class="p-2 border-b"><strong>${item.cabana}:</strong> Disponible ${hasta}</li>`;
                     });

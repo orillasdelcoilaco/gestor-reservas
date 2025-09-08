@@ -6,13 +6,28 @@
     <title>Calendario de Ocupación - Gestor de Reservas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales-all.global.min.js'></script>
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         #calendario { height: 80vh; }
+        
+        /* --- INICIO DE MODIFICACIONES DE ESTILO --- */
+        
+        /* Destacar el día actual */
+        .fc-day-today {
+            background-color: #fef9c3 !important; /* Un amarillo muy claro */
+        }
+
+        /* Formato para cabecera de días en dos líneas */
+        .fc-col-header-cell-cushion {
+            display: inline-block;
+            white-space: normal;
+            line-height: 1.2;
+            padding: 4px 2px;
+        }
+        
+        /* --- FIN DE MODIFICACIONES DE ESTILO --- */
+
         .fc-event.canal-sodc { background-color: #10B981; border-color: #059669; }
         .fc-event.canal-booking { background-color: #3B82F6; border-color: #2563EB; }
         .fc-event.canal-airbnb { background-color: #EF4444; border-color: #DC2626; }
@@ -115,7 +130,7 @@
                         const option = new Option(r.title, r.id);
                         cabanaFilter.add(option);
                     });
-
+                    
                     calendarInstance = new FullCalendar.Calendar(calendarEl, {
                         schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
                         initialView: 'resourceTimelineMonth',
@@ -124,6 +139,14 @@
                         editable: false,
                         resources: allResources,
                         resourceAreaHeaderContent: 'Cabañas',
+                        // --- INICIO DE MODIFICACIONES DE LÓGICA ---
+                        timeZone: 'UTC', // Soluciona el problema del desfase de un día
+                        dayHeaderContent: function(arg) { // Formatea la cabecera del día
+                           const dayOfWeek = arg.date.toLocaleDateString('es-ES', { weekday: 'short' });
+                           const dayOfMonth = arg.date.getDate();
+                           return { html: `<div class="fc-cell-text">${dayOfWeek}</div><div class="fc-cell-number">${dayOfMonth}</div>` };
+                        },
+                        // --- FIN DE MODIFICACIONES DE LÓGICA ---
                         events: [],
                         eventContent: arg => ({ html: `<b>${arg.event.title}</b>` }),
                         eventDidMount: info => {
@@ -162,7 +185,7 @@
             
             async function handleDateClick(info) {
                 const fechaDesde = info.dateStr.split('T')[0];
-                disponibilidadModalTitle.textContent = `Disponibilidad desde el ${new Date(info.dateStr).toLocaleDateString('es-CL')}`;
+                disponibilidadModalTitle.textContent = `Disponibilidad desde el ${new Date(info.dateStr).toLocaleDateString('es-CL', { timeZone: 'UTC' })}`;
                 disponibilidadModalContent.innerHTML = '<p>Calculando...</p>';
                 disponibilidadModal.classList.remove('hidden');
 

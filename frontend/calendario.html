@@ -10,14 +10,11 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
         #calendario { height: 80vh; }
-        
-        /* --- INICIO DE MODIFICACIONES DE ESTILO --- */
-        
+
         .fc-day-today {
             background-color: #fef9c3 !important;
         }
 
-        /* Selector más específico para forzar el estilo de dos líneas */
         .fc .fc-col-header-cell-cushion {
             display: flex;
             flex-direction: column;
@@ -26,8 +23,6 @@
             padding: 2px 4px;
         }
         
-        /* --- FIN DE MODIFICACIONES DE ESTILO --- */
-
         .fc-event.canal-sodc { background-color: #10B981; border-color: #059669; }
         .fc-event.canal-booking { background-color: #3B82F6; border-color: #2563EB; }
         .fc-event.canal-airbnb { background-color: #EF4444; border-color: #DC2626; }
@@ -143,9 +138,8 @@
                         dayHeaderContent: function(arg) {
                            const dayOfWeek = arg.date.toLocaleDateString('es-ES', { weekday: 'short', timeZone: 'UTC' });
                            const dayOfMonth = arg.date.getUTCDate();
-                           return { html: `<span style="font-size: 0.7em;">${dayOfWeek}</span><br><b>${dayOfMonth}</b>` };
+                           return { html: `<span style="font-size: 0.8em;">${dayOfWeek}</span><br><b>${dayOfMonth}</b>` };
                         },
-                        // --- INICIO DE LA CORRECCIÓN: Carga de eventos robusta ---
                         events: async function(fetchInfo, successCallback, failureCallback) {
                             try {
                                 const anio = fetchInfo.start.getUTCFullYear();
@@ -161,7 +155,6 @@
                             const currentDate = view.calendar.getDate();
                             currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
                         },
-                        // --- FIN DE LA CORRECCIÓN ---
                         eventContent: arg => ({ html: `<b>${arg.event.title}</b>` }),
                         eventDidMount: info => {
                             const { canal, reservaIdOriginal } = info.event.extendedProps;
@@ -180,7 +173,7 @@
             
             async function handleDateClick(info) {
                 const fechaDesde = info.dateStr.split('T')[0];
-                disponibilidadModalTitle.textContent = `Disponibilidad desde el ${new Date(info.dateStr).toLocaleDateString('es-CL', { timeZone: 'UTC' })}`;
+                disponibilidadModalTitle.textContent = `Disponibilidad desde el ${new Date(info.date).toLocaleDateString('es-CL', { timeZone: 'UTC' })}`;
                 disponibilidadModalContent.innerHTML = '<p>Calculando...</p>';
                 disponibilidadModal.classList.remove('hidden');
 

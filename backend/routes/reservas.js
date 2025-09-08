@@ -1,5 +1,3 @@
-// backend/routes/reservas.js - CÓDIGO ACTUALIZADO Y CENTRALIZADO
-
 const express = require('express');
 const router = express.Router();
 const admin = require('firebase-admin');
@@ -221,7 +219,7 @@ module.exports = (db) => {
         }
     });
 
-    // --- INICIO DE LA MODIFICACIÓN: Nuevo endpoint para disponibilidad ---
+    // --- INICIO DE LA MODIFICACIÓN: Nuevo endpoint para disponibilidad (CORREGIDO) ---
     router.get('/reservas/disponibilidad', async (req, res) => {
         const { fechaDesde } = req.query;
         if (!fechaDesde) {
@@ -231,28 +229,27 @@ module.exports = (db) => {
         try {
             const startTimestamp = admin.firestore.Timestamp.fromDate(new Date(fechaDesde + 'T00:00:00Z'));
 
-            // Obtener todas las cabañas activas
             const cabanasSnapshot = await db.collection('cabanas').get();
             const cabanasActivas = cabanasSnapshot.docs.map(doc => doc.data().nombre);
 
-            // Obtener todas las reservas futuras desde la fecha indicada
+            // Consulta simplificada que no requiere índice compuesto
             const reservasFuturasSnapshot = await db.collection('reservas')
                 .where('fechaLlegada', '>=', startTimestamp)
-                .where('estado', '!=', 'Cancelada')
                 .orderBy('fechaLlegada', 'asc')
                 .get();
             
             const proximaReservaPorCabana = new Map();
 
-            // Encontrar la primera reserva futura para cada cabaña
+            // Filtrado de canceladas se hace aquí en el código
             reservasFuturasSnapshot.forEach(doc => {
                 const reserva = doc.data();
-                if (!proximaReservaPorCabana.has(reserva.alojamiento)) {
-                    proximaReservaPorCabana.set(reserva.alojamiento, reserva.fechaLlegada.toDate());
+                if (reserva.estado !== 'Cancelada') {
+                    if (!proximaReservaPorCabana.has(reserva.alojamiento)) {
+                        proximaReservaPorCabana.set(reserva.alojamiento, reserva.fechaLlegada.toDate());
+                    }
                 }
             });
 
-            // Construir el resultado final
             const disponibilidad = cabanasActivas.map(nombreCabana => {
                 return {
                     cabana: nombreCabana,

@@ -31,19 +31,49 @@
 
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-900">Listado de Reservas Consolidadas</h2>
-                    <div class="flex items-center space-x-4 mt-4 md:mt-0">
-                        <input type="text" id="search-input" placeholder="Buscar por cliente, cabaña, canal..." class="w-full md:w-auto px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Listado de Reservas Consolidadas</h2>
+                
+                <div class="space-y-4 md:space-y-0 md:flex md:items-end md:justify-between p-4 border rounded-md bg-gray-50 mb-6">
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 w-full">
                         <div>
-                            <label for="page-size-select" class="text-sm font-medium text-gray-700 mr-2">Mostrar:</label>
-                            <select id="page-size-select" class="rounded-md border-gray-300 shadow-sm">
-                                <option value="50" selected>50</option>
-                                <option value="100">100</option>
-                                <option value="200">200</option>
-                                <option value="-1">Todos</option>
-                            </select>
+                            <label for="fecha-inicio-filter" class="block text-sm font-medium text-gray-700">Desde</label>
+                            <input type="date" id="fecha-inicio-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                         </div>
+                        <div>
+                            <label for="fecha-fin-filter" class="block text-sm font-medium text-gray-700">Hasta</label>
+                            <input type="date" id="fecha-fin-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                        </div>
+                        <div>
+                            <label for="canal-filter" class="block text-sm font-medium text-gray-700">Canal</label>
+                            <select id="canal-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
+                        </div>
+                        <div>
+                            <label for="estado-filter" class="block text-sm font-medium text-gray-700">Estado</label>
+                            <select id="estado-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
+                        </div>
+                        <div>
+                            <label for="estado-gestion-filter" class="block text-sm font-medium text-gray-700">Gestión</label>
+                            <select id="estado-gestion-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
+                        </div>
+                    </div>
+                     <div class="w-full md:w-auto md:ml-4">
+                        <label for="search-input" class="block text-sm font-medium text-gray-700">Búsqueda Rápida</label>
+                        <input type="text" id="search-input" placeholder="Nombre, ID..." class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center mb-4">
+                    <div class="text-lg font-semibold text-gray-800">
+                        Total Seleccionado: <span id="total-sum" class="text-blue-600"></span>
+                    </div>
+                    <div>
+                        <label for="page-size-select" class="text-sm font-medium text-gray-700 mr-2">Mostrar:</label>
+                        <select id="page-size-select" class="filter-input rounded-md border-gray-300 shadow-sm">
+                            <option value="50" selected>50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                            <option value="-1">Todos</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -82,7 +112,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium">ID Original</label>
-                        <input type="text" id="reservaIdOriginal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <input type="text" id="reservaIdOriginal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100" readonly>
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Nombre Cliente</label>
@@ -99,7 +129,7 @@
                         <input type="date" id="fechaSalida" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium">Cabaña (Alojamiento)</label>
                         <select id="alojamiento" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></select>
@@ -107,29 +137,26 @@
                     <div>
                         <label class="block text-sm font-medium">Canal</label>
                          <select id="canal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                            <option value="SODC">SODC</option>
-                            <option value="Booking">Booking</option>
-                            <option value="Airbnb">Airbnb</option>
-                         </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium">Estado</label>
-                         <select id="estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                            <option value="Confirmada">Confirmada</option>
-                            <option value="Cancelada">Cancelada</option>
                          </select>
                     </div>
                 </div>
-                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t pt-4">
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                    <div>
+                        <label class="block text-sm font-medium">Estado Reserva</label>
+                         <select id="estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                         </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Estado Gestión</label>
+                        <select id="estadoGestion" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></select>
+                    </div>
+                </div>
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
                     <div>
                         <label class="block text-sm font-medium">Valor Final (CLP)</label>
                         <input type="number" id="valorCLP" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
                      <div>
-                        <label class="block text-sm font-medium">Valor Potencial (CLP)</label>
-                        <input type="number" id="valorPotencialCLP" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                    </div>
-                    <div>
                         <label class="block text-sm font-medium">Total Noches</label>
                         <input type="number" id="totalNoches" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
@@ -145,45 +172,60 @@
     <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
+    // Referencias a elementos del DOM
     const reservasTableBody = document.getElementById('reservas-table-body');
     const loadingState = document.getElementById('loading-state');
-    const searchInput = document.getElementById('search-input');
-    const pageSizeSelect = document.getElementById('page-size-select');
     const modal = document.getElementById('edit-modal');
     const modalTitle = document.getElementById('modal-title');
     const modalStatus = document.getElementById('modal-status');
     const saveBtn = document.getElementById('save-btn');
     const cancelBtn = document.getElementById('cancel-btn');
     const deleteBtn = document.getElementById('delete-btn');
-    const cabanaSelect = document.getElementById('alojamiento');
+    const totalSumEl = document.getElementById('total-sum');
+
+    // Referencias a filtros
+    const filterInputs = document.querySelectorAll('.filter-input');
+    
+    // Opciones para los filtros
+    const canales = ['Todos', 'SODC', 'Booking', 'Airbnb'];
+    const estados = ['Todos', 'Confirmada', 'Cancelada'];
+    const estadosGestion = ['Todos', 'Pendiente Bienvenida', 'Pendiente Cobro', 'Pendiente Pago', 'Pendiente Boleta', 'Facturado'];
 
     let allReservas = [];
     let reservaParaEditarId = null;
 
-    // --- INICIO DE LA MODIFICACIÓN: Cargar cabañas para el dropdown ---
+    function populateSelect(selectId, options) {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '';
+        options.forEach(opt => {
+            const optionEl = new Option(opt, opt);
+            select.add(optionEl);
+        });
+    }
+
     async function loadCabanasIntoSelect() {
         try {
             const cabanas = await fetchAPI('/api/cabanas');
-            cabanaSelect.innerHTML = '';
+            const select = document.getElementById('alojamiento');
+            select.innerHTML = '';
             cabanas.forEach(c => {
                 const option = new Option(c.nombre, c.nombre);
-                cabanaSelect.add(option);
+                select.add(option);
             });
         } catch (error) {
             console.error('No se pudieron cargar las cabañas', error);
-            cabanaSelect.innerHTML = '<option>Error al cargar</option>';
         }
     }
-    // --- FIN DE LA MODIFICACIÓN ---
 
     function renderTable(reservas) {
         reservasTableBody.innerHTML = '';
         if (reservas.length === 0) {
-            loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas.</p>';
+            loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas con los filtros aplicados.</p>';
             loadingState.style.display = 'block';
             return;
         }
         loadingState.style.display = 'none';
+        
         reservas.forEach(reserva => {
             const row = document.createElement('tr');
             row.className = "hover:bg-gray-50";
@@ -210,13 +252,32 @@
     }
 
     function updateTableView() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const pageSize = parseInt(pageSizeSelect.value);
-        const filteredReservas = allReservas.filter(r =>
-            (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
-            (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
-            (r.alojamiento && r.alojamiento.toLowerCase().includes(searchTerm))
-        );
+        const fechaInicio = document.getElementById('fecha-inicio-filter').value;
+        const fechaFin = document.getElementById('fecha-fin-filter').value;
+        const canal = document.getElementById('canal-filter').value;
+        const estado = document.getElementById('estado-filter').value;
+        const estadoGestion = document.getElementById('estado-gestion-filter').value;
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+        const pageSize = parseInt(document.getElementById('page-size-select').value);
+
+        const filteredReservas = allReservas.filter(r => {
+            const llegadaDate = new Date(r.llegada.split('/').reverse().join('-') + 'T00:00:00Z');
+            
+            const matchFechaInicio = !fechaInicio || llegadaDate >= new Date(fechaInicio + 'T00:00:00Z');
+            const matchFechaFin = !fechaFin || llegadaDate <= new Date(fechaFin + 'T00:00:00Z');
+            const matchCanal = canal === 'Todos' || r.canal === canal;
+            const matchEstado = estado === 'Todos' || r.estado === estado;
+            const matchEstadoGestion = estadoGestion === 'Todos' || r.estadoGestion === estadoGestion;
+            const matchSearch = !searchTerm || 
+                                (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
+                                (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm));
+            
+            return matchFechaInicio && matchFechaFin && matchCanal && matchEstado && matchEstadoGestion && matchSearch;
+        });
+
+        const total = filteredReservas.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
+        totalSumEl.textContent = `$${total.toLocaleString('es-CL')}`;
+
         const paginatedReservas = pageSize === -1 ? filteredReservas : filteredReservas.slice(0, pageSize);
         renderTable(paginatedReservas);
     }
@@ -231,12 +292,11 @@
         }
     }
 
-    // --- INICIO DE LA MODIFICACIÓN: Lógica de edición completa ---
     async function handleEditClick(event) {
         reservaParaEditarId = event.target.dataset.id;
         modalStatus.innerHTML = '';
         document.getElementById('edit-form').reset();
-        modalTitle.textContent = `Cargando datos de la reserva...`;
+        modalTitle.textContent = `Cargando datos...`;
         modal.classList.remove('hidden');
 
         try {
@@ -250,8 +310,8 @@
             document.getElementById('alojamiento').value = reserva.alojamiento;
             document.getElementById('canal').value = reserva.canal;
             document.getElementById('estado').value = reserva.estado;
+            document.getElementById('estadoGestion').value = reserva.estadoGestion;
             document.getElementById('valorCLP').value = reserva.valorCLP || 0;
-            document.getElementById('valorPotencialCLP').value = reserva.valorPotencialCLP || 0;
             document.getElementById('totalNoches').value = reserva.totalNoches || 0;
 
         } catch (error) {
@@ -264,15 +324,14 @@
         if (!reservaParaEditarId) return;
 
         const payload = {
-            reservaIdOriginal: document.getElementById('reservaIdOriginal').value,
             clienteNombre: document.getElementById('clienteNombre').value,
             fechaLlegada: document.getElementById('fechaLlegada').value,
             fechaSalida: document.getElementById('fechaSalida').value,
             alojamiento: document.getElementById('alojamiento').value,
             canal: document.getElementById('canal').value,
             estado: document.getElementById('estado').value,
+            estadoGestion: document.getElementById('estadoGestion').value,
             valorCLP: parseInt(document.getElementById('valorCLP').value) || 0,
-            valorPotencialCLP: parseInt(document.getElementById('valorPotencialCLP').value) || 0,
             totalNoches: parseInt(document.getElementById('totalNoches').value) || 0
         };
 
@@ -286,7 +345,6 @@
             await loadReservas();
         } catch (error) {
             modalStatus.textContent = `Error al guardar: ${error.message}`;
-            modalStatus.className = 'mt-2 text-sm text-red-600';
         } finally {
             saveBtn.disabled = false;
             saveBtn.textContent = 'Guardar Cambios';
@@ -297,11 +355,9 @@
     async function handleDelete() {
         if (!reservaParaEditarId) return;
         if (!confirm('¿Estás SEGURO de que quieres eliminar esta reserva? Esta acción no se puede deshacer.')) return;
-        if (!confirm('CONFIRMACIÓN FINAL: ¿Eliminar esta reserva permanentemente?')) return;
 
         deleteBtn.disabled = true;
         deleteBtn.textContent = 'Eliminando...';
-        modalStatus.textContent = '';
         
         try {
             await fetchAPI(`/api/reservas/${reservaParaEditarId}`, { method: 'DELETE' });
@@ -309,14 +365,12 @@
             await loadReservas();
         } catch (error) {
             modalStatus.textContent = `Error al eliminar: ${error.message}`;
-            modalStatus.className = 'mt-2 text-sm text-red-600';
         } finally {
             deleteBtn.disabled = false;
             deleteBtn.textContent = 'Eliminar Reserva';
             reservaParaEditarId = null;
         }
     }
-    // --- FIN DE LA MODIFICACIÓN ---
 
     document.addEventListener('DOMContentLoaded', () => {
         const loader = document.getElementById('loader');
@@ -333,9 +387,18 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
-            loadCabanasIntoSelect(); // Cargar cabañas al iniciar
-            searchInput.addEventListener('input', updateTableView);
-            pageSizeSelect.addEventListener('change', updateTableView);
+            // Poblar dropdowns de filtros y modal
+            populateSelect('canal-filter', canales);
+            populateSelect('estado-filter', estados);
+            populateSelect('estado-gestion-filter', estadosGestion);
+            populateSelect('canal', canales.slice(1));
+            populateSelect('estado', estados.slice(1));
+            populateSelect('estadoGestion', estadosGestion.slice(1));
+
+            loadCabanasIntoSelect();
+            
+            filterInputs.forEach(input => input.addEventListener('input', updateTableView));
+            
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             saveBtn.addEventListener('click', handleSave);
             deleteBtn.addEventListener('click', handleDelete);

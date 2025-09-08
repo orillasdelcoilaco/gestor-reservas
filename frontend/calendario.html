@@ -13,17 +13,17 @@
         
         /* --- INICIO DE MODIFICACIONES DE ESTILO --- */
         
-        /* Destacar el día actual */
         .fc-day-today {
-            background-color: #fef9c3 !important; /* Un amarillo muy claro */
+            background-color: #fef9c3 !important;
         }
 
-        /* Formato para cabecera de días en dos líneas */
-        .fc-col-header-cell-cushion {
-            display: inline-block;
-            white-space: normal;
-            line-height: 1.2;
-            padding: 4px 2px;
+        /* Selector más específico para forzar el estilo de dos líneas */
+        .fc .fc-col-header-cell-cushion {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2px 4px;
         }
         
         /* --- FIN DE MODIFICACIONES DE ESTILO --- */
@@ -137,17 +137,31 @@
                         locale: 'es',
                         headerToolbar: false,
                         editable: false,
+                        timeZone: 'UTC',
                         resources: allResources,
                         resourceAreaHeaderContent: 'Cabañas',
-                        // --- INICIO DE MODIFICACIONES DE LÓGICA ---
-                        timeZone: 'UTC', // Soluciona el problema del desfase de un día
-                        dayHeaderContent: function(arg) { // Formatea la cabecera del día
-                           const dayOfWeek = arg.date.toLocaleDateString('es-ES', { weekday: 'short' });
-                           const dayOfMonth = arg.date.getDate();
-                           return { html: `<div class="fc-cell-text">${dayOfWeek}</div><div class="fc-cell-number">${dayOfMonth}</div>` };
+                        dayHeaderContent: function(arg) {
+                           const dayOfWeek = arg.date.toLocaleDateString('es-ES', { weekday: 'short', timeZone: 'UTC' });
+                           const dayOfMonth = arg.date.getUTCDate();
+                           return { html: `<span style="font-size: 0.7em;">${dayOfWeek}</span><br><b>${dayOfMonth}</b>` };
                         },
-                        // --- FIN DE MODIFICACIONES DE LÓGICA ---
-                        events: [],
+                        // --- INICIO DE LA CORRECCIÓN: Carga de eventos robusta ---
+                        events: async function(fetchInfo, successCallback, failureCallback) {
+                            try {
+                                const anio = fetchInfo.start.getUTCFullYear();
+                                const mes = fetchInfo.start.getUTCMonth() + 1;
+                                const events = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
+                                successCallback(events);
+                            } catch (error) {
+                                console.error("Error al cargar eventos:", error);
+                                failureCallback(error);
+                            }
+                        },
+                        viewDidMount: function(view) {
+                            const currentDate = view.calendar.getDate();
+                            currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+                        },
+                        // --- FIN DE LA CORRECCIÓN ---
                         eventContent: arg => ({ html: `<b>${arg.event.title}</b>` }),
                         eventDidMount: info => {
                             const { canal, reservaIdOriginal } = info.event.extendedProps;
@@ -158,28 +172,9 @@
                     });
 
                     calendarInstance.render();
-                    updateCalendar();
 
                 } catch (error) {
                     calendarEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-8">Error al inicializar el calendario: ${error.message}</p>`;
-                }
-            }
-
-            async function updateCalendar() {
-                if (!calendarInstance) return;
-                
-                const currentDate = calendarInstance.getDate();
-                const anio = currentDate.getFullYear();
-                const mes = currentDate.getMonth() + 1;
-
-                currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-                
-                try {
-                    const events = await fetchAPI(`/api/reservas/calendario?anio=${anio}&mes=${mes}`);
-                    calendarInstance.getEventSourceById('reservas')?.remove();
-                    calendarInstance.addEventSource({ id: 'reservas', events: events });
-                } catch (error) {
-                    alert(`No se pudieron cargar las reservas: ${error.message}`);
                 }
             }
             
@@ -220,12 +215,10 @@
 
             prevBtn.addEventListener('click', () => {
                 calendarInstance.prev();
-                updateCalendar();
             });
 
             nextBtn.addEventListener('click', () => {
                 calendarInstance.next();
-                updateCalendar();
             });
             
             disponibilidadModalCloseBtn.addEventListener('click', () => disponibilidadModal.classList.add('hidden'));

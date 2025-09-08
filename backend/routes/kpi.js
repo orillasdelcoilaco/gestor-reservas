@@ -4,7 +4,6 @@ const { calculateKPIs } = require('../services/kpiService');
 
 module.exports = (db) => {
     router.get('/kpi', async (req, res) => {
-        // --- INICIO DE LA MODIFICACIÓN: Se elimina ocupacionProyectada ---
         const { fechaInicio, fechaFin } = req.query;
 
         if (!fechaInicio || !fechaFin) {
@@ -12,13 +11,12 @@ module.exports = (db) => {
         }
 
         try {
-            const results = await calculateKPIs(db, fechaInicio, fechaFin);
-            res.status(200).json(results);
+            const { results, warningMessage } = await calculateKPIs(db, fechaInicio, fechaFin);
+            res.status(200).json({ ...results, warning: warningMessage });
         } catch (error) {
             console.error("Error en la ruta de KPIs:", error);
             res.status(500).json({ error: error.message });
         }
-        // --- FIN DE LA MODIFICACIÓN ---
     });
 
     return router;

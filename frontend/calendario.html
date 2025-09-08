@@ -92,24 +92,23 @@
                         schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
                         initialView: 'resourceTimelineMonth',
                         locale: 'es',
-                        headerToolbar: false, // Usaremos nuestros propios botones
+                        headerToolbar: false,
                         editable: false,
                         resources: resources,
                         resourceAreaHeaderContent: 'Cabañas',
-                        events: [], // Empezamos con el calendario vacío
+                        events: [],
                         eventContent: function(arg) {
                             return { html: `<b>${arg.event.title}</b>` };
                         },
                         eventDidMount: function(info) {
                             const canal = info.event.extendedProps.canal;
                             info.el.classList.add(getCanalClassName(canal));
-                            // Tooltip simple al pasar el mouse
                             info.el.title = `Cliente: ${info.event.title}\nCanal: ${canal}\nID: ${info.event.extendedProps.reservaIdOriginal}`;
                         }
                     });
 
                     calendarInstance.render();
-                    updateCalendar(); // Cargar datos del mes actual
+                    updateCalendar();
 
                 } catch (error) {
                     calendarEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-8">Error al inicializar el calendario: ${error.message}</p>`;

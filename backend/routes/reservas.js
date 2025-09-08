@@ -197,11 +197,14 @@ module.exports = (db) => {
             querySnapshot.forEach(doc => {
                 const data = doc.data();
                 if (data.fechaSalida >= startTimestamp && data.estado !== 'Cancelada') {
+                    const fechaSalidaDate = data.fechaSalida.toDate();
+                    fechaSalidaDate.setUTCHours(12, 0, 0, 0);
+
                     reservasDelMes.push({
                         id: doc.id,
                         title: data.clienteNombre,
                         start: data.fechaLlegada.toDate().toISOString(),
-                        end: data.fechaSalida.toDate().toISOString(),
+                        end: fechaSalidaDate.toISOString(),
                         resourceId: data.alojamiento,
                         extendedProps: {
                             canal: data.canal,

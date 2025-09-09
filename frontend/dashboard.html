@@ -86,25 +86,23 @@
             
             <div class="bg-white p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <a href="gestion.html" class="bg-red-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-700 transition shadow"><span class="text-3xl">!</span><p class="mt-2">Gestión Diaria</p></a>
                     <a href="calendario.html" class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow flex items-center justify-center"><p>Calendario de Ocupación</p></a>
-                    <a href="sincronizar.html" class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow flex items-center justify-center"><p>Sincronizar Datos</p></a>
-                    <a href="procesar.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow flex items-center justify-center"><p>Procesar y Consolidar</p></a>
-                    <a href="mensajes.html" class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow flex items-center justify-center"><p>Generar Mensajes</p></a>
+                    <a href="agregar-reserva.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow flex items-center justify-center"><p>Agregar Reserva Manual</p></a>
                 </div>
-                </div>
+            </div>
             <div class="bg-white p-8 rounded-lg shadow mt-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas y Configuración</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <a href="clientes.html" class="bg-blue-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-blue-700 transition shadow">Gestionar Clientes</a>
                     <a href="reservas.html" class="bg-white border border-gray-300 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">Ver y Editar Reservas</a>
                     <a href="tarifas.html" class="bg-purple-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-purple-700 transition shadow">Gestionar Tarifas</a>
-                    <a href="importar-tarifas.html" class="bg-orange-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-orange-600 transition shadow">Análisis Histórico</a>
-                    <a href="importar-historicos.html" class="bg-teal-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-teal-700 transition shadow">Importar Históricos</a>
-                    <a href="autorizar.html" class="bg-gray-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-700 transition shadow">Autorizar Google</a>
-                    <a href="gestion-cabanas.html" class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow">Gestionar Cabañas</a>
+                    <a href="sincronizar.html" class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow">Sincronizar Datos</a>
+                    <a href="procesar.html" class="bg-teal-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-teal-700 transition shadow">Procesar y Consolidar</a>
+                    <a href="mensajes.html" class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow">Generar Mensajes</a>
                     <a href="presupuestos.html" class="bg-pink-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-pink-700 transition shadow">Generar Presupuestos</a>
+                    <a href="gestion-cabanas.html" class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow">Gestionar Cabañas</a>
                 </div>
             </div>
             <div class="bg-white p-8 rounded-lg shadow mt-8">
@@ -188,7 +186,6 @@
             <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuento Real</div><div class="text-2xl font-bold text-red-900">${formatCurrency(kpisGenerales.descuentosTotalesReales)}</div></div>
           `;
           
-          // --- INICIO DE LA MODIFICACIÓN ---
           const canalDetailsTable = document.getElementById('canal-details-table');
           const canalData = kpisGenerales.reservasPorCanal;
           let canalTableHtml = `
@@ -212,7 +209,6 @@
             </table>
           `;
           canalDetailsTable.innerHTML = canalTableHtml;
-          // --- FIN DE LA MODIFICACIÓN ---
           
           const rankingTableBody = document.getElementById('ranking-table-body');
           rankingTableBody.innerHTML = '';

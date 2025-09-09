@@ -3,6 +3,7 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const jsonParser = express.json();
 const { updateClientMaster } = require('../services/clienteService');
+const { createManualReservation } = require('../services/reservaService'); // Importar el nuevo servicio
 
 module.exports = (db) => {
     // --- OBTENER TODAS LAS RESERVAS (GET) ---
@@ -327,6 +328,18 @@ module.exports = (db) => {
         } catch (error) {
             console.error("Error al calcular la disponibilidad:", error);
             res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    // --- NUEVO ENDPOINT PARA CREAR RESERVA MANUAL ---
+    router.post('/reservas/crear-manual', jsonParser, async (req, res) => {
+        try {
+            const reservaData = req.body;
+            const reservaId = await createManualReservation(db, reservaData);
+            res.status(201).json({ message: 'Reserva creada exitosamente', reservaIdOriginal: reservaId });
+        } catch (error) {
+            console.error("Error al crear la reserva manual:", error);
+            res.status(500).json({ error: 'Error interno del servidor al crear la reserva.' });
         }
     });
 

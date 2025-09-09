@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAvailabilityData, findBestCombination, calculatePrice } = require('../services/presupuestoService');
+const { getAvailabilityData, findNormalCombination, findSegmentedCombination, calculatePrice } = require('../services/presupuestoService');
 const { findOrCreateClient } = require('../services/clienteService');
 const admin = require('firebase-admin');
 const jsonParser = express.json();
@@ -8,8 +8,7 @@ const jsonParser = express.json();
 module.exports = (db) => {
     
     router.post('/presupuestos/generar', jsonParser, async (req, res) => {
-        // --- SE AÑADE sinCamarotes ---
-        const { fechaLlegada, fechaSalida, personas, sinCamarotes } = req.body;
+        const { fechaLlegada, fechaSalida, personas, sinCamarotes, permitirCambios } = req.body;
 
         if (!fechaLlegada || !fechaSalida || !personas) {
             return res.status(400).json({ error: 'Se requieren fechas y cantidad de personas.' });
@@ -21,9 +20,19 @@ module.exports = (db) => {
         }
 
         try {
-            const { availableCabanas, allCabanas, complexDetails } = await getAvailabilityData(db, startDate, endDate);
-            // --- SE PASA EL FILTRO A LA FUNCIÓN ---
-            const { combination, capacity } = findBestCombination(availableCabanas, parseInt(personas), sinCamarotes);
+            const { availableCabanas, allCabanas, complexDetails, overlappingReservations } = await getAvailabilityData(db, startDate, endDate);
+            
+            let result;
+            let isSegmented = false;
+
+            if (permitirCambios) {
+                result = findSegmentedCombination(allCabanas, overlappingReservations, parseInt(personas), startDate, endDate);
+                isSegmented = true;
+            } else {
+                result = findNormalCombination(availableCabanas, parseInt(personas), sinCamarotes);
+            }
+            
+            const { combination, capacity } = result;
 
             if (combination.length === 0) {
                 return res.status(200).json({
@@ -35,9 +44,9 @@ module.exports = (db) => {
                 });
             }
 
-            const pricing = await calculatePrice(db, combination, startDate, endDate);
+            const pricing = await calculatePrice(db, combination, startDate, endDate, isSegmented);
             res.status(200).json({
-                suggestion: { cabanas: combination, totalCapacity: capacity, pricing: pricing },
+                suggestion: { cabanas: combination, totalCapacity: capacity, pricing: pricing, isSegmented: isSegmented },
                 availableCabanas,
                 allCabanas,
                 complexDetails

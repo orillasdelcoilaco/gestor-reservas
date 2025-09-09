@@ -26,8 +26,8 @@ module.exports = (db) => {
                     clienteId: data.clienteId,
                     nombre: data.clienteNombre || 'Sin Nombre',
                     telefono: cliente.phone || 'Sin Teléfono',
-                    llegada: data.fechaLlegada ? data.fechaLlegada.toDate().toLocaleDateString('es-CL') : 'N/A',
-                    salida: data.fechaSalida ? data.fechaSalida.toDate().toLocaleDateString('es-CL') : 'N/A',
+                    llegada: data.fechaLlegada ? data.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A',
+                    salida: data.fechaSalida ? data.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A',
                     estado: data.estado || 'N/A',
                     alojamiento: data.alojamiento || 'N/A',
                     canal: data.canal || 'N/A',
@@ -63,6 +63,56 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
+    
+    // --- OBTENER DETALLES COMPLETOS DE UN GRUPO DE RESERVA (GET) ---
+    router.get('/reservas/grupo-detalles/:reservaIdOriginal', async (req, res) => {
+        try {
+            const { reservaIdOriginal } = req.params;
+            const q = db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal);
+            const snapshot = await q.get();
+
+            if (snapshot.empty) {
+                return res.status(404).json({ error: 'No se encontraron reservas con ese ID.' });
+            }
+
+            let grupo = {
+                valorTotalCLP: 0,
+                valorPotencialTotalCLP: 0,
+                documentos: {},
+                transacciones: []
+            };
+
+            for (const doc of snapshot.docs) {
+                const data = doc.data();
+                grupo.valorTotalCLP += data.valorCLP || 0;
+                grupo.valorPotencialTotalCLP += data.valorPotencialCLP || 0;
+
+                // Unificar documentos, dando prioridad a los que existan
+                if (data.documentos) {
+                    grupo.documentos = { ...grupo.documentos, ...data.documentos };
+                }
+
+                // Recopilar todas las transacciones de todas las subcolecciones
+                const transaccionesSnapshot = await doc.ref.collection('transacciones').get();
+                transaccionesSnapshot.forEach(transDoc => {
+                    const transData = transDoc.data();
+                    grupo.transacciones.push({
+                        id: transDoc.id,
+                        ...transData,
+                        fecha: transData.fecha ? transData.fecha.toDate().toLocaleString('es-CL') : 'N/A'
+                    });
+                });
+            }
+            
+            grupo.transacciones.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+            res.status(200).json(grupo);
+        } catch (error) {
+            console.error("Error al obtener detalles del grupo de reserva:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
 
     // --- ACTUALIZAR UNA RESERVA INDIVIDUAL (PUT) ---
     router.put('/reservas/:id', jsonParser, async (req, res) => {
@@ -157,8 +207,8 @@ module.exports = (db) => {
                 const data = doc.data();
                 return {
                     id: doc.id,
-                    llegada: data.fechaLlegada.toDate().toLocaleDateString('es-CL'),
-                    salida: data.fechaSalida.toDate().toLocaleDateString('es-CL'),
+                    llegada: data.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }),
+                    salida: data.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }),
                     alojamiento: data.alojamiento,
                     canal: data.canal,
                     valorCLP: data.valorCLP,
@@ -222,7 +272,7 @@ module.exports = (db) => {
         }
     });
 
-    // --- INICIO DE LA MODIFICACIÓN: Nuevo endpoint para disponibilidad (CORREGIDO) ---
+    // --- ENDPOINT PARA DISPONIBILIDAD ---
     router.get('/reservas/disponibilidad', async (req, res) => {
         const { fechaDesde } = req.query;
         if (!fechaDesde) {
@@ -235,7 +285,6 @@ module.exports = (db) => {
             const cabanasSnapshot = await db.collection('cabanas').get();
             const cabanasActivas = cabanasSnapshot.docs.map(doc => doc.data().nombre);
 
-            // Consulta simplificada que no requiere índice compuesto
             const reservasFuturasSnapshot = await db.collection('reservas')
                 .where('fechaLlegada', '>=', startTimestamp)
                 .orderBy('fechaLlegada', 'asc')
@@ -243,7 +292,6 @@ module.exports = (db) => {
             
             const proximaReservaPorCabana = new Map();
 
-            // Filtrado de canceladas se hace aquí en el código
             reservasFuturasSnapshot.forEach(doc => {
                 const reserva = doc.data();
                 if (reserva.estado !== 'Cancelada') {
@@ -267,7 +315,6 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    // --- FIN DE LA MODIFICACIÓN ---
 
     return router;
 };

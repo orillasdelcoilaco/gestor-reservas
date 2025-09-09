@@ -10,7 +10,7 @@
         body { font-family: 'Inter', sans-serif; }
         .table-container { max-height: 70vh; }
         thead th { position: sticky; top: 0; z-index: 1; }
-        #edit-modal { background-color: rgba(0, 0, 0, 0.5); }
+        #edit-modal, #detail-modal { background-color: rgba(0, 0, 0, 0.5); }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -63,10 +63,11 @@
                     </div>
                 </div>
 
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-center mb-4 flex-wrap gap-4">
                     <div class="text-lg font-semibold text-gray-800">
                         Ingreso Real del Período: <span id="total-sum" class="text-blue-600"></span>
                     </div>
+                    <div id="channel-summary" class="flex items-center space-x-4 text-sm"></div>
                     <div>
                         <label for="page-size-select" class="text-sm font-medium text-gray-700 mr-2">Mostrar:</label>
                         <select id="page-size-select" class="filter-input rounded-md border-gray-300 shadow-sm">
@@ -82,13 +83,14 @@
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nº Reserva</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Llegada</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabaña</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Noches Tot.</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Total</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingreso en Período</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingreso Período</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
                             </tr>
                         </thead>
@@ -169,6 +171,17 @@
             </div>
         </div>
     </div>
+    
+    <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl my-8">
+             <h3 class="text-lg font-medium leading-6 text-gray-900" id="detail-modal-title">Detalles de Gestión</h3>
+             <div id="detail-modal-content" class="mt-4 space-y-6 max-h-[75vh] overflow-y-auto pr-4"></div>
+             <div class="mt-5 sm:mt-6">
+                 <button type="button" id="detail-modal-close-btn" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
 <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
 
@@ -176,12 +189,14 @@
     const reservasTableBody = document.getElementById('reservas-table-body');
     const loadingState = document.getElementById('loading-state');
     const modal = document.getElementById('edit-modal');
+    const detailModal = document.getElementById('detail-modal');
     const modalTitle = document.getElementById('modal-title');
     const modalStatus = document.getElementById('modal-status');
     const saveBtn = document.getElementById('save-btn');
     const cancelBtn = document.getElementById('cancel-btn');
     const deleteBtn = document.getElementById('delete-btn');
     const totalSumEl = document.getElementById('total-sum');
+    const channelSummaryEl = document.getElementById('channel-summary');
 
     // Referencias a filtros
     const filterInputs = document.querySelectorAll('.filter-input, .canal-checkbox');
@@ -247,6 +262,7 @@
             const ingresoEnPeriodoFormateado = `(${nochesEnPeriodo} - $${Math.round(ingresoEnPeriodo).toLocaleString('es-CL')})`;
 
             row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${reserva.nombre}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.llegada}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.alojamiento}</td>
@@ -254,15 +270,16 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorTotalFormateado}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${ingresoEnPeriodoFormateado}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.canal}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.estado}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button class="detail-btn text-green-600 hover:text-green-900" data-id="${reserva.reservaIdOriginal}">Ver</button>
                     <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}">Editar</button>
                 </td>`;
 
             reservasTableBody.appendChild(row);
         });
-        document.querySelectorAll('.edit-btn').forEach(button => {
-            button.addEventListener('click', handleEditClick);
-        });
+        document.querySelectorAll('.edit-btn').forEach(button => button.addEventListener('click', handleEditClick));
+        document.querySelectorAll('.detail-btn').forEach(button => button.addEventListener('click', handleDetailClick));
     }
 
     function calcularNochesEnPeriodo(llegadaStr, salidaStr, inicioFiltro, finFiltro) {
@@ -270,8 +287,8 @@
              return 0;
         }
 
-        const llegada = new Date(llegadaStr.split('-').reverse().join('-') + 'T00:00:00Z');
-        const salida = new Date(salidaStr.split('-').reverse().join('-') + 'T00:00:00Z');
+        const llegada = new Date(llegadaStr.replace(/(\d{2})\-(\d{2})\-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
+        const salida = new Date(salidaStr.replace(/(\d{2})\-(\d{2})\-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
         const inicio = new Date(inicioFiltro + 'T00:00:00Z');
         const fin = new Date(finFiltro + 'T00:00:00Z');
         
@@ -295,8 +312,8 @@
         const pageSize = parseInt(document.getElementById('page-size-select').value);
 
         const filteredReservas = allReservas.filter(r => {
-            const llegadaDate = new Date(r.llegada.split('-').reverse().join('-') + 'T00:00:00Z');
-            const salidaDate = new Date(r.salida.split('-').reverse().join('-') + 'T00:00:00Z');
+            const llegadaDate = new Date(r.llegada.replace(/(\d{2})\-(\d{2})\-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
+            const salidaDate = new Date(r.salida.replace(/(\d{2})\-(\d{2})\-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
 
             const matchFechas = (!fechaInicio || !fechaFin) || (llegadaDate < new Date(fechaFin + 'T00:00:00Z') && salidaDate > new Date(fechaInicio + 'T00:00:00Z'));
             const matchCanal = selectedCanales.length === 0 || selectedCanales.includes(r.canal);
@@ -315,6 +332,12 @@
             return sum + (nochesEnPeriodo * valorPorNoche);
         }, 0);
         totalSumEl.textContent = `$${Math.round(total).toLocaleString('es-CL')}`;
+        
+        const canalCounts = filteredReservas.reduce((acc, r) => {
+            acc[r.canal] = (acc[r.canal] || 0) + 1;
+            return acc;
+        }, {});
+        channelSummaryEl.innerHTML = Object.entries(canalCounts).map(([canal, count]) => `<span><strong>${canal}:</strong> ${count}</span>`).join('');
 
         const paginatedReservas = pageSize === -1 ? filteredReservas : filteredReservas.slice(0, pageSize);
         renderTable(paginatedReservas, fechaInicio, fechaFin);
@@ -326,13 +349,68 @@
             const rawReservas = await fetchAPI('/api/reservas');
             allReservas = rawReservas.map(r => ({
                 ...r,
-                // Aseguramos que el formato sea consistente para el split
                 llegada: r.llegada.replace(/\//g, '-'),
                 salida: r.salida.replace(/\//g, '-')
             }));
             updateTableView();
         } catch (error) {
             loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar las reservas: ${error.message}</p>`;
+        }
+    }
+
+    async function handleDetailClick(event) {
+        const reservaIdOriginal = event.target.dataset.id;
+        const modal = document.getElementById('detail-modal');
+        const title = document.getElementById('detail-modal-title');
+        const content = document.getElementById('detail-modal-content');
+        
+        title.textContent = `Cargando detalles para Reserva ${reservaIdOriginal}...`;
+        content.innerHTML = '<p>Cargando...</p>';
+        modal.classList.remove('hidden');
+
+        try {
+            const data = await fetchAPI(`/api/reservas/grupo-detalles/${reservaIdOriginal}`);
+            const descuento = data.valorPotencialTotalCLP > 0 ? data.valorPotencialTotalCLP - data.valorTotalCLP : 0;
+
+            let transaccionesHtml = '<tr><td colspan="4" class="p-2 text-center text-gray-500">No hay pagos registrados.</td></tr>';
+            if (data.transacciones && data.transacciones.length > 0) {
+                transaccionesHtml = data.transacciones.map(t => `
+                    <tr class="border-b">
+                        <td class="p-2 text-sm">${t.fecha}</td>
+                        <td class="p-2 text-sm">${t.tipo}</td>
+                        <td class="p-2 text-sm">${(t.monto || 0).toLocaleString('es-CL')}</td>
+                        <td class="p-2 text-sm">${t.enlaceComprobante ? `<a href="${t.enlaceComprobante}" target="_blank" class="text-blue-600 hover:underline">Ver</a>` : 'N/A'}</td>
+                    </tr>
+                `).join('');
+            }
+
+            content.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Resumen Financiero</h4>
+                        <div class="space-y-1 text-sm">
+                            <p><strong>Valor Lista (Potencial):</strong> $${data.valorPotencialTotalCLP.toLocaleString('es-CL')}</p>
+                            <p><strong>Valor Real Cobrado:</strong> $${data.valorTotalCLP.toLocaleString('es-CL')}</p>
+                            <p class="text-red-600"><strong>Descuento Total:</strong> $${descuento.toLocaleString('es-CL')}</p>
+                        </div>
+                        <h4 class="font-semibold text-gray-800 mt-4 mb-2">Documentos</h4>
+                        <div class="space-y-1 text-sm">
+                           <p><strong>Comprobante Reserva:</strong> ${data.documentos.enlaceReserva ? `<a href="${data.documentos.enlaceReserva}" target="_blank" class="text-blue-600 hover:underline">Ver Documento</a>` : 'No disponible'}</p>
+                           <p><strong>Boleta/Factura:</strong> ${data.documentos.enlaceBoleta ? `<a href="${data.documentos.enlaceBoleta}" target="_blank" class="text-blue-600 hover:underline">Ver Documento</a>` : 'No disponible'}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Historial de Pagos</h4>
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-50 text-xs uppercase">
+                                <tr><th class="p-2">Fecha</th><th class="p-2">Tipo</th><th class="p-2">Monto</th><th class="p-2">Comp.</th></tr>
+                            </thead>
+                            <tbody>${transaccionesHtml}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+        } catch (error) {
+            content.innerHTML = `<p class="text-red-500">Error al cargar los detalles: ${error.message}</p>`;
         }
     }
 
@@ -444,6 +522,7 @@
             document.getElementById('canal-filter-container').addEventListener('change', updateTableView);
             
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            document.getElementById('detail-modal-close-btn').addEventListener('click', () => detailModal.classList.add('hidden'));
             saveBtn.addEventListener('click', handleSave);
             deleteBtn.addEventListener('click', handleDelete);
             loadReservas();

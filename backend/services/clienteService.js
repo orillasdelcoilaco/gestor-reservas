@@ -170,7 +170,9 @@ async function getAllClientsWithStats(db) {
             totalReservas: stats.totalReservas,
             canal: clientData.canal || primerCanal,
             fuente: clientData.fuente || '',
-            origen: clientData.origen || '',
+            pais: clientData.pais || '',
+            region: clientData.region || '',
+            ciudad: clientData.ciudad || '',
             calificacion: clientData.calificacion || 0,
             notas: clientData.notas || '',
             googleContactSynced: clientData.googleContactSynced || false,
@@ -259,7 +261,6 @@ async function syncClientToGoogle(db, clientId) {
     }
 }
 
-// --- FUNCIÓN MODIFICADA ---
 async function updateClientMaster(db, clientId, newData) {
     const clientRef = db.collection('clientes').doc(clientId);
     const clientDoc = await clientRef.get();
@@ -280,10 +281,12 @@ async function updateClientMaster(db, clientId, newData) {
         dataToUpdateInFirestore.telefonoManual = true;
     }
     if (newEmail && newEmail !== oldData.email) dataToUpdateInFirestore.email = newEmail;
-    if (newData.origen !== undefined && newData.origen !== oldData.origen) dataToUpdateInFirestore.origen = newData.origen;
     if (newData.fuente !== undefined && newData.fuente !== oldData.fuente) dataToUpdateInFirestore.fuente = newData.fuente;
     if (newData.calificacion !== undefined && Number(newData.calificacion) !== oldData.calificacion) dataToUpdateInFirestore.calificacion = Number(newData.calificacion);
     if (newData.notas !== undefined && newData.notas !== oldData.notas) dataToUpdateInFirestore.notas = newData.notas;
+    if (newData.pais !== undefined && newData.pais !== oldData.pais) dataToUpdateInFirestore.pais = newData.pais;
+    if (newData.region !== undefined && newData.region !== oldData.region) dataToUpdateInFirestore.region = newData.region;
+    if (newData.ciudad !== undefined && newData.ciudad !== oldData.ciudad) dataToUpdateInFirestore.ciudad = newData.ciudad;
     
     if (Object.keys(dataToUpdateInFirestore).length > 0) {
         await clientRef.update(dataToUpdateInFirestore);
@@ -295,7 +298,6 @@ async function updateClientMaster(db, clientId, newData) {
     const nameHasChanged = newFullName !== oldFullName;
     const phoneHasChanged = newPhone && newPhone !== oldData.phone;
 
-    // --- INICIO DE LA MODIFICACIÓN: Actualización en cascada a reservas ---
     if (nameHasChanged || phoneHasChanged) {
         const reservasQuery = db.collection('reservas').where('clienteId', '==', clientId);
         const reservasSnapshot = await reservasQuery.get();
@@ -316,7 +318,6 @@ async function updateClientMaster(db, clientId, newData) {
             console.log(`Actualizadas ${reservasSnapshot.size} reservas para el cliente ${clientId}.`);
         }
     }
-    // --- FIN DE LA MODIFICACIÓN ---
 
     try {
         const q = db.collection('reservas').where('clienteId', '==', clientId).orderBy('fechaReserva', 'desc').limit(1);

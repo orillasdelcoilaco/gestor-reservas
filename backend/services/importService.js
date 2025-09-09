@@ -59,10 +59,9 @@ async function processHistoricalClients(db, fileBuffer) {
             lastname: row.lastname || '',
             email: row.email || null,
             phone: phone,
-            city: row.city || null,
-            country: row.country || null,
+            ciudad: row.city || null,
+            pais: row.country || null,
             fuente: row.fuente || '',
-            origen: row.origen || '',
             calificacion: Number(row.calificacion) || 0,
             googleContactSynced: false
         };
@@ -75,8 +74,8 @@ async function processHistoricalClients(db, fileBuffer) {
             if (!existingClient.data.firstname && clientData.firstname) dataToUpdate.firstname = clientData.firstname;
             if (!existingClient.data.lastname && clientData.lastname) dataToUpdate.lastname = clientData.lastname;
             if (!existingClient.data.email && clientData.email) dataToUpdate.email = clientData.email;
-            if (!existingClient.data.city && clientData.city) dataToUpdate.city = clientData.city;
-            if (!existingClient.data.country && clientData.country) dataToUpdate.country = clientData.country;
+            if (!existingClient.data.ciudad && clientData.ciudad) dataToUpdate.ciudad = clientData.ciudad;
+            if (!existingClient.data.pais && clientData.pais) dataToUpdate.pais = clientData.pais;
 
             if (Object.keys(dataToUpdate).length > 0) {
                  batch.update(clientRef, dataToUpdate);

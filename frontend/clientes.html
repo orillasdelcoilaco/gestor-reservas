@@ -79,9 +79,13 @@
                             <label for="fuente-select" class="block text-sm font-medium">Fuente</label>
                             <select id="fuente-select" class="block w-full px-3 py-2 border rounded-md mt-1"></select>
                         </div>
-                        <div>
-                            <label for="origen-select" class="block text-sm font-medium">Origen</label>
-                            <select id="origen-select" class="block w-full px-3 py-2 border rounded-md mt-1"></select>
+                         <div>
+                            <label class="block text-sm font-medium">Ubicación Geográfica</label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-1">
+                                <input type="text" id="pais-input" placeholder="País" class="block w-full px-3 py-2 border rounded-md">
+                                <input type="text" id="region-input" placeholder="Región" class="block w-full px-3 py-2 border rounded-md">
+                                <input type="text" id="ciudad-input" placeholder="Ciudad" class="block w-full px-3 py-2 border rounded-md">
+                            </div>
                         </div>
                     </div>
                     <div>
@@ -124,21 +128,16 @@
     const modalStatus = document.getElementById('modal-status');
     const saveBtn = document.getElementById('save-btn');
     const cancelBtn = document.getElementById('cancel-btn');
-    // --- INICIO DE LA MODIFICACIÓN ---
     const deleteBtn = document.getElementById('delete-btn');
-    // --- FIN DE LA MODIFICACIÓN ---
     
     let allClients = [];
     let editingClientId = null;
 
     const fuentes = ['instagram', 'facebook', 'tiktok', 'google', 'ia', 'boca a boca'];
-    const origenes = ['booking', 'sodc', 'airbnb', 'otra'];
 
     function populateDropdowns() {
         const fuenteSelect = document.getElementById('fuente-select');
-        const origenSelect = document.getElementById('origen-select');
         fuentes.forEach(f => fuenteSelect.add(new Option(f.charAt(0).toUpperCase() + f.slice(1), f)));
-        origenes.forEach(o => origenSelect.add(new Option(o.charAt(0).toUpperCase() + o.slice(1), o)));
     }
 
     function setupStars() {
@@ -223,7 +222,9 @@
         document.getElementById('lastname-input').value = lastnameParts.join(' ') || '';
         document.getElementById('phone-input').value = cliente.telefono || '';
         document.getElementById('email-input').value = cliente.email || '';
-        document.getElementById('origen-select').value = cliente.origen || 'otra';
+        document.getElementById('pais-input').value = cliente.pais || '';
+        document.getElementById('region-input').value = cliente.region || '';
+        document.getElementById('ciudad-input').value = cliente.ciudad || '';
         document.getElementById('fuente-select').value = cliente.fuente || 'boca a boca';
         document.getElementById('calificacion-stars').dataset.rating = cliente.calificacion || 0;
         updateStarDisplay(cliente.calificacion || 0);
@@ -279,7 +280,9 @@
             lastname: document.getElementById('lastname-input').value.trim(),
             phone: document.getElementById('phone-input').value.trim(),
             email: document.getElementById('email-input').value.trim(),
-            origen: document.getElementById('origen-select').value,
+            pais: document.getElementById('pais-input').value.trim(),
+            region: document.getElementById('region-input').value.trim(),
+            ciudad: document.getElementById('ciudad-input').value.trim(),
             fuente: document.getElementById('fuente-select').value,
             calificacion: document.getElementById('calificacion-stars').dataset.rating,
             notas: document.getElementById('notas-input').value.trim()
@@ -303,7 +306,6 @@
         }
     }
 
-    // --- INICIO DE LA NUEVA FUNCIÓN ---
     async function handleDelete() {
         if (!editingClientId) return;
 
@@ -335,7 +337,6 @@
             editingClientId = null;
         }
     }
-    // --- FIN DE LA NUEVA FUNCIÓN ---
 
     function updateTableView() {
         const searchTerm = searchInput.value.toLowerCase();
@@ -378,9 +379,7 @@
             searchInput.addEventListener('input', updateTableView);
             cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
             saveBtn.addEventListener('click', handleSave);
-            // --- INICIO DE LA MODIFICACIÓN ---
             deleteBtn.addEventListener('click', handleDelete);
-            // --- FIN DE LA MODIFICACIÓN ---
             loadClients();
         }
     });

@@ -124,3 +124,7 @@ Añadir dos nuevas columnas: "Noches Faltantes" y "Descuento Total".
 Implementar la funcionalidad para que al hacer clic en una fila de la tabla (una cabaña), se muestre un detalle con el desglose de noches y descuentos por cada canal.
 
 Gráfico de Canales: Actualizar el gráfico para que muestre los valores porcentuales directamente sobre cada sección, facilitando su lectura.
+
+# Plan de Acción
+* Etapa 1 a 8: (✅ Completadas)
+* **Etapa 9: Creación de Reservas Manuales y Gestión de Propuestas (✅ Completada)**

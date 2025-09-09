@@ -425,6 +425,93 @@ module.exports = (db) => {
         }
     });
 
+    // --- NUEVO: CORREGIR IDENTIDAD DE RESERVA (MOVER DATOS) ---
+    router.post('/reservas/corregir-identidad', jsonParser, async (req, res) => {
+        const { viejoIdCompleto, nuevosDatos } = req.body;
+
+        if (!viejoIdCompleto || !nuevosDatos || !nuevosDatos.reservaIdOriginal || !nuevosDatos.canal) {
+            return res.status(400).json({ error: 'Faltan datos para la corrección de identidad.' });
+        }
+
+        const viejoReservaRef = db.collection('reservas').doc(viejoIdCompleto);
+
+        try {
+            const resultado = await db.runTransaction(async (transaction) => {
+                const viejoDoc = await transaction.get(viejoReservaRef);
+                if (!viejoDoc.exists) {
+                    throw new Error('La reserva original no existe.');
+                }
+
+                const datosViejos = viejoDoc.data();
+                const datosMezclados = { ...datosViejos, ...nuevosDatos }; // Prioriza los nuevos datos
+                const nuevoIdCompleto = `${nuevosDatos.canal.toUpperCase()}_${nuevosDatos.reservaIdOriginal}_${datosMezclados.alojamiento.replace(/\s+/g, '')}`;
+                
+                if (viejoIdCompleto === nuevoIdCompleto) {
+                    throw new Error('El nuevo ID es idéntico al antiguo. No se requiere ninguna acción.');
+                }
+
+                const nuevoReservaRef = db.collection('reservas').doc(nuevoIdCompleto);
+                const nuevoDocCheck = await transaction.get(nuevoReservaRef);
+                if(nuevoDocCheck.exists) {
+                    throw new Error(`Ya existe una reserva con el nuevo ID (${nuevoIdCompleto}). No se puede combinar.`);
+                }
+
+                // 1. Mover transacciones
+                const viejaTransaccionesRef = viejoReservaRef.collection('transacciones');
+                const transaccionesSnapshot = await transaction.get(viejaTransaccionesRef);
+                let transaccionesMovidas = 0;
+                if (!transaccionesSnapshot.empty) {
+                    const nuevaTransaccionesRef = nuevoReservaRef.collection('transacciones');
+                    transaccionesSnapshot.forEach(doc => {
+                        transaction.set(nuevaTransaccionesRef.doc(doc.id), doc.data());
+                        transaction.delete(doc.ref);
+                        transaccionesMovidas++;
+                    });
+                }
+
+                // 2. Actualizar notas de gestión
+                let notasActualizadas = 0;
+                if (datosViejos.reservaIdOriginal !== nuevosDatos.reservaIdOriginal) {
+                    const notasQuery = db.collection('gestion_notas').where('reservaIdOriginal', '==', datosViejos.reservaIdOriginal);
+                    const notasSnapshot = await transaction.get(notasQuery);
+                     if (!notasSnapshot.empty) {
+                        notasSnapshot.forEach(doc => {
+                            transaction.update(doc.ref, { reservaIdOriginal: nuevosDatos.reservaIdOriginal });
+                            notasActualizadas++;
+                        });
+                    }
+                }
+
+                // 3. Crear el registro de redirección
+                const obsoletoRef = db.collection('reservas_obsoletas').doc(viejoIdCompleto);
+                transaction.set(obsoletoRef, {
+                    nuevaReservaId: nuevoIdCompleto,
+                    motivo: 'Corrección manual de identidad desde la interfaz.',
+                    fechaCorreccion: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                // 4. Crear la nueva reserva y eliminar la antigua
+                transaction.set(nuevoReservaRef, datosMezclados);
+                transaction.delete(viejoReservaRef);
+
+                return {
+                    viejoId: viejoIdCompleto,
+                    nuevoId: nuevoIdCompleto,
+                    transaccionesMovidas,
+                    notasActualizadas
+                };
+            });
+
+            res.status(200).json({ 
+                message: 'La reserva ha sido movida y actualizada exitosamente.',
+                summary: `Se movió la reserva de ${resultado.viejoId} a ${resultado.nuevoId}. Se migraron ${resultado.transaccionesMovidas} transacciones y se actualizaron ${resultado.notasActualizadas} notas de gestión.`
+            });
+
+        } catch (error) {
+            console.error("Error al corregir la identidad de la reserva:", error);
+            res.status(500).json({ error: error.message || 'Error interno del servidor.' });
+        }
+    });
 
     return router;
 };

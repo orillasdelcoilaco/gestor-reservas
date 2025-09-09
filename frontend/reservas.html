@@ -204,12 +204,13 @@
     const filterInputs = document.querySelectorAll('.filter-input, .canal-checkbox');
     
     // Opciones para los filtros
-    const canales = ['SODC', 'Booking', 'Airbnb'];
-    const estados = ['Todos', 'Confirmada', 'Cancelada', 'no_show'];
+    const canales = ['SODC', 'Booking', 'Airbnb', 'App'];
+    const estados = ['Todos', 'Confirmada', 'Cancelada', 'no_show', 'Pendiente Aprobación'];
     const estadosGestion = ['Todos', 'Pendiente Bienvenida', 'Pendiente Cobro', 'Pendiente Pago', 'Pendiente Boleta', 'Facturado'];
 
     let allReservas = [];
     let reservaParaEditarId = null;
+    let reservaOriginalParaComparar = null; // --- NUEVO: Para detectar cambios en el ID
 
     function populateSelect(selectId, options) {
         const select = document.getElementById(selectId);
@@ -442,6 +443,15 @@
             const reserva = await fetchAPI(`/api/reservas/detalles/${reservaParaEditarId}`);
             modalTitle.textContent = `Editando Reserva N° ${reserva.reservaIdOriginal}`;
             
+            // --- INICIO DE LA MODIFICACIÓN: Guardar estado original ---
+            reservaOriginalParaComparar = {
+                reservaIdOriginal: reserva.reservaIdOriginal,
+                canal: reserva.canal
+            };
+            document.getElementById('reservaIdOriginal').readOnly = false; // Hacer el campo editable
+            document.getElementById('reservaIdOriginal').classList.remove('bg-gray-100');
+            // --- FIN DE LA MODIFICACIÓN ---
+            
             document.getElementById('reservaIdOriginal').value = reserva.reservaIdOriginal || '';
             document.getElementById('clienteNombre').value = reserva.clienteNombre || '';
             document.getElementById('fechaLlegada').value = reserva.fechaLlegada;
@@ -471,23 +481,57 @@
             estado: document.getElementById('estado').value,
             estadoGestion: document.getElementById('estadoGestion').value,
             valorCLP: parseInt(document.getElementById('valorCLP').value) || 0,
-            totalNoches: parseInt(document.getElementById('totalNoches').value) || 0
+            totalNoches: parseInt(document.getElementById('totalNoches').value) || 0,
+            reservaIdOriginal: document.getElementById('reservaIdOriginal').value
         };
 
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Guardando...';
-        modalStatus.textContent = '';
-        
-        try {
-            await fetchAPI(`/api/reservas/${reservaParaEditarId}`, { method: 'PUT', body: payload });
-            modal.classList.add('hidden');
-            await loadReservas();
-        } catch (error) {
-            modalStatus.textContent = `Error al guardar: ${error.message}`;
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Guardar Cambios';
-            reservaParaEditarId = null;
+        const idCambio = payload.reservaIdOriginal !== reservaOriginalParaComparar.reservaIdOriginal;
+        const canalCambio = payload.canal !== reservaOriginalParaComparar.canal;
+
+        if (idCambio || canalCambio) {
+            if (!confirm('Has cambiado el Nº de Reserva o el Canal. Esta acción moverá permanentemente la reserva y todos sus datos asociados (pagos, notas) a una nueva identidad y eliminará la original para evitar duplicados. ¿Estás seguro de que quieres continuar?')) {
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Moviendo...';
+            modalStatus.textContent = '';
+
+            const correccionPayload = {
+                viejoIdCompleto: reservaParaEditarId,
+                nuevosDatos: payload
+            };
+            
+            try {
+                const result = await fetchAPI('/api/reservas/corregir-identidad', { method: 'POST', body: correccionPayload });
+                alert(result.summary);
+                modal.classList.add('hidden');
+                await loadReservas();
+            } catch (error) {
+                modalStatus.textContent = `Error al mover la reserva: ${error.message}`;
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Guardar Cambios';
+                reservaParaEditarId = null;
+                reservaOriginalParaComparar = null;
+            }
+        } else {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Guardando...';
+            modalStatus.textContent = '';
+            
+            try {
+                await fetchAPI(`/api/reservas/${reservaParaEditarId}`, { method: 'PUT', body: payload });
+                modal.classList.add('hidden');
+                await loadReservas();
+            } catch (error) {
+                modalStatus.textContent = `Error al guardar: ${error.message}`;
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Guardar Cambios';
+                reservaParaEditarId = null;
+                reservaOriginalParaComparar = null;
+            }
         }
     }
 

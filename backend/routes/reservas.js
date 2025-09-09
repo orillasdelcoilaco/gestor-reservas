@@ -7,8 +7,6 @@ const { createManualReservation } = require('../services/reservaService');
 const { getAvailabilityData } = require('../services/presupuestoService');
 
 module.exports = (db) => {
-    // ... (código de los endpoints GET, PUT, DELETE existentes) ...
-    
     // --- OBTENER TODAS LAS RESERVAS (GET) ---
     router.get('/reservas', async (req, res) => {
         try {
@@ -264,7 +262,10 @@ module.exports = (db) => {
             const reservasDelMes = [];
             querySnapshot.forEach(doc => {
                 const data = doc.data();
-                if (data.fechaSalida >= startTimestamp && data.estado !== 'Cancelada') {
+                // --- INICIO DE LA CORRECCIÓN ---
+                // Solo mostrar reservas confirmadas en el calendario
+                if (data.fechaSalida >= startTimestamp && data.estado === 'Confirmada') {
+                // --- FIN DE LA CORRECCIÓN ---
                     const fechaSalidaDate = data.fechaSalida.toDate();
                     fechaSalidaDate.setUTCHours(12, 0, 0, 0);
 

@@ -1,25 +1,43 @@
 const admin = require('firebase-admin');
 
 async function getAvailabilityData(db, startDate, endDate) {
-    const cabanasSnapshot = await db.collection('cabanas').get();
+    // --- INICIO DE LA MODIFICACIÓN ---
+    const [cabanasSnapshot, tarifasSnapshot, reservasSnapshot] = await Promise.all([
+        db.collection('cabanas').get(),
+        db.collection('tarifas').get(),
+        db.collection('reservas').where('fechaLlegada', '<', admin.firestore.Timestamp.fromDate(endDate)).get()
+    ]);
+
     const allCabanas = cabanasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const complexDoc = await db.collection('config').doc('complejo').get();
-    const complexDetails = complexDoc.exists ? complexDoc.data() : {};
-    const startTimestamp = admin.firestore.Timestamp.fromDate(startDate);
-    const endTimestamp = admin.firestore.Timestamp.fromDate(endDate);
-    const reservasQuery1 = db.collection('reservas').where('fechaLlegada', '<', endTimestamp);
-    const snapshot1 = await reservasQuery1.get();
+    const allTarifas = tarifasSnapshot.docs.map(doc => doc.data());
+    
+    // 1. Filtrar cabañas que tienen una tarifa válida en el período
+    const cabanasConTarifa = allCabanas.filter(cabana => {
+        return allTarifas.some(tarifa => {
+            const inicioTarifa = tarifa.fechaInicio.toDate();
+            const finTarifa = tarifa.fechaTermino.toDate();
+            return tarifa.nombreCabaña === cabana.nombre && inicioTarifa <= endDate && finTarifa >= startDate;
+        });
+    });
+
+    // 2. Encontrar las reservas que se superponen en el período
     const overlappingReservations = [];
-    snapshot1.forEach(doc => {
+    reservasSnapshot.forEach(doc => {
         const reserva = doc.data();
-        // --- MODIFICACIÓN CLAVE: Ignorar reservas pendientes y canceladas ---
         if (reserva.fechaSalida.toDate() > startDate && reserva.estado === 'Confirmada') {
             overlappingReservations.push(reserva);
         }
     });
+    
+    // 3. Determinar las cabañas disponibles (que tienen tarifa y no están ocupadas)
     const occupiedCabanaNames = new Set(overlappingReservations.map(reserva => reserva.alojamiento));
-    const availableCabanas = allCabanas.filter(cabana => !occupiedCabanaNames.has(cabana.nombre));
+    const availableCabanas = cabanasConTarifa.filter(cabana => !occupiedCabanaNames.has(cabana.nombre));
+    
+    const complexDoc = await db.collection('config').doc('complejo').get();
+    const complexDetails = complexDoc.exists ? complexDoc.data() : {};
+
     return { availableCabanas, allCabanas, complexDetails, overlappingReservations };
+    // --- FIN DE LA MODIFICACIÓN ---
 }
 
 function findNormalCombination(availableCabanas, requiredCapacity, sinCamarotes = false) {

@@ -176,7 +176,7 @@
         let allClients = [];
         let selectedClient = null;
         let availabilityData = {};
-        let currentPricing = { totalPrice: 0, nights: 0 };
+        let currentPricing = { totalPrice: 0, nights: 0, details: [] };
         let currentSelection = [];
 
         loader.style.display = 'none';
@@ -250,14 +250,16 @@
                 suggestionContainer.innerHTML = `
                     <h4 class="font-medium text-gray-700">Propuesta de Itinerario</h4>
                     <div class="space-y-2 p-3 bg-white rounded-md border">${
-                        suggestion.cabanas.map(segmento => `
-                            <div class="flex justify-between items-center text-sm">
-                                <span><strong>${segmento.cabana.nombre}</strong></span>
-                                <span>${new Date(segmento.startDate).toLocaleDateString('es-CL', {timeZone: 'UTC'})} - ${new Date(segmento.endDate).toLocaleDateString('es-CL', {timeZone: 'UTC'})}</span>
-                                <span>(${segmento.noches} noches)</span>
+                        suggestion.pricing.details.map((detail, index) => `
+                            <div class="grid grid-cols-4 gap-4 items-center text-sm">
+                                <span><strong>${detail.nombre}</strong></span>
+                                <span>${new Date(detail.fechaInicio + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})} - ${new Date(detail.fechaTermino + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})}</span>
+                                <span class="text-center">${detail.noches} noche(s)</span>
+                                <input type="number" data-index="${index}" class="segment-price-input w-full p-1 border rounded-md text-right" value="${Math.round(detail.precioTotal)}">
                             </div>
                         `).join('')
                     }</div>`;
+                document.querySelectorAll('.segment-price-input').forEach(input => input.addEventListener('input', updateTotalsFromSegmentInputs));
             } else {
                 currentSelection = [...suggestion.cabanas];
                 const suggestedIds = new Set(suggestion.cabanas.map(c => c.id));
@@ -307,17 +309,26 @@
         }
         
         function handleDiscountChange(e) {
-            const valorFinalInput = document.getElementById('valor-final-input');
-            const descuentoPctInput = document.getElementById('descuento-pct');
-            const descuentoFijoTotalInput = document.getElementById('descuento-fijo-total');
-            
-            if (e.target.id === 'valor-final-input') {
-                descuentoPctInput.value = '';
-                descuentoFijoTotalInput.value = '';
-            } else {
-                valorFinalInput.value = '';
-            }
+            document.querySelectorAll('.discount-input').forEach(input => {
+                if (input.id !== e.target.id) input.value = '';
+            });
             updateSummary(currentPricing);
+        }
+        
+        function updateTotalsFromSegmentInputs() {
+            let newTotal = 0;
+            document.querySelectorAll('.segment-price-input').forEach(input => {
+                newTotal += parseFloat(input.value) || 0;
+            });
+
+            document.querySelectorAll('.discount-input').forEach(input => input.value = '');
+            
+            const precioLista = currentPricing.totalPrice;
+            const descuentoTotal = precioLista - newTotal;
+            
+            document.getElementById('summary-precio-lista').textContent = formatCurrency(precioLista);
+            document.getElementById('summary-descuento').textContent = `-${formatCurrency(descuentoTotal)}`;
+            document.getElementById('summary-precio-final').textContent = formatCurrency(newTotal);
         }
 
         function updateSummary(pricing) {
@@ -345,6 +356,15 @@
             document.getElementById('summary-precio-lista').textContent = formatCurrency(precioLista);
             document.getElementById('summary-descuento').textContent = `-${formatCurrency(descuentoTotal)}`;
             document.getElementById('summary-precio-final').textContent = formatCurrency(precioFinal);
+            
+            if (availabilityData.suggestion?.isSegmented) {
+                const priceInputs = document.querySelectorAll('.segment-price-input');
+                priceInputs.forEach((input, index) => {
+                    const originalSegmentPrice = pricing.details[index].precioTotal;
+                    const newSegmentPrice = originalSegmentPrice * (precioFinal / precioLista);
+                    input.value = Math.round(newSegmentPrice);
+                });
+            }
         }
 
         async function loadClients() {
@@ -389,24 +409,24 @@
                 alert('El nombre y teléfono del cliente son obligatorios.'); return;
             }
 
-            const precioFinal = parseFloat(document.getElementById('summary-precio-final').textContent.replace(/\$|\./g, ''));
-            const precioLista = parseFloat(document.getElementById('summary-precio-lista').textContent.replace(/\$|\./g, ''));
+            const precioFinal = parseFloat(document.getElementById('summary-precio-final').textContent.replace(/\$|\.|\,/g, ''));
+            const precioLista = parseFloat(document.getElementById('summary-precio-lista').textContent.replace(/\$|\.|\,/g, ''));
             
             const descuentoInfo = {
-                tipo: document.getElementById('valor-final-input').value ? 'valor_final' : (document.getElementById('descuento-pct').value ? 'porcentaje' : 'fijo_total'),
+                tipo: 'calculado',
                 valor: precioLista - precioFinal
             };
             
             const isSegmented = availabilityData.suggestion.isSegmented;
-            const reservasParaGuardar = isSegmented
-                ? currentSelection.map(sel => {
-                    const detail = currentPricing.details.find(d => d.nombre === sel.nombre && d.fechaInicio === sel.segmento.startDate.toISOString().split('T')[0]);
+            const reservasParaGuardar = isSegmented 
+                ? Array.from(document.querySelectorAll('.segment-price-input')).map((input, index) => {
+                    const detail = currentPricing.details[index];
                     return {
-                        alojamiento: sel.nombre,
-                        fechaLlegada: sel.segmento.startDate.toISOString().split('T')[0],
-                        fechaSalida: sel.segmento.endDate.toISOString().split('T')[0],
+                        alojamiento: detail.nombre,
+                        fechaLlegada: detail.fechaInicio,
+                        fechaSalida: detail.fechaTermino,
                         valorPotencial: detail.precioTotal,
-                        valorFinal: detail.precioTotal * (precioFinal / precioLista) // Distribución proporcional del descuento
+                        valorFinal: parseFloat(input.value) || 0
                     };
                 })
                 : currentSelection.map(sel => {
@@ -416,7 +436,7 @@
                         fechaLlegada: document.getElementById('fecha-llegada').value,
                         fechaSalida: document.getElementById('fecha-salida').value,
                         valorPotencial: detail.precioTotal,
-                        valorFinal: (detail.precioTotal / precioLista) * precioFinal // Distribución proporcional del descuento
+                        valorFinal: (detail.precioTotal / precioLista) * precioFinal
                     };
                 });
             
@@ -447,12 +467,12 @@
         function showSummaryModal(payload, reservaId) {
             let summary = `Propuesta de Reserva #${reservaId}\n`;
             summary += `Cliente: ${payload.cliente.nombre}\n\n`;
-            summary += `Fechas: ${payload.propuesta.reservas[0].fechaLlegada} al ${payload.propuesta.reservas[0].fechaSalida}\n`;
+            summary += `Fechas: ${document.getElementById('fecha-llegada').value} al ${document.getElementById('fecha-salida').value}\n`;
             summary += `Noches: ${currentPricing.nights}\n`;
             summary += `Personas: ${payload.propuesta.personas}\n\n`;
             summary += `Detalle:\n`;
             payload.propuesta.reservas.forEach(r => {
-                summary += `- ${r.alojamiento}: ${formatCurrency(r.valorFinal)}\n`;
+                summary += `- ${r.alojamiento} (${r.fechaLlegada} a ${r.fechaSalida}): ${formatCurrency(r.valorFinal)}\n`;
             });
             summary += `\nPrecio Lista: ${document.getElementById('summary-precio-lista').textContent}`;
             summary += `\nDescuento: ${document.getElementById('summary-descuento').textContent}`;

@@ -32,7 +32,7 @@ module.exports = (db) => {
                 result = findNormalCombination(availableCabanas, parseInt(personas), sinCamarotes);
             }
             
-            const { combination, capacity } = result;
+            const { combination, capacity, dailyOptions } = result;
 
             if (combination.length === 0) {
                 return res.status(200).json({
@@ -46,7 +46,7 @@ module.exports = (db) => {
 
             const pricing = await calculatePrice(db, combination, startDate, endDate, isSegmented);
             res.status(200).json({
-                suggestion: { cabanas: combination, totalCapacity: capacity, pricing: pricing, isSegmented: isSegmented },
+                suggestion: { cabanas: combination, totalCapacity: capacity, pricing: pricing, isSegmented: isSegmented, dailyOptions: dailyOptions || null },
                 availableCabanas,
                 allCabanas,
                 complexDetails
@@ -72,6 +72,33 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor al recalcular.' });
         }
     });
+    
+    router.post('/presupuestos/recalcular-segmentado', jsonParser, async (req, res) => {
+        const { itinerary } = req.body;
+        if (!itinerary || !Array.isArray(itinerary) || itinerary.length === 0) {
+            return res.status(400).json({ error: 'Se requiere un itinerario válido.' });
+        }
+        try {
+            const allCabanasSnapshot = await db.collection('cabanas').get();
+            const allCabanas = allCabanasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            const firstDay = new Date(itinerary[0].fechaInicio + 'T00:00:00Z');
+            const lastDay = new Date(itinerary[itinerary.length - 1].fechaTermino + 'T00:00:00Z');
+
+            const items = itinerary.map(seg => ({
+                cabana: allCabanas.find(c => c.id === seg.cabanaId),
+                startDate: new Date(seg.fechaInicio + 'T00:00:00Z'),
+                endDate: new Date(seg.fechaTermino + 'T00:00:00Z')
+            }));
+
+            const pricing = await calculatePrice(db, items, firstDay, lastDay, true);
+            res.status(200).json(pricing);
+        } catch(error) {
+            console.error("Error al recalcular el itinerario segmentado:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
 
     router.post('/presupuestos/guardar', jsonParser, async (req, res) => {
         const { cliente, presupuesto } = req.body;

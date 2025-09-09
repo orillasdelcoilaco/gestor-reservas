@@ -246,20 +246,47 @@
         function renderCabanasSection(suggestion) {
             suggestionContainer.innerHTML = '';
             if (suggestion.isSegmented) {
-                currentSelection = suggestion.cabanas.map(seg => ({...seg.cabana, segmento: seg}));
+                currentSelection = suggestion.cabanas;
+                
+                const getOptionsForSegment = (segment) => {
+                    const segmentStart = new Date(segment.startDate);
+                    const segmentEnd = new Date(segment.endDate);
+                    let commonOptions = null;
+
+                    for (let d = new Date(segmentStart); d < segmentEnd; d.setDate(d.getDate() + 1)) {
+                        const dayStr = d.toISOString().split('T')[0];
+                        const dayOptions = availabilityData.suggestion.dailyOptions.find(opt => opt.date.startsWith(dayStr));
+                        if (!dayOptions) return [];
+                        
+                        const optionIds = new Set(dayOptions.options.map(opt => opt.id));
+                        if (commonOptions === null) {
+                            commonOptions = optionIds;
+                        } else {
+                            commonOptions = new Set([...commonOptions].filter(id => optionIds.has(id)));
+                        }
+                    }
+                    return availabilityData.allCabanas.filter(c => commonOptions.has(c.id));
+                };
+
                 suggestionContainer.innerHTML = `
                     <h4 class="font-medium text-gray-700">Propuesta de Itinerario</h4>
                     <div class="space-y-2 p-3 bg-white rounded-md border">${
-                        suggestion.pricing.details.map((detail, index) => `
-                            <div class="grid grid-cols-4 gap-4 items-center text-sm">
-                                <span><strong>${detail.nombre}</strong></span>
-                                <span>${new Date(detail.fechaInicio + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})} - ${new Date(detail.fechaTermino + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})}</span>
-                                <span class="text-center">${detail.noches} noche(s)</span>
-                                <input type="number" data-index="${index}" class="segment-price-input w-full p-1 border rounded-md text-right" value="${Math.round(detail.precioTotal)}">
-                            </div>
-                        `).join('')
+                        suggestion.pricing.details.map((detail, index) => {
+                            const segment = suggestion.cabanas[index];
+                            const options = getOptionsForSegment(segment);
+                            return `
+                                <div class="grid grid-cols-5 gap-4 items-center text-sm">
+                                    <select data-index="${index}" class="segment-cabana-select w-full p-1 border rounded-md">
+                                        ${options.map(opt => `<option value="${opt.id}" ${opt.id === segment.cabana.id ? 'selected' : ''}>${opt.nombre}</option>`).join('')}
+                                    </select>
+                                    <span>${new Date(detail.fechaInicio + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})} - ${new Date(detail.fechaTermino + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})}</span>
+                                    <span class="text-center">${detail.noches} noche(s)</span>
+                                    <input type="number" data-index="${index}" class="segment-price-input w-full p-1 border rounded-md text-right" value="${Math.round(detail.precioTotal)}">
+                                </div>`;
+                        }).join('')
                     }</div>`;
                 document.querySelectorAll('.segment-price-input').forEach(input => input.addEventListener('input', updateTotalsFromSegmentInputs));
+                document.querySelectorAll('.segment-cabana-select').forEach(select => select.addEventListener('change', handleItineraryChange));
             } else {
                 currentSelection = [...suggestion.cabanas];
                 const suggestedIds = new Set(suggestion.cabanas.map(c => c.id));
@@ -276,6 +303,52 @@
             }
         }
         
+        async function handleItineraryChange() {
+            let tempItinerary = [];
+            document.querySelectorAll('.segment-cabana-select').forEach((select, index) => {
+                const cabanaId = select.value;
+                const originalSegment = availabilityData.suggestion.cabanas[index];
+                tempItinerary.push({
+                    cabanaId,
+                    fechaInicio: originalSegment.startDate.toISOString().split('T')[0],
+                    fechaTermino: originalSegment.endDate.toISOString().split('T')[0]
+                });
+            });
+
+            // Re-agrupar segmentos si son contiguos y misma cabaña
+            let finalItinerary = [];
+            if (tempItinerary.length > 0) {
+                let current = {...tempItinerary[0]};
+                for (let i = 1; i < tempItinerary.length; i++) {
+                    if (tempItinerary[i].cabanaId === current.cabanaId && tempItinerary[i].fechaInicio === current.fechaTermino) {
+                        current.fechaTermino = tempItinerary[i].fechaTermino;
+                    } else {
+                        finalItinerary.push(current);
+                        current = {...tempItinerary[i]};
+                    }
+                }
+                finalItinerary.push(current);
+            }
+            
+            try {
+                const newPricing = await fetchAPI('/api/presupuestos/recalcular-segmentado', {
+                    method: 'POST',
+                    body: { itinerary: finalItinerary }
+                });
+                // Actualizar datos globales y re-renderizar
+                availabilityData.suggestion.pricing = newPricing;
+                availabilityData.suggestion.cabanas = newPricing.details.map(d => ({
+                    cabana: availabilityData.allCabanas.find(c => c.nombre === d.nombre),
+                    startDate: new Date(d.fechaInicio + 'T00:00:00Z'),
+                    endDate: new Date(d.fechaTermino + 'T00:00:00Z')
+                }));
+                renderCabanasSection(availabilityData.suggestion);
+                updateSummary(newPricing);
+            } catch (error) {
+                alert('Error al recalcular el itinerario: ' + error.message);
+            }
+        }
+
         function createCabanaCheckbox(cabana, isSuggested) {
             return `
             <div class="p-2 border rounded-md flex items-center justify-between bg-white">
@@ -309,9 +382,16 @@
         }
         
         function handleDiscountChange(e) {
-            document.querySelectorAll('.discount-input').forEach(input => {
-                if (input.id !== e.target.id) input.value = '';
-            });
+            const valorFinalInput = document.getElementById('valor-final-input');
+            const descuentoPctInput = document.getElementById('descuento-pct');
+            const descuentoFijoTotalInput = document.getElementById('descuento-fijo-total');
+            
+            if (e.target.id === 'valor-final-input') {
+                descuentoPctInput.value = '';
+                descuentoFijoTotalInput.value = '';
+            } else {
+                valorFinalInput.value = '';
+            }
             updateSummary(currentPricing);
         }
         
@@ -322,6 +402,7 @@
             });
 
             document.querySelectorAll('.discount-input').forEach(input => input.value = '');
+            document.getElementById('valor-final-input').value = Math.round(newTotal);
             
             const precioLista = currentPricing.totalPrice;
             const descuentoTotal = precioLista - newTotal;
@@ -361,8 +442,12 @@
                 const priceInputs = document.querySelectorAll('.segment-price-input');
                 priceInputs.forEach((input, index) => {
                     const originalSegmentPrice = pricing.details[index].precioTotal;
-                    const newSegmentPrice = originalSegmentPrice * (precioFinal / precioLista);
-                    input.value = Math.round(newSegmentPrice);
+                    if (precioLista > 0) {
+                        const newSegmentPrice = originalSegmentPrice * (precioFinal / precioLista);
+                        input.value = Math.round(newSegmentPrice);
+                    } else {
+                        input.value = 0;
+                    }
                 });
             }
         }
@@ -436,7 +521,7 @@
                         fechaLlegada: document.getElementById('fecha-llegada').value,
                         fechaSalida: document.getElementById('fecha-salida').value,
                         valorPotencial: detail.precioTotal,
-                        valorFinal: (detail.precioTotal / precioLista) * precioFinal
+                        valorFinal: precioLista > 0 ? (detail.precioTotal / precioLista) * precioFinal : 0
                     };
                 });
             
@@ -472,7 +557,9 @@
             summary += `Personas: ${payload.propuesta.personas}\n\n`;
             summary += `Detalle:\n`;
             payload.propuesta.reservas.forEach(r => {
-                summary += `- ${r.alojamiento} (${r.fechaLlegada} a ${r.fechaSalida}): ${formatCurrency(r.valorFinal)}\n`;
+                const llegada = new Date(r.fechaLlegada + 'T00:00:00Z').toLocaleDateString('es-CL');
+                const salida = new Date(r.fechaSalida + 'T00:00:00Z').toLocaleDateString('es-CL');
+                summary += `- ${r.alojamiento} (${llegada} a ${salida}): ${formatCurrency(r.valorFinal)}\n`;
             });
             summary += `\nPrecio Lista: ${document.getElementById('summary-precio-lista').textContent}`;
             summary += `\nDescuento: ${document.getElementById('summary-descuento').textContent}`;

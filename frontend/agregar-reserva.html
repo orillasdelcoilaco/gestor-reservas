@@ -59,7 +59,10 @@
                     <div id="availability-status" class="text-center text-gray-500 hidden p-4"></div>
 
                     <div id="cabanas-section" class="hidden p-4 border rounded-md bg-gray-50 mb-6">
-                        <h3 class="font-semibold text-gray-800 mb-2">2. Selección de Cabañas</h3>
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="font-semibold text-gray-800">2. Selección de Cabañas</h3>
+                            <button id="refresh-itinerary-btn" class="hidden px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-md hover:bg-blue-200">Actualizar Itinerario y Precios</button>
+                        </div>
                         <div id="suggestion-container" class="space-y-4"></div>
                     </div>
 
@@ -172,6 +175,7 @@
         const summaryModal = document.getElementById('summary-modal');
         const copySummaryBtn = document.getElementById('copy-summary-btn');
         const closeSummaryBtn = document.getElementById('close-summary-btn');
+        const refreshItineraryBtn = document.getElementById('refresh-itinerary-btn');
 
         let allClients = [];
         let selectedClient = null;
@@ -202,6 +206,7 @@
             summaryModal.classList.add('hidden');
             window.location.reload();
         });
+        refreshItineraryBtn.addEventListener('click', handleItineraryChange);
 
 
         function formatCurrency(value) { return `$${(Math.round(value) || 0).toLocaleString('es-CL')}`; }
@@ -245,8 +250,10 @@
 
         function renderCabanasSection(suggestion) {
             suggestionContainer.innerHTML = '';
+            refreshItineraryBtn.classList.toggle('hidden', !suggestion.isSegmented);
+
             if (suggestion.isSegmented) {
-                currentSelection = suggestion.cabanas;
+                currentSelection = suggestion.cabanas.map(seg => ({...seg.cabana, segmento: seg}));
                 
                 const getOptionsForSegment = (segment) => {
                     const segmentStart = new Date(segment.startDate);
@@ -279,7 +286,7 @@
                                     <select data-index="${index}" class="segment-cabana-select w-full p-1 border rounded-md">
                                         ${options.map(opt => `<option value="${opt.id}" ${opt.id === segment.cabana.id ? 'selected' : ''}>${opt.nombre}</option>`).join('')}
                                     </select>
-                                    <span>${new Date(detail.fechaInicio + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})} - ${new Date(detail.fechaTermino + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})}</span>
+                                    <span class="text-center">${new Date(detail.fechaInicio + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})} - ${new Date(detail.fechaTermino + 'T00:00:00Z').toLocaleDateString('es-CL', {timeZone: 'UTC'})}</span>
                                     <span class="text-center">${detail.noches} noche(s)</span>
                                     <input type="number" data-index="${index}" class="segment-price-input w-full p-1 border rounded-md text-right" value="${Math.round(detail.precioTotal)}">
                                 </div>`;
@@ -304,18 +311,19 @@
         }
         
         async function handleItineraryChange() {
+            refreshItineraryBtn.disabled = true;
+            refreshItineraryBtn.textContent = 'Actualizando...';
+
             let tempItinerary = [];
-            document.querySelectorAll('.segment-cabana-select').forEach((select, index) => {
-                const cabanaId = select.value;
-                const originalSegment = availabilityData.suggestion.cabanas[index];
+            availabilityData.suggestion.cabanas.forEach((originalSegment, index) => {
+                const select = document.querySelector(`.segment-cabana-select[data-index="${index}"]`);
                 tempItinerary.push({
-                    cabanaId,
+                    cabanaId: select.value,
                     fechaInicio: originalSegment.startDate.toISOString().split('T')[0],
                     fechaTermino: originalSegment.endDate.toISOString().split('T')[0]
                 });
             });
 
-            // Re-agrupar segmentos si son contiguos y misma cabaña
             let finalItinerary = [];
             if (tempItinerary.length > 0) {
                 let current = {...tempItinerary[0]};
@@ -335,17 +343,21 @@
                     method: 'POST',
                     body: { itinerary: finalItinerary }
                 });
-                // Actualizar datos globales y re-renderizar
+                
                 availabilityData.suggestion.pricing = newPricing;
                 availabilityData.suggestion.cabanas = newPricing.details.map(d => ({
                     cabana: availabilityData.allCabanas.find(c => c.nombre === d.nombre),
                     startDate: new Date(d.fechaInicio + 'T00:00:00Z'),
                     endDate: new Date(d.fechaTermino + 'T00:00:00Z')
                 }));
+                
                 renderCabanasSection(availabilityData.suggestion);
                 updateSummary(newPricing);
             } catch (error) {
                 alert('Error al recalcular el itinerario: ' + error.message);
+            } finally {
+                refreshItineraryBtn.disabled = false;
+                refreshItineraryBtn.textContent = 'Actualizar Itinerario y Precios';
             }
         }
 
@@ -557,8 +569,8 @@
             summary += `Personas: ${payload.propuesta.personas}\n\n`;
             summary += `Detalle:\n`;
             payload.propuesta.reservas.forEach(r => {
-                const llegada = new Date(r.fechaLlegada + 'T00:00:00Z').toLocaleDateString('es-CL');
-                const salida = new Date(r.fechaSalida + 'T00:00:00Z').toLocaleDateString('es-CL');
+                const llegada = new Date(r.fechaLlegada + 'T00:00:00Z').toLocaleDateString('es-CL', { timeZone: 'UTC'});
+                const salida = new Date(r.fechaSalida + 'T00:00:00Z').toLocaleDateString('es-CL', { timeZone: 'UTC'});
                 summary += `- ${r.alojamiento} (${llegada} a ${salida}): ${formatCurrency(r.valorFinal)}\n`;
             });
             summary += `\nPrecio Lista: ${document.getElementById('summary-precio-lista').textContent}`;

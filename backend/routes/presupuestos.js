@@ -20,13 +20,13 @@ module.exports = (db) => {
         }
 
         try {
-            const { availableCabanas, allCabanas, complexDetails, overlappingReservations } = await getAvailabilityData(db, startDate, endDate);
+            const { availableCabanas, allCabanas, allTarifas, complexDetails, overlappingReservations } = await getAvailabilityData(db, startDate, endDate);
             
             let result;
             let isSegmented = false;
 
             if (permitirCambios) {
-                result = findSegmentedCombination(allCabanas, overlappingReservations, parseInt(personas), startDate, endDate);
+                result = findSegmentedCombination(allCabanas, allTarifas, overlappingReservations, parseInt(personas), startDate, endDate);
                 isSegmented = true;
             } else {
                 result = findNormalCombination(availableCabanas, parseInt(personas), sinCamarotes);

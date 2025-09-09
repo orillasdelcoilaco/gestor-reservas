@@ -1,7 +1,6 @@
 const admin = require('firebase-admin');
 
 async function getAvailabilityData(db, startDate, endDate) {
-    // --- INICIO DE LA MODIFICACIÓN ---
     const [cabanasSnapshot, tarifasSnapshot, reservasSnapshot] = await Promise.all([
         db.collection('cabanas').get(),
         db.collection('tarifas').get(),
@@ -11,7 +10,6 @@ async function getAvailabilityData(db, startDate, endDate) {
     const allCabanas = cabanasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const allTarifas = tarifasSnapshot.docs.map(doc => doc.data());
     
-    // 1. Filtrar cabañas que tienen una tarifa válida en el período
     const cabanasConTarifa = allCabanas.filter(cabana => {
         return allTarifas.some(tarifa => {
             const inicioTarifa = tarifa.fechaInicio.toDate();
@@ -20,7 +18,6 @@ async function getAvailabilityData(db, startDate, endDate) {
         });
     });
 
-    // 2. Encontrar las reservas que se superponen en el período
     const overlappingReservations = [];
     reservasSnapshot.forEach(doc => {
         const reserva = doc.data();
@@ -29,15 +26,13 @@ async function getAvailabilityData(db, startDate, endDate) {
         }
     });
     
-    // 3. Determinar las cabañas disponibles (que tienen tarifa y no están ocupadas)
     const occupiedCabanaNames = new Set(overlappingReservations.map(reserva => reserva.alojamiento));
     const availableCabanas = cabanasConTarifa.filter(cabana => !occupiedCabanaNames.has(cabana.nombre));
     
     const complexDoc = await db.collection('config').doc('complejo').get();
     const complexDetails = complexDoc.exists ? complexDoc.data() : {};
 
-    return { availableCabanas, allCabanas, complexDetails, overlappingReservations };
-    // --- FIN DE LA MODIFICACIÓN ---
+    return { availableCabanas, allCabanas, allTarifas, complexDetails, overlappingReservations };
 }
 
 function findNormalCombination(availableCabanas, requiredCapacity, sinCamarotes = false) {
@@ -70,66 +65,77 @@ function findNormalCombination(availableCabanas, requiredCapacity, sinCamarotes 
     return { combination, capacity: currentCapacity };
 }
 
-function findSegmentedCombination(allCabanas, overlappingReservations, requiredCapacity, startDate, endDate) {
+function findSegmentedCombination(allCabanas, allTarifas, overlappingReservations, requiredCapacity, startDate, endDate) {
     const availabilityMap = new Map();
-    for (const cabana of allCabanas) {
-        availabilityMap.set(cabana.nombre, []);
-    }
-
-    for (const reserva of overlappingReservations) {
+    allCabanas.forEach(cabana => availabilityMap.set(cabana.nombre, []));
+    overlappingReservations.forEach(reserva => {
         if (availabilityMap.has(reserva.alojamiento)) {
             availabilityMap.get(reserva.alojamiento).push({
                 start: reserva.fechaLlegada.toDate(),
                 end: reserva.fechaSalida.toDate()
             });
         }
-    }
+    });
 
-    let currentItinerary = [];
-    let lastCabana = null;
-    let segmentStart = new Date(startDate);
+    const allDailyOptions = [];
+    let isPossible = true;
 
     for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
         const currentDate = new Date(d);
-        let foundCabanaForDay = false;
+        const dailyAvailableCabanas = allCabanas.filter(cabana => {
+            const hasTarifa = allTarifas.some(t => 
+                t.nombreCabaña === cabana.nombre &&
+                t.fechaInicio.toDate() <= currentDate &&
+                t.fechaTermino.toDate() >= currentDate
+            );
+            if (!hasTarifa) return false;
 
-        const sortedCabanas = allCabanas.sort((a, b) => a.capacidad - b.capacidad);
+            const isOccupied = (availabilityMap.get(cabana.nombre) || []).some(res =>
+                currentDate >= res.start && currentDate < res.end
+            );
+            return !isOccupied && cabana.capacidad >= requiredCapacity;
+        });
 
-        for (const cabana of sortedCabanas) {
-            if (cabana.capacidad >= requiredCapacity) {
-                const reservationsForCabana = availabilityMap.get(cabana.nombre) || [];
-                const isOccupied = reservationsForCabana.some(res => currentDate >= res.start && currentDate < res.end);
-                
-                if (!isOccupied) {
-                    if (lastCabana && cabana.nombre !== lastCabana) {
-                        currentItinerary.push({
-                            cabana: allCabanas.find(c => c.nombre === lastCabana),
-                            startDate: new Date(segmentStart),
-                            endDate: new Date(currentDate)
-                        });
-                        segmentStart = new Date(currentDate);
-                    }
-                    lastCabana = cabana.nombre;
-                    foundCabanaForDay = true;
-                    break;
-                }
+        if (dailyAvailableCabanas.length === 0) {
+            isPossible = false;
+            break;
+        }
+        allDailyOptions.push({ date: new Date(currentDate), options: dailyAvailableCabanas });
+    }
+
+    if (!isPossible) return { combination: [], capacity: 0, dailyOptions: [] };
+
+    let itinerary = [];
+    if (allDailyOptions.length > 0) {
+        let currentSegment = {
+            cabana: allDailyOptions[0].options[0],
+            startDate: allDailyOptions[0].date,
+            endDate: new Date(allDailyOptions[0].date).setDate(allDailyOptions[0].date.getDate() + 1)
+        };
+
+        for (let i = 1; i < allDailyOptions.length; i++) {
+            const day = allDailyOptions[i];
+            if (day.options.some(opt => opt.id === currentSegment.cabana.id)) {
+                currentSegment.endDate = new Date(day.date).setDate(day.date.getDate() + 1);
+            } else {
+                itinerary.push(currentSegment);
+                currentSegment = {
+                    cabana: day.options[0],
+                    startDate: day.date,
+                    endDate: new Date(day.date).setDate(day.date.getDate() + 1)
+                };
             }
         }
-
-        if (!foundCabanaForDay) {
-            return { combination: [], capacity: 0 }; // No se pudo cubrir toda la estadía
-        }
-    }
-
-    if (lastCabana) {
-        currentItinerary.push({
-            cabana: allCabanas.find(c => c.nombre === lastCabana),
-            startDate: new Date(segmentStart),
-            endDate: new Date(endDate)
-        });
+        itinerary.push(currentSegment);
     }
     
-    return { combination: currentItinerary, capacity: requiredCapacity };
+    const finalCombination = itinerary.map(seg => ({
+        ...seg,
+        startDate: new Date(seg.startDate),
+        endDate: new Date(seg.endDate)
+    }));
+
+    return { combination: finalCombination, capacity: requiredCapacity, dailyOptions: allDailyOptions };
 }
 
 
@@ -139,19 +145,23 @@ async function calculatePrice(db, items, startDate, endDate, isSegmented = false
     
     if (isSegmented) {
         for (const segment of items) {
-            const segmentNights = Math.max(1, Math.round((segment.endDate - segment.startDate) / (1000 * 60 * 60 * 24)));
-            const pricing = await calculatePrice(db, [segment.cabana], segment.startDate, segment.endDate);
+            const segmentStartDate = segment.startDate instanceof Date ? segment.startDate : new Date(segment.startDate);
+            const segmentEndDate = segment.endDate instanceof Date ? segment.endDate : new Date(segment.endDate);
+
+            const segmentNights = Math.max(1, Math.round((segmentEndDate - segmentStartDate) / (1000 * 60 * 60 * 24)));
+            const pricing = await calculatePrice(db, [segment.cabana], segmentStartDate, segmentEndDate);
             totalPrice += pricing.totalPrice;
             priceDetails.push({
                 nombre: segment.cabana.nombre,
                 precioTotal: pricing.totalPrice,
                 precioPorNoche: pricing.totalPrice > 0 ? pricing.totalPrice / segmentNights : 0,
                 noches: segmentNights,
-                fechaInicio: segment.startDate.toISOString().split('T')[0],
-                fechaTermino: segment.endDate.toISOString().split('T')[0]
+                fechaInicio: segmentStartDate.toISOString().split('T')[0],
+                fechaTermino: segmentEndDate.toISOString().split('T')[0]
             });
         }
-        return { totalPrice, nights: Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)), details: priceDetails };
+        const totalNights = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+        return { totalPrice, nights: totalNights, details: priceDetails };
     } else {
         const nights = Math.max(1, Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)));
         for (const cabana of items) {

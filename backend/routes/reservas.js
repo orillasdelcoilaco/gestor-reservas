@@ -79,7 +79,8 @@ module.exports = (db) => {
                 valorTotalCLP: 0,
                 valorPotencialTotalCLP: 0,
                 documentos: {},
-                transacciones: []
+                transacciones: [],
+                notas: []
             };
 
             for (const doc of snapshot.docs) {
@@ -87,12 +88,10 @@ module.exports = (db) => {
                 grupo.valorTotalCLP += data.valorCLP || 0;
                 grupo.valorPotencialTotalCLP += data.valorPotencialCLP || 0;
 
-                // Unificar documentos, dando prioridad a los que existan
                 if (data.documentos) {
                     grupo.documentos = { ...grupo.documentos, ...data.documentos };
                 }
 
-                // Recopilar todas las transacciones de todas las subcolecciones
                 const transaccionesSnapshot = await doc.ref.collection('transacciones').get();
                 transaccionesSnapshot.forEach(transDoc => {
                     const transData = transDoc.data();
@@ -101,6 +100,21 @@ module.exports = (db) => {
                         ...transData,
                         fecha: transData.fecha ? transData.fecha.toDate().toLocaleString('es-CL') : 'N/A'
                     });
+                });
+            }
+            
+            const notasSnapshot = await db.collection('gestion_notas')
+                .where('reservaIdOriginal', '==', reservaIdOriginal)
+                .orderBy('fecha', 'desc')
+                .get();
+
+            if (!notasSnapshot.empty) {
+                grupo.notas = notasSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        ...data,
+                        fecha: data.fecha ? data.fecha.toDate().toLocaleString('es-CL', { timeZone: 'UTC' }) : 'N/A'
+                    };
                 });
             }
             

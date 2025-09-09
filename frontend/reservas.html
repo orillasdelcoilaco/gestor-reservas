@@ -287,8 +287,8 @@
              return 0;
         }
 
-        const llegada = new Date(llegadaStr.replace(/(\d{2})\-(\d{2})\-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
-        const salida = new Date(salidaStr.replace(/(\d{2})\-(\d{2})\-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
+        const llegada = new Date(llegadaStr.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
+        const salida = new Date(salidaStr.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
         const inicio = new Date(inicioFiltro + 'T00:00:00Z');
         const fin = new Date(finFiltro + 'T00:00:00Z');
         
@@ -312,8 +312,8 @@
         const pageSize = parseInt(document.getElementById('page-size-select').value);
 
         const filteredReservas = allReservas.filter(r => {
-            const llegadaDate = new Date(r.llegada.replace(/(\d{2})\-(\d{2})\-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
-            const salidaDate = new Date(r.salida.replace(/(\d{2})\-(\d{2})\-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
+            const llegadaDate = new Date(r.llegada.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
+            const salidaDate = new Date(r.salida.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
 
             const matchFechas = (!fechaInicio || !fechaFin) || (llegadaDate < new Date(fechaFin + 'T00:00:00Z') && salidaDate > new Date(fechaInicio + 'T00:00:00Z'));
             const matchCanal = selectedCanales.length === 0 || selectedCanales.includes(r.canal);
@@ -384,6 +384,16 @@
                 `).join('');
             }
 
+            let notasHtml = '<p class="text-sm text-center text-gray-500">No hay notas registradas.</p>';
+            if (data.notas && data.notas.length > 0) {
+                notasHtml = `<div class="space-y-2 max-h-48 overflow-y-auto pr-2">${data.notas.map(nota => `
+                    <div class="bg-gray-50 p-3 rounded-md border text-sm">
+                        <p class="text-gray-800">${nota.texto}</p>
+                        <p class="text-xs text-gray-500 mt-1">Por: ${nota.autor} - ${nota.fecha}</p>
+                    </div>
+                `).join('')}</div>`;
+            }
+
             content.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -408,6 +418,10 @@
                             <tbody>${transaccionesHtml}</tbody>
                         </table>
                     </div>
+                </div>
+                <div class="border-t mt-6 pt-4">
+                     <h4 class="font-semibold text-gray-800 mb-2">Bitácora de Notas</h4>
+                     ${notasHtml}
                 </div>`;
         } catch (error) {
             content.innerHTML = `<p class="text-red-500">Error al cargar los detalles: ${error.message}</p>`;

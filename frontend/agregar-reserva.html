@@ -233,6 +233,14 @@
                 const result = await fetchAPI('/api/presupuestos/generar', { method: 'POST', body: payload });
                 availabilityData = result;
                 if (result.suggestion) {
+                    // --- INICIO DE LA CORRECCIÓN ---
+                    if (result.suggestion.isSegmented) {
+                        result.suggestion.cabanas.forEach(seg => {
+                            seg.startDate = new Date(seg.startDate);
+                            seg.endDate = new Date(seg.endDate);
+                        });
+                    }
+                    // --- FIN DE LA CORRECCIÓN ---
                     availabilityStatus.classList.add('hidden');
                     renderCabanasSection(result.suggestion);
                     updateSummary(result.suggestion.pricing);

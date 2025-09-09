@@ -28,8 +28,8 @@ module.exports = (db) => {
                     clienteId: data.clienteId,
                     nombre: data.clienteNombre || 'Sin Nombre',
                     telefono: cliente.phone || 'Sin Teléfono',
-                    llegada: data.fechaLlegada ? data.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A',
-                    salida: data.fechaSalida ? data.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A',
+                    llegada: data.fechaLlegada && typeof data.fechaLlegada.toDate === 'function' ? data.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'Fecha Inválida',
+                    salida: data.fechaSalida && typeof data.fechaSalida.toDate === 'function' ? data.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'Fecha Inválida',
                     estado: data.estado || 'N/A',
                     alojamiento: data.alojamiento || 'N/A',
                     canal: data.canal || 'N/A',
@@ -464,6 +464,14 @@ module.exports = (db) => {
                 }
 
                 // --- FASE DE ESCRITURA ---
+                // Corregir formato de fechas antes de escribir
+                if (datosMezclados.fechaLlegada && typeof datosMezclados.fechaLlegada === 'string') {
+                    datosMezclados.fechaLlegada = admin.firestore.Timestamp.fromDate(new Date(datosMezclados.fechaLlegada + 'T00:00:00Z'));
+                }
+                if (datosMezclados.fechaSalida && typeof datosMezclados.fechaSalida === 'string') {
+                    datosMezclados.fechaSalida = admin.firestore.Timestamp.fromDate(new Date(datosMezclados.fechaSalida + 'T00:00:00Z'));
+                }
+
                 let transaccionesMovidas = 0;
                 if (!transaccionesSnapshot.empty) {
                     const nuevaTransaccionesRef = nuevoReservaRef.collection('transacciones');

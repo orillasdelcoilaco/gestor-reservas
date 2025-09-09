@@ -61,7 +61,7 @@
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div class="lg:col-span-1">
                             <h3 class="text-lg font-semibold text-gray-800 mb-2">Distribución por Canal</h3>
-                            <canvas id="canal-chart"></canvas>
+                            <div id="canal-details-table" class="overflow-x-auto"></div>
                         </div>
                         <div class="lg:col-span-2">
                              <h3 class="text-lg font-semibold text-gray-800 mb-2">Ranking de Ocupación por Cabaña</h3>
@@ -140,7 +140,6 @@
     <script type="module">
       import { checkSession, logout, fetchAPI } from './api.js';
 
-      let canalChartInstance = null;
       let fullKpiResults = null;
       let ingresoPotencialBase = 0;
 
@@ -189,40 +188,31 @@
             <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuento Real</div><div class="text-2xl font-bold text-red-900">${formatCurrency(kpisGenerales.descuentosTotalesReales)}</div></div>
           `;
           
-          const chartCanvas = document.getElementById('canal-chart').getContext('2d');
+          // --- INICIO DE LA MODIFICACIÓN ---
+          const canalDetailsTable = document.getElementById('canal-details-table');
           const canalData = kpisGenerales.reservasPorCanal;
-          if (canalChartInstance) {
-              canalChartInstance.destroy();
-          }
-          
-          Chart.register(ChartDataLabels);
-          canalChartInstance = new Chart(chartCanvas, {
-              type: 'doughnut',
-              data: {
-                  labels: Object.keys(canalData),
-                  datasets: [{
-                      data: Object.values(canalData),
-                      backgroundColor: ['#4F46E5', '#10B981', '#F59E0B', '#6366F1', '#3B82F6'],
-                      borderWidth: 1
-                  }]
-              },
-              options: { 
-                responsive: true, 
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { position: 'top' },
-                    datalabels: {
-                        formatter: (value, ctx) => {
-                            const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-                            if (sum === 0) return '0%';
-                            const percentage = (value * 100 / sum).toFixed(1) + '%';
-                            return percentage;
-                        },
-                        color: '#fff',
-                    }
-                }
-              }
-          });
+          let canalTableHtml = `
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"># Reservas</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ingreso Real</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${Object.entries(canalData).map(([canal, data]) => `
+                        <tr>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${canal}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${data.count}</td>
+                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(data.ingreso)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+          `;
+          canalDetailsTable.innerHTML = canalTableHtml;
+          // --- FIN DE LA MODIFICACIÓN ---
           
           const rankingTableBody = document.getElementById('ranking-table-body');
           rankingTableBody.innerHTML = '';

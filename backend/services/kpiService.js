@@ -25,13 +25,10 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     const todasLasCabañas = cabanasSnapshot.docs.map(doc => doc.data().nombre);
     const allTarifas = tarifasSnapshot.docs.map(doc => doc.data());
 
-    // --- LÓGICA MEJORADA: Determinar cabañas activas en el período ---
     const cabañasActivasEnPeriodo = todasLasCabañas.filter(nombreCabaña => {
         return allTarifas.some(tarifa => {
             const inicioTarifa = getUTCDate(tarifa.fechaInicio.toDate());
             const finTarifa = getUTCDate(tarifa.fechaTermino.toDate());
-            // Hay traslape si la tarifa no termina antes de que empiece el período,
-            // y no empieza después de que termine el período.
             return tarifa.nombreCabaña === nombreCabaña &&
                    inicioTarifa <= endDate &&
                    finTarifa >= startDate;
@@ -44,7 +41,6 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         warningMessage = `Advertencia: Las siguientes cabañas no se consideraron en el cálculo por no tener tarifas definidas en el período seleccionado: ${cabañasExcluidas.join(', ')}.`;
         console.log(`[KPI Service] ${warningMessage}`);
     }
-    // --- FIN DE LA LÓGICA MEJORADA ---
 
     const allReservas = [];
     reservasSnapshot.forEach(doc => {
@@ -74,9 +70,10 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
             canales: {}
         };
     });
+    // --- INICIO DE LA MODIFICACIÓN ---
     const reservasPorCanalGeneral = {};
-    const reservasUnicasContadas = new Set();
-
+    // --- FIN DE LA MODIFICACIÓN ---
+    
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const currentDate = getUTCDate(d);
         for (const cabañaNombre of cabañasActivasEnPeriodo) {
@@ -99,12 +96,6 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
 
             if (reservaDelDia) {
                 analisisPorCabaña[cabañaNombre].nochesOcupadas++;
-                const reservaCanalKey = `${reservaDelDia.reservaIdOriginal}|${cabañaNombre}`;
-                if (!reservasUnicasContadas.has(reservaCanalKey)) {
-                    reservasUnicasContadas.add(reservaCanalKey);
-                    const canal = reservaDelDia.canal;
-                    reservasPorCanalGeneral[canal] = (reservasPorCanalGeneral[canal] || 0) + 1;
-                }
             }
         }
     }
@@ -119,6 +110,15 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         const ingresoRealReserva = valorNocheReal * nochesEnRango;
         ingresoTotalReal += ingresoRealReserva;
         analisisPorCabaña[reserva.alojamiento].ingresoRealTotal += ingresoRealReserva;
+        
+        // --- INICIO DE LA MODIFICACIÓN ---
+        const canal = reserva.canal;
+        if (!reservasPorCanalGeneral[canal]) {
+            reservasPorCanalGeneral[canal] = { count: 0, ingreso: 0 };
+        }
+        reservasPorCanalGeneral[canal].count++;
+        reservasPorCanalGeneral[canal].ingreso += ingresoRealReserva;
+        // --- FIN DE LA MODIFICACIÓN ---
 
         if (reserva.valorPotencialCLP && reserva.valorPotencialCLP > 0) {
            const valorNochePotencial = reserva.valorPotencialCLP / reserva.totalNoches;
@@ -127,7 +127,6 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
            totalDescuentosReales += descuentoReserva;
            analisisPorCabaña[reserva.alojamiento].descuentoTotal += descuentoReserva;
            
-           const canal = reserva.canal;
            if(!analisisPorCabaña[reserva.alojamiento].canales[canal]){
                analisisPorCabaña[reserva.alojamiento].canales[canal] = { noches: 0, descuento: 0 };
            }

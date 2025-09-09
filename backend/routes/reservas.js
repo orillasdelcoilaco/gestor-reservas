@@ -3,9 +3,12 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const jsonParser = express.json();
 const { updateClientMaster } = require('../services/clienteService');
-const { createManualReservation } = require('../services/reservaService'); // Importar el nuevo servicio
+const { createManualReservation } = require('../services/reservaService');
+const { getAvailabilityData } = require('../services/presupuestoService');
 
 module.exports = (db) => {
+    // ... (código de los endpoints GET, PUT, DELETE existentes) ...
+    
     // --- OBTENER TODAS LAS RESERVAS (GET) ---
     router.get('/reservas', async (req, res) => {
         try {
@@ -331,7 +334,7 @@ module.exports = (db) => {
         }
     });
 
-    // --- NUEVO ENDPOINT PARA CREAR RESERVA MANUAL ---
+    // --- ENDPOINT PARA CREAR RESERVA MANUAL ---
     router.post('/reservas/crear-manual', jsonParser, async (req, res) => {
         try {
             const reservaData = req.body;
@@ -342,6 +345,85 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor al crear la reserva.' });
         }
     });
+
+    // --- NUEVO: OBTENER PROPUESTAS PENDIENTES ---
+    router.get('/reservas/propuestas', async (req, res) => {
+        try {
+            const snapshot = await db.collection('reservas')
+                .where('estado', '==', 'Pendiente Aprobación')
+                .orderBy('fechaReserva', 'desc')
+                .get();
+
+            if (snapshot.empty) {
+                return res.status(200).json([]);
+            }
+
+            const propuestasAgrupadas = {};
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                if (!propuestasAgrupadas[data.reservaIdOriginal]) {
+                    propuestasAgrupadas[data.reservaIdOriginal] = {
+                        ...data,
+                        id: data.reservaIdOriginal,
+                        fechaReserva: data.fechaReserva.toDate().toLocaleDateString('es-CL'),
+                        fechaLlegada: data.fechaLlegada.toDate().toLocaleDateString('es-CL'),
+                        valorTotal: 0,
+                        cabañas: []
+                    };
+                }
+                propuestasAgrupadas[data.reservaIdOriginal].valorTotal += data.valorCLP;
+                propuestasAgrupadas[data.reservaIdOriginal].cabañas.push(data.alojamiento);
+            });
+
+            res.status(200).json(Object.values(propuestasAgrupadas));
+        } catch (error) {
+            console.error("Error al obtener propuestas pendientes:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+    
+    // --- NUEVO: ACTUALIZAR ESTADO DE PROPUESTA (CONFIRMAR/CANCELAR) ---
+    router.post('/reservas/propuestas/:reservaIdOriginal/estado', jsonParser, async (req, res) => {
+        const { reservaIdOriginal } = req.params;
+        const { nuevoEstado } = req.body;
+
+        if (!nuevoEstado || !['Confirmada', 'Cancelada'].includes(nuevoEstado)) {
+            return res.status(400).json({ error: 'Estado no válido.' });
+        }
+
+        try {
+            const q = db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal);
+            const snapshot = await q.get();
+
+            if (snapshot.empty) {
+                return res.status(404).json({ error: 'Propuesta no encontrada.' });
+            }
+
+            // Si se va a confirmar, verificar disponibilidad
+            if (nuevoEstado === 'Confirmada') {
+                for (const doc of snapshot.docs) {
+                    const propuesta = doc.data();
+                    const { availableCabanas } = await getAvailabilityData(db, propuesta.fechaLlegada.toDate(), propuesta.fechaSalida.toDate());
+                    const cabanaSigueDisponible = availableCabanas.some(c => c.nombre === propuesta.alojamiento);
+                    if (!cabanaSigueDisponible) {
+                        return res.status(409).json({ error: `La cabaña ${propuesta.alojamiento} ya no está disponible para las fechas solicitadas.` });
+                    }
+                }
+            }
+
+            const batch = db.batch();
+            snapshot.docs.forEach(doc => {
+                batch.update(doc.ref, { estado: nuevoEstado });
+            });
+            await batch.commit();
+
+            res.status(200).json({ message: `La propuesta ${reservaIdOriginal} ha sido actualizada a: ${nuevoEstado}` });
+        } catch (error) {
+            console.error("Error al actualizar estado de la propuesta:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
 
     return router;
 };

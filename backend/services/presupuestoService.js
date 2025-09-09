@@ -12,7 +12,8 @@ async function getAvailabilityData(db, startDate, endDate) {
     const overlappingReservations = [];
     snapshot1.forEach(doc => {
         const reserva = doc.data();
-        if (reserva.fechaSalida.toDate() > startDate && reserva.estado !== 'Cancelada') {
+        // --- MODIFICACIÓN CLAVE: Ignorar reservas pendientes y canceladas ---
+        if (reserva.fechaSalida.toDate() > startDate && reserva.estado === 'Confirmada') {
             overlappingReservations.push(reserva);
         }
     });

@@ -38,7 +38,7 @@ async function createManualReservation(db, data) {
             clienteId,
             clienteNombre: cliente.nombre,
             canal: canal,
-            estado: 'Confirmada',
+            estado: 'Pendiente Aprobación', // Estado inicial para propuestas
             fechaReserva: admin.firestore.FieldValue.serverTimestamp(),
             fechaLlegada: admin.firestore.Timestamp.fromDate(fechaLlegada),
             fechaSalida: admin.firestore.Timestamp.fromDate(fechaSalida),
@@ -52,7 +52,6 @@ async function createManualReservation(db, data) {
             correo: cliente.email,
             valorManual: true, // Indica que el precio fue fijado manualmente o con descuento
             estadoGestion: 'Pendiente Bienvenida',
-            // Otros campos con valores por defecto
             abono: 0,
             pagado: false,
             boleta: false,

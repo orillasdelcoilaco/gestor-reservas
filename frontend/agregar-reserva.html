@@ -261,8 +261,9 @@
                     let commonOptions = null;
 
                     for (let d = new Date(segmentStart); d < segmentEnd; d.setDate(d.getDate() + 1)) {
-                        const dayStr = d.toISOString().split('T')[0];
-                        const dayOptions = availabilityData.suggestion.dailyOptions.find(opt => opt.date.startsWith(dayStr));
+                        const dayISO = d.toISOString();
+                        const dayOptions = availabilityData.suggestion.dailyOptions.find(opt => new Date(opt.date).toISOString() === dayISO);
+                        
                         if (!dayOptions) return [];
                         
                         const optionIds = new Set(dayOptions.options.map(opt => opt.id));
@@ -272,7 +273,7 @@
                             commonOptions = new Set([...commonOptions].filter(id => optionIds.has(id)));
                         }
                     }
-                    return availabilityData.allCabanas.filter(c => commonOptions.has(c.id));
+                    return availabilityData.allCabanas.filter(c => commonOptions && commonOptions.has(c.id));
                 };
 
                 suggestionContainer.innerHTML = `

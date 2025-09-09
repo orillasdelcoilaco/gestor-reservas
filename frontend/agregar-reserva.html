@@ -137,7 +137,280 @@
 
 <script type="module">
     import { checkSession, logout, fetchAPI } from './api.js';
-    // Lógica principal de la página de agregar reserva
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const session = checkSession();
+        if (!session) return;
+
+        // --- REFERENCIAS AL DOM ---
+        const loader = document.getElementById('loader');
+        const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
+        const buscarBtn = document.getElementById('buscar-btn');
+        const availabilityStatus = document.getElementById('availability-status');
+        const sections = {
+            cabanas: document.getElementById('cabanas-section'),
+            cliente: document.getElementById('cliente-section'),
+            pricing: document.getElementById('pricing-section'),
+            action: document.getElementById('action-section')
+        };
+        const suggestionContainer = document.getElementById('suggestion-container');
+        const clientSearchInput = document.getElementById('client-search');
+        const clientResultsList = document.getElementById('client-results-list');
+        const guardarReservaBtn = document.getElementById('guardar-reserva-btn');
+
+        // --- ESTADO DE LA PÁGINA ---
+        let allClients = [];
+        let selectedClient = null;
+        let availabilityData = {};
+        let currentPricing = {};
+        let currentSelection = [];
+
+        // --- INICIALIZACIÓN ---
+        loader.style.display = 'none';
+        appContent.classList.remove('hidden');
+        authInfo.innerHTML = `
+            <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+            <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+        `;
+        document.getElementById('logout-btn').addEventListener('click', logout);
+        loadClients();
+
+        // --- LÓGICA DE EVENTOS ---
+        buscarBtn.addEventListener('click', handleBuscarDisponibilidad);
+        clientSearchInput.addEventListener('input', filterClients);
+        document.querySelectorAll('.discount-input').forEach(input => input.addEventListener('input', handleDiscountChange));
+        guardarReservaBtn.addEventListener('click', handleGuardarReserva);
+
+        // --- FUNCIONES ---
+        function formatCurrency(value) { return `$${(Math.round(value) || 0).toLocaleString('es-CL')}`; }
+
+        async function handleBuscarDisponibilidad() {
+            const payload = {
+                fechaLlegada: document.getElementById('fecha-llegada').value,
+                fechaSalida: document.getElementById('fecha-salida').value,
+                personas: document.getElementById('personas').value,
+                permitirCambios: document.getElementById('permitir-cambios').checked
+            };
+
+            if (!payload.fechaLlegada || !payload.fechaSalida || !payload.personas) {
+                alert('Por favor, completa las fechas y la cantidad de personas.'); return;
+            }
+
+            buscarBtn.disabled = true;
+            buscarBtn.textContent = 'Buscando...';
+            availabilityStatus.textContent = 'Buscando disponibilidad y sugerencias...';
+            availabilityStatus.classList.remove('hidden');
+            Object.values(sections).forEach(s => s.classList.add('hidden'));
+
+            try {
+                const result = await fetchAPI('/api/presupuestos/generar', { method: 'POST', body: payload });
+                availabilityData = result;
+                if (result.suggestion) {
+                    availabilityStatus.classList.add('hidden');
+                    renderCabanasSection(result.suggestion);
+                    updateSummary(result.suggestion.pricing);
+                    Object.values(sections).forEach(s => s.classList.remove('hidden'));
+                } else {
+                    availabilityStatus.textContent = result.message || 'No se encontró disponibilidad.';
+                }
+            } catch (error) {
+                availabilityStatus.textContent = `Error: ${error.message}`;
+            } finally {
+                buscarBtn.disabled = false;
+                buscarBtn.textContent = 'Buscar Disponibilidad';
+            }
+        }
+
+        function renderCabanasSection(suggestion) {
+            suggestionContainer.innerHTML = '';
+            if (suggestion.isSegmented) {
+                // Renderizar itinerario para reserva segmentada
+                currentSelection = suggestion.cabanas.map(seg => ({...seg.cabana, segmento: seg}));
+                suggestionContainer.innerHTML = `
+                    <h4 class="font-medium text-gray-700">Propuesta de Itinerario</h4>
+                    <div class="space-y-2 p-3 bg-white rounded-md border">${
+                        suggestion.cabanas.map(segmento => `
+                            <div class="flex justify-between items-center text-sm">
+                                <span><strong>${segmento.cabana.nombre}</strong></span>
+                                <span>${new Date(segmento.startDate).toLocaleDateString()} - ${new Date(segmento.endDate).toLocaleDateString()}</span>
+                                <span>(${segmento.noches} noches)</span>
+                            </div>
+                        `).join('')
+                    }</div>`;
+            } else {
+                // Renderizar checkboxes para reserva normal
+                currentSelection = [...suggestion.cabanas];
+                const suggestedIds = new Set(suggestion.cabanas.map(c => c.id));
+                suggestionContainer.innerHTML = `
+                    <div>
+                        <h4 class="font-medium text-gray-700">Cabañas Sugeridas</h4>
+                        <div id="suggested-list" class="mt-2 space-y-2">${suggestion.cabanas.map(c => createCabanaCheckbox(c, true)).join('')}</div>
+                    </div>
+                    <div>
+                        <h4 class="font-medium text-gray-700 mt-4">Otras Cabañas Disponibles</h4>
+                        <div id="available-list" class="mt-2 space-y-2">${availabilityData.availableCabanas.filter(c => !suggestedIds.has(c.id)).map(c => createCabanaCheckbox(c, false)).join('')}</div>
+                    </div>`;
+                document.querySelectorAll('.cabana-checkbox').forEach(cb => cb.addEventListener('change', handleSelectionChange));
+            }
+        }
+        
+        function createCabanaCheckbox(cabana, isSuggested) {
+            return `
+            <div class="p-2 border rounded-md flex items-center justify-between bg-white">
+                <div>
+                    <input type="checkbox" id="cb-${cabana.id}" data-id="${cabana.id}" class="cabana-checkbox h-4 w-4 text-indigo-600 border-gray-300 rounded" ${isSuggested ? 'checked' : ''}>
+                    <label for="cb-${cabana.id}" class="ml-2 font-medium">${cabana.nombre}</label>
+                    <span class="ml-2 text-sm text-gray-500">(Cap: ${cabana.capacidad})</span>
+                </div>
+            </div>`;
+        }
+        
+        async function handleSelectionChange() {
+            const selectedIds = new Set(Array.from(document.querySelectorAll('.cabana-checkbox:checked')).map(cb => cb.dataset.id));
+            currentSelection = availabilityData.allCabanas.filter(c => selectedIds.has(c.id));
+
+            if (currentSelection.length === 0) {
+                updateSummary({ totalPrice: 0, nights: currentPricing.nights, details: [] });
+                return;
+            }
+            try {
+                const payload = {
+                    fechaLlegada: document.getElementById('fecha-llegada').value,
+                    fechaSalida: document.getElementById('fecha-salida').value,
+                    cabanas: currentSelection
+                };
+                const newPricing = await fetchAPI('/api/presupuestos/recalcular', { method: 'POST', body: payload });
+                updateSummary(newPricing);
+            } catch (error) {
+                alert(`Error al recalcular: ${error.message}`);
+            }
+        }
+        
+        function handleDiscountChange(e) {
+            document.querySelectorAll('.discount-input').forEach(input => {
+                if (input.id !== e.target.id) input.value = '';
+            });
+            updateSummary(currentPricing);
+        }
+
+        function updateSummary(pricing) {
+            currentPricing = pricing;
+            const precioLista = pricing.totalPrice;
+            const noches = pricing.nights;
+            
+            let descuentoTotal = 0;
+            const pct = parseFloat(document.getElementById('descuento-pct').value) || 0;
+            const fijoTotal = parseFloat(document.getElementById('descuento-fijo-total').value) || 0;
+            const fijoNoche = parseFloat(document.getElementById('descuento-fijo-noche').value) || 0;
+
+            if (pct > 0) descuentoTotal = precioLista * (pct / 100);
+            else if (fijoTotal > 0) descuentoTotal = fijoTotal;
+            else if (fijoNoche > 0) descuentoTotal = fijoNoche * noches;
+            
+            const precioFinal = precioLista - descuentoTotal;
+
+            document.getElementById('summary-noches').textContent = noches;
+            document.getElementById('summary-precio-lista').textContent = formatCurrency(precioLista);
+            document.getElementById('summary-descuento').textContent = `-${formatCurrency(descuentoTotal)}`;
+            document.getElementById('summary-precio-final').textContent = formatCurrency(precioFinal);
+        }
+
+        async function loadClients() {
+            try {
+                allClients = await fetchAPI('/api/clientes/simplificado');
+            } catch (error) { console.error("No se pudieron cargar los clientes:", error); }
+        }
+
+        function filterClients() {
+            const searchTerm = clientSearchInput.value.toLowerCase();
+            clientResultsList.innerHTML = '';
+            if (!searchTerm) {
+                selectedClient = null;
+                return;
+            };
+            const filtered = allClients.filter(c => c.nombre.toLowerCase().includes(searchTerm) || c.telefono.includes(searchTerm));
+            filtered.slice(0, 5).forEach(client => {
+                const div = document.createElement('div');
+                div.className = 'p-2 cursor-pointer';
+                div.textContent = `${client.nombre} (${client.telefono})`;
+                div.onclick = () => selectClient(client);
+                clientResultsList.appendChild(div);
+            });
+        }
+        
+        function selectClient(client) {
+            selectedClient = client;
+            clientSearchInput.value = client.nombre;
+            clientResultsList.innerHTML = '';
+            document.getElementById('new-client-name').value = client.nombre || '';
+            document.getElementById('new-client-phone').value = client.telefono || '';
+            document.getElementById('new-client-email').value = client.email || '';
+        }
+
+        async function handleGuardarReserva() {
+            // Recopilar todos los datos
+            const clienteData = {
+                nombre: document.getElementById('new-client-name').value.trim(),
+                telefono: document.getElementById('new-client-phone').value.trim(),
+                email: document.getElementById('new-client-email').value.trim()
+            };
+            if(selectedClient && !clienteData.nombre) clienteData.nombre = selectedClient.nombre;
+            
+            if (!clienteData.nombre || !clienteData.telefono) {
+                alert('El nombre y teléfono del cliente son obligatorios.'); return;
+            }
+
+            const descuentoPct = parseFloat(document.getElementById('descuento-pct').value) || 0;
+            const descuentoFijoTotal = parseFloat(document.getElementById('descuento-fijo-total').value) || 0;
+            const descuentoFijoNoche = parseFloat(document.getElementById('descuento-fijo-noche').value) || 0;
+            let descuentoInfo = null;
+            if(descuentoPct > 0) descuentoInfo = { tipo: 'porcentaje', valor: descuentoPct };
+            else if(descuentoFijoTotal > 0) descuentoInfo = { tipo: 'fijo_total', valor: descuentoFijoTotal };
+            else if(descuentoFijoNoche > 0) descuentoInfo = { tipo: 'fijo_noche', valor: descuentoFijoNoche };
+
+            const reservasParaGuardar = availabilityData.suggestion.isSegmented 
+                ? currentSelection.map(sel => ({
+                    alojamiento: sel.nombre,
+                    fechaLlegada: sel.segmento.startDate.toISOString().split('T')[0],
+                    fechaSalida: sel.segmento.endDate.toISOString().split('T')[0],
+                    valorPotencial: currentPricing.details.find(d => d.nombre === sel.nombre).precioTotal,
+                    valorFinal: currentPricing.details.find(d => d.nombre === sel.nombre).precioTotal // El descuento se aplica al total, no por segmento aquí
+                }))
+                : currentSelection.map(sel => ({
+                    alojamiento: sel.nombre,
+                    fechaLlegada: document.getElementById('fecha-llegada').value,
+                    fechaSalida: document.getElementById('fecha-salida').value,
+                    valorPotencial: currentPricing.details.find(d => d.nombre === sel.nombre).precioTotal,
+                    valorFinal: (currentPricing.details.find(d => d.nombre === sel.nombre).precioTotal / currentPricing.totalPrice) * parseFloat(document.getElementById('summary-precio-final').textContent.replace(/\$|\./g, ''))
+                }));
+
+
+            const payload = {
+                cliente: clienteData,
+                canal: document.getElementById('canal-select').value,
+                propuesta: {
+                    personas: parseInt(document.getElementById('personas').value),
+                    descuento: descuentoInfo,
+                    reservas: reservasParaGuardar
+                }
+            };
+            
+            guardarReservaBtn.disabled = true;
+            guardarReservaBtn.textContent = 'Guardando...';
+
+            try {
+                const result = await fetchAPI('/api/reservas/crear-manual', { method: 'POST', body: payload });
+                alert(`¡Reserva creada con éxito! ID del grupo: ${result.reservaIdOriginal}`);
+                window.location.href = 'gestion.html';
+            } catch (error) {
+                alert(`Error al guardar la reserva: ${error.message}`);
+            } finally {
+                guardarReservaBtn.disabled = false;
+                guardarReservaBtn.textContent = 'Guardar Reserva';
+            }
+        }
+    });
 </script>
 </body>
 </html>

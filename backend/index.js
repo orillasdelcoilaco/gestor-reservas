@@ -19,7 +19,8 @@ const gestionRoutes = require('./routes/gestion');
 const cabanasRoutes = require('./routes/cabanas');
 const presupuestosRoutes = require('./routes/presupuestos');
 const icalRoutes = require('./routes/ical');
-const calendarioRoutes = require('./routes/calendario'); // <-- INICIO DE LA MODIFICACIÓN
+const calendarioRoutes = require('./routes/calendario');
+const reportesRoutes = require('./routes/reportes'); // <-- INICIO DE LA MODIFICACIÓN
 
 //--- INICIO DE LA CORRECCIÓN ---
 // Lista de dominios permitidos
@@ -86,7 +87,8 @@ privateRouter.use(analisisRoutes(db));
 privateRouter.use(gestionRoutes(db)); 
 privateRouter.use(cabanasRoutes(db));
 privateRouter.use(presupuestosRoutes(db));
-privateRouter.use(calendarioRoutes(db)); // <-- INICIO DE LA MODIFICACIÓN
+privateRouter.use(calendarioRoutes(db));
+privateRouter.use(reportesRoutes(db)); // <-- INICIO DE LA MODIFICACIÓN
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 

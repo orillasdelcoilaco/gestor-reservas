@@ -238,7 +238,7 @@ module.exports = (db) => {
         }
     });
     
-    // --- ENDPOINT PARA EL CALENDARIO ---
+    // --- ENDPOINT PARA EL CALENDARIO (OPTIMIZADO) ---
     router.get('/reservas/calendario', async (req, res) => {
         const { anio, mes } = req.query;
         if (!anio || !mes) {
@@ -256,13 +256,14 @@ module.exports = (db) => {
             const endTimestamp = admin.firestore.Timestamp.fromDate(ultimoDia);
             
             const querySnapshot = await db.collection('reservas')
+                .where('fechaSalida', '>=', startTimestamp)
                 .where('fechaLlegada', '<=', endTimestamp)
                 .get();
 
             const reservasDelMes = [];
             querySnapshot.forEach(doc => {
                 const data = doc.data();
-                if (data.fechaSalida >= startTimestamp && data.estado === 'Confirmada') {
+                if (data.estado === 'Confirmada') {
                     const fechaSalidaDate = data.fechaSalida.toDate();
                     fechaSalidaDate.setUTCHours(12, 0, 0, 0);
 

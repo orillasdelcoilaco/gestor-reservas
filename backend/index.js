@@ -18,7 +18,8 @@ const analisisRoutes = require('./routes/analisis');
 const gestionRoutes = require('./routes/gestion');
 const cabanasRoutes = require('./routes/cabanas');
 const presupuestosRoutes = require('./routes/presupuestos');
-const icalRoutes = require('./routes/ical'); // <-- INICIO DE LA MODIFICACIÓN
+const icalRoutes = require('./routes/ical');
+const calendarioRoutes = require('./routes/calendario'); // <-- INICIO DE LA MODIFICACIÓN
 
 //--- INICIO DE LA CORRECCIÓN ---
 // Lista de dominios permitidos
@@ -66,7 +67,7 @@ const privateRouter = express.Router();
 
 //--- Configuración de Rutas Públicas ---
 publicRouter.use('/auth', authRoutes(db)); 
-publicRouter.use(icalRoutes(db)); // <-- INICIO DE LA MODIFICACIÓN
+publicRouter.use(icalRoutes(db));
 publicRouter.get('/', (req, res) => {
   res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
 });
@@ -85,6 +86,7 @@ privateRouter.use(analisisRoutes(db));
 privateRouter.use(gestionRoutes(db)); 
 privateRouter.use(cabanasRoutes(db));
 privateRouter.use(presupuestosRoutes(db));
+privateRouter.use(calendarioRoutes(db)); // <-- INICIO DE LA MODIFICACIÓN
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 

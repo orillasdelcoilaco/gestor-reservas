@@ -92,7 +92,6 @@
 
             async function initializeCalendar() {
                 try {
-                    // Carga inicial de recursos y eventos del mes actual en una sola llamada
                     const initialData = await fetchAPI('/api/calendario/datos-iniciales');
                     
                     calendarInstance = new FullCalendar.Calendar(calendarEl, {
@@ -103,14 +102,13 @@
                         editable: false,
                         timeZone: 'UTC',
                         resources: initialData.recursos,
-                        initialEvents: initialData.eventos, // Carga los eventos iniciales
+                        initialEvents: initialData.eventos,
                         resourceAreaHeaderContent: 'Cabañas',
                         dayHeaderContent: function(arg) {
                            const dayOfWeek = arg.date.toLocaleDateString('es-ES', { weekday: 'short', timeZone: 'UTC' });
                            const dayOfMonth = arg.date.getUTCDate();
                            return { html: `<span style="font-size: 0.8em;">${dayOfWeek}</span><br><b>${dayOfMonth}</b>` };
                         },
-                        // Ahora events solo se usa para cargar meses futuros/pasados
                         events: function(fetchInfo, successCallback, failureCallback) {
                             const anio = fetchInfo.start.getUTCFullYear();
                             const mes = fetchInfo.start.getUTCMonth() + 1;
@@ -122,7 +120,10 @@
                             const currentDate = calendarInstance.getDate();
                             currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
                         },
-                        eventContent: arg => ({ html: `<b>${arg.event.title}</b>` }),
+                        eventContent: arg => {
+                            const uniqueTitle = [...new Set((arg.event.title || '').split('\n'))].join(' ').trim();
+                            return { html: `<b>${uniqueTitle}</b>` };
+                        },
                         eventDidMount: info => {
                             const { canal, reservaIdOriginal } = info.event.extendedProps;
                             info.el.classList.add(getCanalClassName(canal));
@@ -131,7 +132,6 @@
                     });
 
                     calendarInstance.render();
-                    // Actualizar el título del mes al inicio
                     const currentDate = calendarInstance.getDate();
                     currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 

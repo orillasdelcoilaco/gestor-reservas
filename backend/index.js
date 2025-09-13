@@ -20,16 +20,19 @@ const cabanasRoutes = require('./routes/cabanas');
 const presupuestosRoutes = require('./routes/presupuestos');
 const icalRoutes = require('./routes/ical');
 const calendarioRoutes = require('./routes/calendario');
-const reportesRoutes = require('./routes/reportes'); // <-- INICIO DE LA MODIFICACIÓN
+const reportesRoutes = require('./routes/reportes');
 
-//--- INICIO DE LA CORRECCIÓN ---
-// Lista de dominios permitidos
-const allowedOrigins = ['https://www.orillasdelcoilaco.cl', 'https://orillasdelcoilaco.cl'];
+// --- INICIO DE LA MODIFICACIÓN ---
+// Lista de dominios permitidos más explícita
+const allowedOrigins = [
+    'https://orillasdelcoilaco.cl',
+    'https://www.orillasdelcoilaco.cl'
+];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permite solicitudes sin origen (como las de Postman o apps móviles) y las de la lista
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    // Permitir solicitudes sin origen (como Postman o apps móviles) y las de la lista
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       callback(new Error('No permitido por CORS'));
@@ -37,7 +40,7 @@ const corsOptions = {
   },
   optionsSuccessStatus: 200
 };
-//--- FIN DE LA CORRECCIÓN ---
+// --- FIN DE LA MODIFICACIÓN ---
 
 
 //--- Inicialización de Firebase Admin SDK ---
@@ -88,7 +91,7 @@ privateRouter.use(gestionRoutes(db));
 privateRouter.use(cabanasRoutes(db));
 privateRouter.use(presupuestosRoutes(db));
 privateRouter.use(calendarioRoutes(db));
-privateRouter.use(reportesRoutes(db)); // <-- INICIO DE LA MODIFICACIÓN
+privateRouter.use(reportesRoutes(db));
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 

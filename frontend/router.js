@@ -64,28 +64,24 @@ const menuConfig = [
     }
 ];
 
-// --- INICIO DE LA MODIFICACIÓN ---
-const BASE_PATH = '/gestor-reservas'; 
+const resolveRoute = () => {
+    const path = location.hash.slice(1).toLowerCase() || '/';
+    return path;
+};
 
-const loadView = async (path) => {
+const loadView = async () => {
+    const path = resolveRoute();
     const viewContainer = document.getElementById('view-content');
     viewContainer.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
     
-    // Limpiar el path para que coincida con nuestras rutas definidas
-    let cleanPath = path.startsWith(BASE_PATH) ? path.substring(BASE_PATH.length) : path;
-    if (cleanPath === '' || cleanPath.startsWith('/app.html')) {
-        cleanPath = '/';
-    }
-
-    const viewFile = routes[cleanPath] || 'views/404.html';
+    const viewFile = routes[path] || 'views/404.html';
     
     try {
         const response = await fetch(viewFile);
         if (!response.ok) throw new Error('Página no encontrada');
         const html = await response.text();
-        viewContainer.innerHTML = ''; // Limpiar antes de añadir el nuevo contenido
+        viewContainer.innerHTML = ''; 
 
-        // Crear un div temporal para parsear el HTML y separar el script
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = html;
         
@@ -96,30 +92,21 @@ const loadView = async (path) => {
             scriptElement.remove();
         }
 
-        // Añadir el HTML sin el script
         while(tempDiv.firstChild) {
             viewContainer.appendChild(tempDiv.firstChild);
         }
 
-        // Ejecutar el script
         if (scriptContent) {
             const scriptModule = document.createElement('script');
             scriptModule.type = 'module';
             scriptModule.textContent = scriptContent;
-            document.body.appendChild(scriptModule).remove(); // Añadir y remover para ejecutar
+            document.body.appendChild(scriptModule).remove();
         }
 
     } catch (error) {
         viewContainer.innerHTML = `<p class="text-center text-red-500">Error al cargar la página: ${error.message}</p>`;
     }
 };
-
-const navigateTo = (path) => {
-    const fullPath = `${BASE_PATH}${path}`;
-    history.pushState(null, null, fullPath);
-    loadView(fullPath);
-};
-// --- FIN DE LA MODIFICACIÓN ---
 
 const buildMenu = () => {
     const nav = document.getElementById('main-nav');
@@ -131,28 +118,24 @@ const buildMenu = () => {
                             <span class="category-title">${item.name}</span>
                             <ul>`;
             item.children.forEach(child => {
-                menuHtml += `<li><a href="${child.path}" class="nav-link">${child.name}</a></li>`;
+                menuHtml += `<li><a href="#${child.path}" class="nav-link">${child.name}</a></li>`;
             });
             menuHtml += `</ul></div>`;
         } else {
-            menuHtml += `<ul><li><a href="${item.path}" class="nav-link single-link">${item.name}</a></li></ul>`;
+            menuHtml += `<ul><li><a href="#${item.path}" class="nav-link single-link">${item.name}</a></li></ul>`;
         }
     });
-
     nav.innerHTML = menuHtml;
 };
 
 export const initRouter = () => {
     buildMenu();
     
-    window.addEventListener('popstate', () => loadView(location.pathname));
-
-    document.body.addEventListener('click', e => {
-        if (e.target.matches('.nav-link')) {
-            e.preventDefault();
-            navigateTo(e.target.getAttribute('href'));
-        }
-    });
-
-    loadView(location.pathname);
+    window.addEventListener('hashchange', loadView);
+    
+    if (!location.hash) {
+        location.hash = '#/';
+    }
+    
+    loadView();
 };

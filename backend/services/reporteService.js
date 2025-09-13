@@ -82,7 +82,7 @@ async function getDisponibilidadPeriodo(db, fechaInicioStr, fechaFinStr) {
         const tarifa = tarifasSnapshot.docs
             .map(doc => doc.data())
             .filter(t => t.nombreCabaña === cabana.nombre)
-            .sort((a, b) => b.fechaInicio.toDate() - a.fechaInicio())[0];
+            .sort((a, b) => b.fechaInicio.toDate() - a.fechaInicio.toDate())[0];
 
         // Filtrar y ordenar las reservas para esta cabaña
         const reservasDeCabana = reservasSnapshot.docs

@@ -108,13 +108,15 @@ async function getDisponibilidadPeriodo(db, fechaInicioStr, fechaFinStr) {
     const cabanas = cabanasSnapshot.docs.map(doc => doc.data());
 
     const reporte = cabanas.map(cabana => {
-        // Obtener la tarifa más relevante para la cabaña
         const tarifa = tarifasSnapshot.docs
             .map(doc => doc.data())
             .filter(t => t.nombreCabaña === cabana.nombre)
             .sort((a, b) => b.fechaInicio.toDate() - a.fechaInicio.toDate())[0];
 
-        // Filtrar y ordenar las reservas para esta cabaña
+        if (!tarifa) {
+            return null;
+        }
+
         const reservasDeCabana = reservasSnapshot.docs
             .map(doc => doc.data())
             .filter(r => r.alojamiento === cabana.nombre && r.fechaLlegada.toDate() < fechaFin)
@@ -145,7 +147,7 @@ async function getDisponibilidadPeriodo(db, fechaInicioStr, fechaFinStr) {
                 fin: p.fin ? p.fin.toISOString().split('T')[0] : null
             }))
         };
-    });
+    }).filter(Boolean); // <-- Se añade .filter(Boolean) para eliminar los nulos.
 
     return reporte;
 }

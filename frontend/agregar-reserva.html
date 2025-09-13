@@ -588,7 +588,7 @@
             }
             
             const precioFinal = parseFloat(document.getElementById('summary-precio-final').textContent.replace(/\$|\.|\,/g, ''));
-            const precioLista = parseFloat(document.getElementById('summary-precio-lista').textContent.replace(/\$|\.|\,/g, ''));
+            const precioLista = currentPricing.totalPrice;
             const abono = Math.round(precioFinal * 0.10);
             const descuento = precioLista - precioFinal;
 
@@ -601,12 +601,30 @@
                 }
             });
 
-            let resumenValores = `Valor noche: ${formatCurrency(currentPricing.details.reduce((sum, d) => sum + d.precioPorNoche, 0))}\nTotal noches: ${formatCurrency(precioLista)}\n`;
+            let resumenValores = '---------------------------------------------------\n';
+            resumenValores += 'Cabaña'.padEnd(12) + '| V. Noche'.padEnd(11) + '| Noches'.padEnd(8) + '| Total\n';
+            resumenValores += '---------------------------------------------------\n';
+
+            currentPricing.details.forEach(detail => {
+                const cabanaName = detail.nombre.padEnd(12);
+                const valorNoche = formatCurrency(detail.precioPorNoche).padEnd(10);
+                const noches = currentPricing.nights.toString().padEnd(7);
+                const totalCabana = formatCurrency(detail.precioTotal);
+                resumenValores += `${cabanaName}| ${valorNoche}| ${noches}| ${totalCabana}\n`;
+            });
+            resumenValores += '---------------------------------------------------\n';
+            
+            const totalListaLabel = ''.padEnd(32);
+            resumenValores += `${totalListaLabel}Subtotal: ${formatCurrency(precioLista)}\n`;
+
             if (descuento > 0) {
-                const pct = ((descuento / precioLista) * 100).toFixed(0);
-                resumenValores += `Desc. (${pct}%): ${formatCurrency(descuento)}\n`;
+                const pct = precioLista > 0 ? ((descuento / precioLista) * 100).toFixed(0) : 0;
+                const descLabel = `Desc. (${pct}%)`.padEnd(12);
+                resumenValores += `${totalListaLabel}${descLabel}: -${formatCurrency(descuento)}\n`;
             }
-            resumenValores += `Total a pagar: ${formatCurrency(precioFinal)} (IVA incluido)`;
+
+            const totalFinalLabel = ''.padEnd(25);
+            resumenValores += `${totalFinalLabel}TOTAL A PAGAR: ${formatCurrency(precioFinal)} (IVA incluido)`;
 
             const summary = `📌 Propuesta de Reserva #${reservaId}
 Fecha de emisión: ${hoy.toLocaleDateString('es-CL')}

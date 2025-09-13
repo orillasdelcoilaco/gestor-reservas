@@ -92,7 +92,8 @@
 
             async function initializeCalendar() {
                 try {
-                    const initialData = await fetchAPI('/api/calendario/datos-iniciales');
+                    const cabanas = await fetchAPI('/api/cabanas');
+                    const resources = cabanas.map(c => ({ id: c.nombre, title: c.nombre }));
                     
                     calendarInstance = new FullCalendar.Calendar(calendarEl, {
                         schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
@@ -101,8 +102,7 @@
                         headerToolbar: false,
                         editable: false,
                         timeZone: 'UTC',
-                        resources: initialData.recursos,
-                        initialEvents: initialData.eventos,
+                        resources: resources,
                         resourceAreaHeaderContent: 'Cabañas',
                         dayHeaderContent: function(arg) {
                            const dayOfWeek = arg.date.toLocaleDateString('es-ES', { weekday: 'short', timeZone: 'UTC' });
@@ -133,8 +133,6 @@
                     });
 
                     calendarInstance.render();
-                    const currentDate = calendarInstance.getDate();
-                    currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
 
                 } catch (error) {
                     calendarEl.innerHTML = `<p class="text-red-500 font-semibold text-center p-8">Error al inicializar el calendario: ${error.message}</p>`;

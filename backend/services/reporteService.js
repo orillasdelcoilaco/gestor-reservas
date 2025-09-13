@@ -12,48 +12,78 @@ async function getActividadDiaria(db, fechaStr) {
 
     const [cabanasSnapshot, reservasSnapshot] = await Promise.all([
         db.collection('cabanas').orderBy('nombre', 'asc').get(),
-        db.collection('reservas')
-            .where('fechaLlegada', '<=', fechaTimestamp)
-            .where('estado', '==', 'Confirmada')
-            .get()
+        db.collection('reservas').where('estado', '==', 'Confirmada').get()
     ]);
 
     const cabanas = cabanasSnapshot.docs.map(doc => doc.data());
-    const reservasActivas = new Map();
+    const reporte = [];
 
-    reservasSnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.fechaSalida.toDate() > fecha) {
-            reservasActivas.set(data.alojamiento, data);
+    for (const cabana of cabanas) {
+        const llegadaHoy = reservasSnapshot.docs
+            .map(d => d.data())
+            .find(r => r.alojamiento === cabana.nombre && r.fechaLlegada.toDate().getTime() === fecha.getTime());
+        
+        const salidaHoy = reservasSnapshot.docs
+            .map(d => d.data())
+            .find(r => r.alojamiento === cabana.nombre && r.fechaSalida.toDate().getTime() === fecha.getTime());
+
+        const enEstadia = reservasSnapshot.docs
+            .map(d => d.data())
+            .find(r => r.alojamiento === cabana.nombre && r.fechaLlegada.toDate() < fecha && r.fechaSalida.toDate() > fecha);
+
+        const cabanaInfo = { cabana: cabana.nombre };
+
+        if (salidaHoy) {
+            cabanaInfo.salida = {
+                cliente: salidaHoy.clienteNombre,
+                reservaId: salidaHoy.reservaIdOriginal,
+                fechas: `${salidaHoy.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' })} al ${salidaHoy.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' })}`
+            };
         }
-    });
 
-    const reporte = cabanas.map(cabana => {
-        const reserva = reservasActivas.get(cabana.nombre);
-        if (reserva) {
-            const llegada = reserva.fechaLlegada.toDate();
-            const esLlegadaHoy = llegada.getUTCFullYear() === fecha.getUTCFullYear() &&
-                                llegada.getUTCMonth() === fecha.getUTCMonth() &&
-                                llegada.getUTCDate() === fecha.getUTCDate();
+        if (llegadaHoy) {
+            cabanaInfo.llegada = {
+                cliente: llegadaHoy.clienteNombre,
+                reservaId: llegadaHoy.reservaIdOriginal,
+                fechas: `${llegadaHoy.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' })} al ${llegadaHoy.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' })}`,
+                canal: llegadaHoy.canal
+            };
+        } else if (enEstadia) {
+            cabanaInfo.estadia = {
+                cliente: enEstadia.clienteNombre,
+                reservaId: enEstadia.reservaIdOriginal,
+                fechas: `${enEstadia.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' })} al ${enEstadia.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' })}`
+            };
+        }
+
+        if (!llegadaHoy && !salidaHoy && !enEstadia) {
+            const proximaReservaSnapshot = await db.collection('reservas')
+                .where('alojamiento', '==', cabana.nombre)
+                .where('estado', '==', 'Confirmada')
+                .where('fechaLlegada', '>=', fechaTimestamp)
+                .orderBy('fechaLlegada', 'asc')
+                .limit(1)
+                .get();
             
-            return {
-                cabana: cabana.nombre,
-                estado: esLlegadaHoy ? 'Llega hoy' : 'En estadía',
-                cliente: reserva.clienteNombre,
-                reservaId: reserva.reservaIdOriginal,
-                fechas: `${llegada.toLocaleDateString('es-CL', { timeZone: 'UTC' })} al ${reserva.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' })}`,
-                canal: reserva.canal
-            };
-        } else {
-            return {
-                cabana: cabana.nombre,
-                estado: 'Sin reserva hoy'
-            };
+            if (!proximaReservaSnapshot.empty) {
+                const proxima = proximaReservaSnapshot.docs[0].data();
+                const diasFaltantes = Math.ceil((proxima.fechaLlegada.toDate() - fecha) / (1000 * 60 * 60 * 24));
+                cabanaInfo.proxima = {
+                    fecha: proxima.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }),
+                    diasFaltantes: diasFaltantes,
+                    cliente: proxima.clienteNombre
+                };
+            } else {
+                cabanaInfo.estado = 'Libre sin próximas reservas';
+            }
         }
-    });
+        
+        reporte.push(cabanaInfo);
+    }
 
     return reporte;
 }
+
 
 /**
  * Obtiene un resumen de disponibilidad para un período de fechas.

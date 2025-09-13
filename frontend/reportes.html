@@ -98,13 +98,19 @@
                 let reporteTexto = `🟢 Reservas activas hoy (${formatDate(fecha)})\n\n`;
                 data.forEach(item => {
                     reporteTexto += `🏡 Cabaña ${item.cabana}\n`;
-                    if (item.estado === 'Llega hoy') {
-                        reporteTexto += `🧑‍🤝‍🧑 Llega hoy:\n${item.cliente}\nReserva: ${item.reservaId}\nFechas: ${item.fechas.replace(/\//g, '-')}\nCanal: ${item.canal}\n\n`;
-                    } else if (item.estado === 'En estadía') {
-                        reporteTexto += `💤 En estadía:\n${item.cliente}\nReserva: ${item.reservaId}\n\n`;
-                    } else {
-                        reporteTexto += `❌ sin reserva hoy\n\n`;
+                    if (item.salida) {
+                        reporteTexto += `👋 Se retira hoy: ${item.salida.cliente}\nFechas: ${item.salida.fechas.replace(/\//g, '-')}\nReserva: ${item.salida.reservaId}\n`;
                     }
+                    if (item.llegada) {
+                         reporteTexto += `🧑‍🤝‍🧑 Llega hoy: ${item.llegada.cliente}\nFechas: ${item.llegada.fechas.replace(/\//g, '-')}\nReserva: ${item.llegada.reservaId}\nCanal: ${item.llegada.canal}\n`;
+                    } else if (item.estadia) {
+                        reporteTexto += `💤 En estadía: ${item.estadia.cliente}\nReserva: ${item.estadia.reservaId}\nFechas: ${item.estadia.fechas.replace(/\//g, '-')}\n`;
+                    } else if (item.proxima) {
+                         reporteTexto += `🔜 Próxima reserva: ${formatDate(item.proxima.fecha)}\n(Faltan ${item.proxima.diasFaltantes} días)\nLlega: ${item.proxima.cliente}\n`;
+                    } else if (!item.salida) {
+                        reporteTexto += `❌ Sin reserva hoy\n`;
+                    }
+                    reporteTexto += `\n`;
                 });
                 boxDiario.textContent = reporteTexto;
             } catch (error) {
@@ -138,10 +144,11 @@
                         reporteTexto += `🏡 Cabaña ${item.cabana}:\n${item.link}\nValor: $${item.valor.toLocaleString('es-CL')}\nCapacidad: ${item.capacidad} personas\n`;
                         item.periodos.forEach(p => {
                             if (p.fin) {
-                                // Restar un día a la fecha de fin para que sea inclusiva
                                 const finDate = new Date(p.fin + 'T00:00:00Z');
                                 finDate.setUTCDate(finDate.getUTCDate() - 1);
-                                reporteTexto += `👍 Del ${formatDate(p.inicio)} al ${formatDate(finDate.toISOString().split('T')[0])}\n`;
+                                if(p.inicio <= finDate.toISOString().split('T')[0]) {
+                                   reporteTexto += `👍 Del ${formatDate(p.inicio)} al ${formatDate(finDate.toISOString().split('T')[0])}\n`;
+                                }
                             } else {
                                 reporteTexto += `👍 Del ${formatDate(p.inicio)} en adelante\n`;
                             }

@@ -345,7 +345,7 @@ module.exports = (db) => {
         }
     });
 
-    // --- NUEVO: OBTENER PROPUESTAS PENDIENTES ---
+    // --- OBTENER PROPUESTAS PENDIENTES ---
     router.get('/reservas/propuestas', async (req, res) => {
         try {
             const snapshot = await db.collection('reservas')
@@ -381,7 +381,7 @@ module.exports = (db) => {
         }
     });
     
-    // --- NUEVO: ACTUALIZAR ESTADO DE PROPUESTA (CONFIRMAR/CANCELAR) ---
+    // --- ACTUALIZAR ESTADO DE PROPUESTA (CONFIRMAR/CANCELAR) ---
     router.post('/reservas/propuestas/:reservaIdOriginal/estado', jsonParser, async (req, res) => {
         const { reservaIdOriginal } = req.params;
         const { nuevoEstado } = req.body;
@@ -398,7 +398,6 @@ module.exports = (db) => {
                 return res.status(404).json({ error: 'Propuesta no encontrada.' });
             }
 
-            // Si se va a confirmar, verificar disponibilidad
             if (nuevoEstado === 'Confirmada') {
                 for (const doc of snapshot.docs) {
                     const propuesta = doc.data();
@@ -423,6 +422,46 @@ module.exports = (db) => {
         }
     });
 
+    // --- INICIO DE LA MODIFICACIÓN: RECHAZAR PROPUESTA CON MOTIVO ---
+    router.post('/reservas/propuestas/:reservaIdOriginal/rechazar', jsonParser, async (req, res) => {
+        const { reservaIdOriginal } = req.params;
+        const { motivo, nota } = req.body;
+
+        if (!motivo) {
+            return res.status(400).json({ error: 'Se requiere un motivo para rechazar la propuesta.' });
+        }
+
+        try {
+            const q = db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal);
+            const snapshot = await q.get();
+
+            if (snapshot.empty) {
+                return res.status(404).json({ error: 'Propuesta no encontrada.' });
+            }
+
+            const batch = db.batch();
+            const rechazoInfo = {
+                motivo: motivo,
+                nota: nota || '',
+                fecha: admin.firestore.FieldValue.serverTimestamp()
+            };
+
+            snapshot.docs.forEach(doc => {
+                batch.update(doc.ref, { 
+                    estado: 'Rechazada',
+                    rechazoInfo: rechazoInfo
+                });
+            });
+            await batch.commit();
+
+            res.status(200).json({ message: `La propuesta ${reservaIdOriginal} ha sido marcada como Rechazada.` });
+        } catch (error) {
+            console.error("Error al rechazar la propuesta:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+    // --- FIN DE LA MODIFICACIÓN ---
+
     // --- CORREGIDO: CORREGIR IDENTIDAD DE RESERVA (MOVER DATOS) ---
     router.post('/reservas/corregir-identidad', jsonParser, async (req, res) => {
         const { viejoIdCompleto, nuevosDatos } = req.body;
@@ -435,7 +474,6 @@ module.exports = (db) => {
 
         try {
             const resultado = await db.runTransaction(async (transaction) => {
-                // --- FASE DE LECTURA ---
                 const viejoDoc = await transaction.get(viejoReservaRef);
                 if (!viejoDoc.exists) {
                     throw new Error('La reserva original no existe.');
@@ -464,8 +502,6 @@ module.exports = (db) => {
                     notasSnapshot = await transaction.get(notasQuery);
                 }
 
-                // --- FASE DE ESCRITURA ---
-                // Corregir formato de fechas antes de escribir
                 if (datosMezclados.fechaLlegada && typeof datosMezclados.fechaLlegada === 'string') {
                     datosMezclados.fechaLlegada = admin.firestore.Timestamp.fromDate(new Date(datosMezclados.fechaLlegada + 'T00:00:00Z'));
                 }

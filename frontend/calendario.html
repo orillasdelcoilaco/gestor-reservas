@@ -120,9 +120,11 @@
                             const currentDate = calendarInstance.getDate();
                             currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
                         },
-                        eventContent: arg => {
+                        eventContent: (arg) => {
                             const uniqueTitle = [...new Set((arg.event.title || '').split('\n'))].join(' ').trim();
-                            return { html: `<b>${uniqueTitle}</b>` };
+                            const b = document.createElement('b');
+                            b.textContent = uniqueTitle;
+                            return { domNodes: [b] };
                         },
                         eventDidMount: info => {
                             const { canal, reservaIdOriginal } = info.event.extendedProps;

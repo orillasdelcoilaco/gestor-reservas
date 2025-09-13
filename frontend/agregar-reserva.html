@@ -601,9 +601,10 @@
                 }
             });
 
-            let resumenValores = `Precio lista: ${formatCurrency(precioLista)}\n`;
+            let resumenValores = `Valor noche: ${formatCurrency(currentPricing.details.reduce((sum, d) => sum + d.precioPorNoche, 0))}\nTotal noches: ${formatCurrency(precioLista)}\n`;
             if (descuento > 0) {
-                resumenValores += `Descuento: ${formatCurrency(descuento)}\n`;
+                const pct = ((descuento / precioLista) * 100).toFixed(0);
+                resumenValores += `Desc. (${pct}%): ${formatCurrency(descuento)}\n`;
             }
             resumenValores += `Total a pagar: ${formatCurrency(precioFinal)} (IVA incluido)`;
 

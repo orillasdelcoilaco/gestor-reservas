@@ -176,6 +176,8 @@
         const copySummaryBtn = document.getElementById('copy-summary-btn');
         const closeSummaryBtn = document.getElementById('close-summary-btn');
         const refreshItineraryBtn = document.getElementById('refresh-itinerary-btn');
+        const fechaLlegadaInput = document.getElementById('fecha-llegada');
+        const fechaSalidaInput = document.getElementById('fecha-salida');
 
         let allClients = [];
         let selectedClient = null;
@@ -233,14 +235,12 @@
                 const result = await fetchAPI('/api/presupuestos/generar', { method: 'POST', body: payload });
                 availabilityData = result;
                 if (result.suggestion) {
-                    // --- INICIO DE LA CORRECCIÓN ---
                     if (result.suggestion.isSegmented) {
                         result.suggestion.cabanas.forEach(seg => {
                             seg.startDate = new Date(seg.startDate);
                             seg.endDate = new Date(seg.endDate);
                         });
                     }
-                    // --- FIN DE LA CORRECCIÓN ---
                     availabilityStatus.classList.add('hidden');
                     renderCabanasSection(result.suggestion);
                     updateSummary(result.suggestion.pricing);
@@ -571,20 +571,70 @@
         }
         
         function showSummaryModal(payload, reservaId) {
-            let summary = `Propuesta de Reserva #${reservaId}\n`;
-            summary += `Cliente: ${payload.cliente.nombre}\n\n`;
-            summary += `Fechas: ${document.getElementById('fecha-llegada').value} al ${document.getElementById('fecha-salida').value}\n`;
-            summary += `Noches: ${currentPricing.nights}\n`;
-            summary += `Personas: ${payload.propuesta.personas}\n\n`;
-            summary += `Detalle:\n`;
-            payload.propuesta.reservas.forEach(r => {
-                const llegada = new Date(r.fechaLlegada + 'T00:00:00Z').toLocaleDateString('es-CL', { timeZone: 'UTC'});
-                const salida = new Date(r.fechaSalida + 'T00:00:00Z').toLocaleDateString('es-CL', { timeZone: 'UTC'});
-                summary += `- ${r.alojamiento} (${llegada} a ${salida}): ${formatCurrency(r.valorFinal)}\n`;
+            const hoy = new Date();
+            const vencimiento = new Date(hoy);
+            vencimiento.setDate(hoy.getDate() + 1);
+
+            const llegada = new Date(fechaLlegadaInput.value + 'T00:00:00Z');
+            const salida = new Date(fechaSalidaInput.value + 'T00:00:00Z');
+
+            const formatFullDate = (date) => new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
+            
+            let fechasEstadiaStr;
+            if (llegada.getUTCMonth() === salida.getUTCMonth()) {
+                fechasEstadiaStr = `${llegada.getUTCDate()} al ${formatFullDate(salida)}`;
+            } else {
+                fechasEstadiaStr = `${formatFullDate(llegada)} al ${formatFullDate(salida)}`;
+            }
+            
+            const precioFinal = parseFloat(document.getElementById('summary-precio-final').textContent.replace(/\$|\.|\,/g, ''));
+            const precioLista = parseFloat(document.getElementById('summary-precio-lista').textContent.replace(/\$|\.|\,/g, ''));
+            const abono = Math.round(precioFinal * 0.10);
+            const descuento = precioLista - precioFinal;
+
+            let detalleAlojamiento = '';
+            payload.propuesta.reservas.forEach(reserva => {
+                const cabanaInfo = availabilityData.allCabanas.find(c => c.nombre === reserva.alojamiento);
+                if (cabanaInfo) {
+                    detalleAlojamiento += `${cabanaInfo.nombre}: ${cabanaInfo.descripcion}\n`;
+                    if(cabanaInfo.linkFotos) detalleAlojamiento += `📸 Fotos y más información: ${cabanaInfo.linkFotos}\n\n`;
+                }
             });
-            summary += `\nPrecio Lista: ${document.getElementById('summary-precio-lista').textContent}`;
-            summary += `\nDescuento: ${document.getElementById('summary-descuento').textContent}`;
-            summary += `\nTOTAL A PAGAR: ${document.getElementById('summary-precio-final').textContent}`;
+
+            let resumenValores = `Precio lista: ${formatCurrency(precioLista)}\n`;
+            if (descuento > 0) {
+                resumenValores += `Descuento: ${formatCurrency(descuento)}\n`;
+            }
+            resumenValores += `Total a pagar: ${formatCurrency(precioFinal)} (IVA incluido)`;
+
+            const summary = `📌 Propuesta de Reserva #${reservaId}
+Fecha de emisión: ${hoy.toLocaleDateString('es-CL')}
+Cliente: ${payload.cliente.nombre}
+Estadía:
+
+Fechas: ${fechasEstadiaStr}
+Noches: ${currentPricing.nights}
+Personas: ${payload.propuesta.personas}
+
+Detalle del alojamiento:
+${detalleAlojamiento}
+Resumen de valores:
+${resumenValores}
+
+⚠️ Condiciones de la propuesta:
+Esta propuesta tiene una vigencia de 24 horas a contar de su emisión (vence el ${vencimiento.toLocaleDateString('es-CL')} a las 23:59 hrs).
+Para mantener la reserva activa, debe realizarse un abono del 10% (${formatCurrency(abono)}) dentro del plazo indicado.
+Si no se realiza el abono en el tiempo establecido, la propuesta quedará automáticamente anulada.
+
+✅ Confirmación de la reserva:
+Para validar el abono, solicitamos enviar el comprobante de transferencia al WhatsApp: +56 9 7518 0855.
+
+La reserva quedará confirmada una vez recibido el comprobante.
+
+Atentamente,
+Pablo Meza
++56 9 7518 0855
+www.orillasdelcoilaco.cl`;
             
             document.getElementById('summary-text').value = summary;
             summaryModal.classList.remove('hidden');

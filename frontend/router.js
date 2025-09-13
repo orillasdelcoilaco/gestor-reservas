@@ -133,9 +133,14 @@ export const initRouter = () => {
     
     window.addEventListener('hashchange', loadView);
     
+    // --- INICIO DE LA MODIFICACIÓN ---
+    // Si al cargar no hay un hash, lo establecemos a la ruta raíz.
+    // Esto disparará el evento 'hashchange' que a su vez llamará a loadView().
     if (!location.hash) {
         location.hash = '#/';
+    } else {
+        // Si ya hay un hash (ej. el usuario refrescó la página), cargamos esa vista directamente.
+        loadView();
     }
-    
-    loadView();
+    // --- FIN DE LA MODIFICACIÓN ---
 };

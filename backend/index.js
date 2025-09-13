@@ -1,3 +1,4 @@
+// backend/index.js
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
@@ -25,12 +26,17 @@ const reportesRoutes = require('./routes/reportes');
 // Lista de dominios permitidos
 const allowedOrigins = [
     'https://orillasdelcoilaco.cl',
-    'https://www.orillasdelcoilaco.cl'
+    'https://www.orillasdelcoilaco.cl',
+    // Añadido para desarrollo local
+    'http://localhost',
+    'http://127.0.0.1'
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // Permite solicitudes sin 'origin' (como Postman) o si el origen está en la lista blanca.
+    // Se ajusta para permitir cualquier puerto de localhost.
+    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
       callback(null, true);
     } else {
       callback(new Error('No permitido por CORS'));

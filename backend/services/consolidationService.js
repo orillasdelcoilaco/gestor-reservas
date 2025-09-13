@@ -49,11 +49,9 @@ async function processChannel(db, channel) {
         });
     }
 
-    // --- INICIO DE LA MODIFICACIÓN: Cargar reservas obsoletas ---
     const obsoleteReservations = new Map();
     const obsoleteSnapshot = await db.collection('reservas_obsoletas').get();
     obsoleteSnapshot.forEach(doc => obsoleteReservations.set(doc.id, doc.data()));
-    // --- FIN DE LA MODIFICACIÓN ---
 
     const batch = db.batch();
     const genericPhone = '56999999999';
@@ -86,14 +84,12 @@ async function processChannel(db, channel) {
             }
             
             const idCompuestoCorrecto = `AIRBNB_${reservaIdOriginal}_${cabanaCorrecta.replace(/\s+/g, '')}`;
-
-            // --- INICIO DE LA MODIFICACIÓN: Comprobación de obsolescencia ---
+            
             if (obsoleteReservations.has(idCompuestoCorrecto)) {
                 console.log(`Saltando reserva obsoleta (Airbnb): ${idCompuestoCorrecto}. Redirigida a ${obsoleteReservations.get(idCompuestoCorrecto).nuevaReservaId}`);
                 batch.delete(doc.ref);
                 continue;
             }
-            // --- FIN DE LA MODIFICACIÓN ---
 
             const existingReservation = airbnbReservationsByOriginalId.get(reservaIdOriginal);
 
@@ -193,24 +189,24 @@ async function processChannel(db, channel) {
                  if (!cabana) continue;
                 
                 const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
-
-                // --- INICIO DE LA MODIFICACIÓN: Comprobación de obsolescencia ---
+                
                 if (obsoleteReservations.has(idCompuesto)) {
                     console.log(`Saltando reserva obsoleta (${channel}): ${idCompuesto}. Redirigida a ${obsoleteReservations.get(idCompuesto).nuevaReservaId}`);
-                    continue; // No borramos el doc.ref aquí porque podría haber otras cabañas en la misma fila
+                    continue;
+                }
+
+                // --- INICIO DE LA MODIFICACIÓN: Lógica anti-duplicados ---
+                if (allExistingReservations.has(idCompuesto)) {
+                    console.log(`Saltando reserva ya existente (${channel}): ${idCompuesto}`);
+                    continue; // Si la reserva ya existe, simplemente la saltamos.
                 }
                 // --- FIN DE LA MODIFICACIÓN ---
-
+                
+                reservasCreadas++;
                 const reservaRef = db.collection('reservas').doc(idCompuesto);
-                
                 let clienteId;
-                const existingReservation = allExistingReservations.get(idCompuesto);
-                
-                if (existingReservation) reservasActualizadas++; else reservasCreadas++;
 
-                if (existingReservation && existingReservation.clienteId) {
-                    clienteId = existingReservation.clienteId;
-                } else if (reservaData.telefono !== genericPhone && existingClientsByPhone.has(reservaData.telefono)) {
+                if (reservaData.telefono !== genericPhone && existingClientsByPhone.has(reservaData.telefono)) {
                     clienteId = existingClientsByPhone.get(reservaData.telefono);
                 } else {
                     clientesNuevos++;
@@ -271,21 +267,9 @@ async function processChannel(db, channel) {
                     fechaPago: null,
                     pagado: false,
                     pendiente: valorCLPCalculado,
-                    boleta: false
+                    boleta: false,
+                    estadoGestion: 'Pendiente Bienvenida'
                 };
-                
-                if (existingReservation) {
-                    if (existingReservation.valorManual) dataToSave.valorCLP = existingReservation.valorCLP;
-                    if (existingReservation.nombreManual) dataToSave.clienteNombre = existingReservation.clienteNombre;
-                    dataToSave.abono = existingReservation.abono || 0;
-                    dataToSave.fechaAbono = existingReservation.fechaAbono || null;
-                    dataToSave.pagado = existingReservation.pagado || false;
-                    dataToSave.pendiente = existingReservation.pendiente === undefined ? dataToSave.valorCLP - dataToSave.abono : existingReservation.pendiente;
-                    dataToSave.boleta = existingReservation.boleta || false;
-                    dataToSave.estadoGestion = existingReservation.estadoGestion || 'Pendiente Bienvenida';
-                } else {
-                    dataToSave.estadoGestion = 'Pendiente Bienvenida';
-                }
 
                 batch.set(reservaRef, dataToSave, { merge: true });
             }

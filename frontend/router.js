@@ -16,7 +16,8 @@ const routes = {
     '/tarifas': 'views/tarifas.html',
     '/reservas': 'views/reservas.html',
     '/cargar-dolar': 'views/dolar.html',
-    '/autorizar': 'views/autorizar.html'
+    '/autorizar': 'views/autorizar.html',
+    '/mantenimiento': 'views/mantenimiento.html'
 };
 
 const menuConfig = [
@@ -57,28 +58,56 @@ const menuConfig = [
             { name: 'Gestionar Tarifas', path: '/tarifas', id: 'tarifas' },
             { name: 'Gestionar Reservas', path: '/reservas', id: 'reservas' },
             { name: 'Cargar Valor Dólar', path: '/cargar-dolar', id: 'cargar-dolar' },
-            { name: 'Autorizar Google Contacts', path: '/autorizar', id: 'autorizar' }
+            { name: 'Autorizar Google Contacts', path: '/autorizar', id: 'autorizar' },
+            { name: 'Herramientas de Mantenimiento', path: '/mantenimiento', id: 'mantenimiento' }
         ]
     }
 ];
+
+// --- INICIO DE LA MODIFICACIÓN ---
+const BASE_PATH = '/gestor-reservas'; 
 
 const loadView = async (path) => {
     const viewContainer = document.getElementById('view-content');
     viewContainer.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
     
-    const viewPath = routes[path] || 'views/404.html';
+    // Limpiar el path para que coincida con nuestras rutas definidas
+    let cleanPath = path.startsWith(BASE_PATH) ? path.substring(BASE_PATH.length) : path;
+    if (cleanPath === '' || cleanPath.startsWith('/app.html')) {
+        cleanPath = '/';
+    }
+
+    const viewFile = routes[cleanPath] || 'views/404.html';
     
     try {
-        const response = await fetch(viewPath);
+        const response = await fetch(viewFile);
         if (!response.ok) throw new Error('Página no encontrada');
         const html = await response.text();
-        viewContainer.innerHTML = html;
+        viewContainer.innerHTML = ''; // Limpiar antes de añadir el nuevo contenido
+
+        // Crear un div temporal para parsear el HTML y separar el script
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
         
-        // Cargar y ejecutar el script asociado si existe
-        const scriptModule = document.createElement('script');
-        scriptModule.type = 'module';
-        scriptModule.innerHTML = viewContainer.querySelector('script[type="module"]')?.innerHTML || '';
-        viewContainer.appendChild(scriptModule);
+        const scriptElement = tempDiv.querySelector('script[type="module"]');
+        let scriptContent = '';
+        if (scriptElement) {
+            scriptContent = scriptElement.innerHTML;
+            scriptElement.remove();
+        }
+
+        // Añadir el HTML sin el script
+        while(tempDiv.firstChild) {
+            viewContainer.appendChild(tempDiv.firstChild);
+        }
+
+        // Ejecutar el script
+        if (scriptContent) {
+            const scriptModule = document.createElement('script');
+            scriptModule.type = 'module';
+            scriptModule.textContent = scriptContent;
+            document.body.appendChild(scriptModule).remove(); // Añadir y remover para ejecutar
+        }
 
     } catch (error) {
         viewContainer.innerHTML = `<p class="text-center text-red-500">Error al cargar la página: ${error.message}</p>`;
@@ -86,9 +115,11 @@ const loadView = async (path) => {
 };
 
 const navigateTo = (path) => {
-    history.pushState(null, null, path);
-    loadView(path);
+    const fullPath = `${BASE_PATH}${path}`;
+    history.pushState(null, null, fullPath);
+    loadView(fullPath);
 };
+// --- FIN DE LA MODIFICACIÓN ---
 
 const buildMenu = () => {
     const nav = document.getElementById('main-nav');
@@ -123,6 +154,5 @@ export const initRouter = () => {
         }
     });
 
-    // Cargar la vista inicial
-    loadView(location.pathname === '/' ? '/' : location.pathname);
+    loadView(location.pathname);
 };

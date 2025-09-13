@@ -75,6 +75,9 @@ body {
     .main-content {
         margin-left: 260px;
     }
+    #sidebar-toggle-mobile {
+        display: none;
+    }
 
     /* Estilos para el menú colapsado en escritorio */
     .sidebar.collapsed {
@@ -85,14 +88,20 @@ body {
     .sidebar.collapsed .category-title {
         overflow: hidden;
         text-overflow: ellipsis;
-        white-space: nowrap;
     }
     
-    .sidebar.collapsed .category-title,
-    .sidebar.collapsed .nav-link span {
-       display: none; /* Ocultar texto, solo mostrar íconos */
+    .sidebar.collapsed .category-title {
+       font-size: 0.6rem;
+       padding-left: 0.5rem;
+       padding-right: 0.5rem;
+       text-align: center;
     }
-
+     .sidebar.collapsed .nav-link {
+        padding-left: 0;
+        justify-content: center;
+        display: flex;
+    }
+    
     .main-content.collapsed {
         margin-left: 80px;
     }

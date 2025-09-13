@@ -22,8 +22,7 @@ const icalRoutes = require('./routes/ical');
 const calendarioRoutes = require('./routes/calendario');
 const reportesRoutes = require('./routes/reportes');
 
-// --- INICIO DE LA MODIFICACIÓN ---
-// Lista de dominios permitidos más explícita
+// Lista de dominios permitidos
 const allowedOrigins = [
     'https://orillasdelcoilaco.cl',
     'https://www.orillasdelcoilaco.cl'
@@ -31,7 +30,6 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permitir solicitudes sin origen (como Postman o apps móviles) y las de la lista
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -40,8 +38,6 @@ const corsOptions = {
   },
   optionsSuccessStatus: 200
 };
-// --- FIN DE LA MODIFICACIÓN ---
-
 
 //--- Inicialización de Firebase Admin SDK ---
 const serviceAccount = process.env.RENDER 

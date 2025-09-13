@@ -65,6 +65,7 @@ const menuConfig = [
 ];
 
 const resolveRoute = () => {
+    // Con hash routing, la ruta es lo que viene después del '#'
     const path = location.hash.slice(1).toLowerCase() || '/';
     return path;
 };
@@ -78,7 +79,7 @@ const loadView = async () => {
     
     try {
         const response = await fetch(viewFile);
-        if (!response.ok) throw new Error('Página no encontrada');
+        if (!response.ok) throw new Error('Página no encontrada (404)');
         const html = await response.text();
         viewContainer.innerHTML = ''; 
 
@@ -118,6 +119,7 @@ const buildMenu = () => {
                             <span class="category-title">${item.name}</span>
                             <ul>`;
             item.children.forEach(child => {
+                // Los enlaces ahora apuntan a hashes
                 menuHtml += `<li><a href="#${child.path}" class="nav-link">${child.name}</a></li>`;
             });
             menuHtml += `</ul></div>`;
@@ -131,16 +133,14 @@ const buildMenu = () => {
 export const initRouter = () => {
     buildMenu();
     
+    // Escuchar cambios en el hash de la URL
     window.addEventListener('hashchange', loadView);
     
-    // --- INICIO DE LA MODIFICACIÓN ---
-    // Si al cargar no hay un hash, lo establecemos a la ruta raíz.
-    // Esto disparará el evento 'hashchange' que a su vez llamará a loadView().
+    // Si al cargar no hay un hash, lo establecemos a la ruta raíz para cargar el dashboard.
     if (!location.hash) {
         location.hash = '#/';
     } else {
-        // Si ya hay un hash (ej. el usuario refrescó la página), cargamos esa vista directamente.
+        // Si ya hay un hash, cargamos la vista correspondiente.
         loadView();
     }
-    // --- FIN DE LA MODIFICACIÓN ---
 };

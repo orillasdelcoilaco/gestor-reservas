@@ -1,124 +1,87 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestionar Clientes - Gestor de Reservas</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .table-container { max-height: 70vh; }
-        thead th { position: sticky; top: 0; z-index: 1; }
-        #edit-modal { background-color: rgba(0, 0, 0, 0.5); }
-        .star { cursor: pointer; color: #d1d5db; font-size: 2rem; }
-        .star.selected { color: #f59e0b; }
-    </style>
-</head>
-<body class="bg-gray-100">
-
-    <div id="loader" class="text-center p-8">
-        <p class="text-gray-500">Verificando sesión...</p>
+<div class="bg-white p-6 md:p-8 rounded-lg shadow">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+        <h2 class="text-2xl font-semibold text-gray-900">Listado de Clientes</h2>
+        <input type="text" id="search-input" placeholder="Buscar por nombre, teléfono, email..." class="mt-4 md:mt-0 w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
     </div>
-
-    <div id="app-content" class="min-h-screen hidden">
-        <nav class="bg-white shadow-sm">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex items-center justify-between h-16">
-                    <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
-                    <div id="auth-info" class="flex items-center space-x-4"></div>
-                </div>
-            </div>
-        </nav>
-
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-                    <h2 class="text-2xl font-semibold text-gray-900">Listado de Clientes</h2>
-                    <input type="text" id="search-input" placeholder="Buscar por nombre, teléfono, email..." class="mt-4 md:mt-0 w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                </div>
-                
-                <div class="table-container overflow-y-auto border rounded-lg">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Reservas</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Primer Canal</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clientes-table-body" class="bg-white divide-y divide-gray-200"></tbody>
-                    </table>
-                </div>
-                <div id="loading-state" class="text-center p-8">
-                    <p class="text-gray-500">Cargando clientes...</p>
-                </div>
-            </div>
-        </main>
+    
+    <div class="table-container overflow-y-auto border rounded-lg">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teléfono</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Reservas</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Primer Canal</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="clientes-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+        </table>
     </div>
+    <div id="loading-state" class="text-center p-8">
+        <p class="text-gray-500">Cargando clientes...</p>
+    </div>
+</div>
 
-    <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center">
-                <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Cliente</h3>
-                <button type="button" id="delete-btn" class="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Eliminar Cliente</button>
+<div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Cliente</h3>
+            <button type="button" id="delete-btn" class="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Eliminar Cliente</button>
+            </div>
+        <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <form id="edit-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" id="firstname-input" placeholder="Nombre" class="block w-full px-3 py-2 border rounded-md">
+                    <input type="text" id="lastname-input" placeholder="Apellido" class="block w-full px-3 py-2 border rounded-md">
                 </div>
-            <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <form id="edit-form" class="space-y-4">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input type="text" id="firstname-input" placeholder="Nombre" class="block w-full px-3 py-2 border rounded-md">
-                        <input type="text" id="lastname-input" placeholder="Apellido" class="block w-full px-3 py-2 border rounded-md">
-                    </div>
-                    <input type="tel" id="phone-input" placeholder="Teléfono" class="block w-full px-3 py-2 border rounded-md">
-                    <input type="email" id="email-input" placeholder="Email" class="block w-full px-3 py-2 border rounded-md">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="fuente-select" class="block text-sm font-medium">Fuente</label>
-                            <select id="fuente-select" class="block w-full px-3 py-2 border rounded-md mt-1"></select>
-                        </div>
-                         <div>
-                            <label class="block text-sm font-medium">Ubicación Geográfica</label>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-1">
-                                <input type="text" id="pais-input" placeholder="País" class="block w-full px-3 py-2 border rounded-md">
-                                <input type="text" id="region-input" placeholder="Región" class="block w-full px-3 py-2 border rounded-md">
-                                <input type="text" id="ciudad-input" placeholder="Ciudad" class="block w-full px-3 py-2 border rounded-md">
-                            </div>
-                        </div>
-                    </div>
+                <input type="tel" id="phone-input" placeholder="Teléfono" class="block w-full px-3 py-2 border rounded-md">
+                <input type="email" id="email-input" placeholder="Email" class="block w-full px-3 py-2 border rounded-md">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium">Calificación</label>
-                        <div id="calificacion-stars" class="flex items-center" data-rating="0">
-                            <span class="star" data-value="1">★</span>
-                            <span class="star" data-value="2">★</span>
-                            <span class="star" data-value="3">★</span>
-                            <span class="star" data-value="4">★</span>
-                            <span class="star" data-value="5">★</span>
+                        <label for="fuente-select" class="block text-sm font-medium">Fuente</label>
+                        <select id="fuente-select" class="block w-full px-3 py-2 border rounded-md mt-1"></select>
+                    </div>
+                     <div>
+                        <label class="block text-sm font-medium">Ubicación Geográfica</label>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 mt-1">
+                            <input type="text" id="pais-input" placeholder="País" class="block w-full px-3 py-2 border rounded-md">
+                            <input type="text" id="region-input" placeholder="Región" class="block w-full px-3 py-2 border rounded-md">
+                            <input type="text" id="ciudad-input" placeholder="Ciudad" class="block w-full px-3 py-2 border rounded-md">
                         </div>
                     </div>
-                    <textarea id="notas-input" rows="3" placeholder="Notas adicionales..." class="block w-full px-3 py-2 border rounded-md"></textarea>
-                    <div id="modal-status" class="mt-2 text-sm"></div>
-                </form>
-
+                </div>
                 <div>
-                    <h4 class="text-md font-semibold text-gray-800 border-b pb-2 mb-2">Historial de Reservas</h4>
-                    <div id="historial-reservas-container" class="max-h-64 overflow-y-auto">
-                        <p class="text-gray-500">Cargando historial...</p>
+                    <label class="block text-sm font-medium">Calificación</label>
+                    <div id="calificacion-stars" class="flex items-center" data-rating="0">
+                        <span class="star" data-value="1">★</span>
+                        <span class="star" data-value="2">★</span>
+                        <span class="star" data-value="3">★</span>
+                        <span class="star" data-value="4">★</span>
+                        <span class="star" data-value="5">★</span>
                     </div>
                 </div>
-            </div>
-            <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                <button type="button" id="save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar Cambios</button>
-                <button type="button" id="cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0">Cancelar</button>
+                <textarea id="notas-input" rows="3" placeholder="Notas adicionales..." class="block w-full px-3 py-2 border rounded-md"></textarea>
+                <div id="modal-status" class="mt-2 text-sm"></div>
+            </form>
+
+            <div>
+                <h4 class="text-md font-semibold text-gray-800 border-b pb-2 mb-2">Historial de Reservas</h4>
+                <div id="historial-reservas-container" class="max-h-64 overflow-y-auto">
+                    <p class="text-gray-500">Cargando historial...</p>
+                </div>
             </div>
         </div>
+        <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
+            <button type="button" id="save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar Cambios</button>
+            <button type="button" id="cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0">Cancelar</button>
+        </div>
     </div>
+</div>
 
-
-    <script type="module">
-    import { checkSession, logout, fetchAPI } from './api.js';
+<script type="module">
+    import { fetchAPI } from '../api.js';
 
     const clientesTableBody = document.getElementById('clientes-table-body');
     const loadingState = document.getElementById('loading-state');
@@ -359,30 +322,11 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const loader = document.getElementById('loader');
-        const appContent = document.getElementById('app-content');
-        const authInfo = document.getElementById('auth-info');
-
-        const session = checkSession();
-        if (session) {
-            loader.style.display = 'none';
-            appContent.classList.remove('hidden');
-            authInfo.innerHTML = `
-                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
-                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-            `;
-            document.getElementById('logout-btn').addEventListener('click', logout);
-
-            populateDropdowns();
-            setupStars();
-            searchInput.addEventListener('input', updateTableView);
-            cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            saveBtn.addEventListener('click', handleSave);
-            deleteBtn.addEventListener('click', handleDelete);
-            loadClients();
-        }
-    });
+    populateDropdowns();
+    setupStars();
+    searchInput.addEventListener('input', updateTableView);
+    cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+    saveBtn.addEventListener('click', handleSave);
+    deleteBtn.addEventListener('click', handleDelete);
+    loadClients();
 </script>
-</body>
-</html>

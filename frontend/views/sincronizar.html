@@ -1,0 +1,100 @@
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-2">
+        <div class="bg-white p-6 md:p-8 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-2">Sincronización Automática</h2>
+            <p class="text-gray-600 mb-6">Busca los reportes más recientes en tu carpeta de Google Drive y los prepara para la consolidación.</p>
+            <button id="sync-drive-btn" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+                Sincronizar desde Google Drive
+            </button>
+            <div id="sync-status" class="mt-4 p-4 rounded-md hidden"></div>
+        </div>
+    </div>
+    <div>
+        <div class="bg-white p-6 md:p-8 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-2">Cargar Reserva Airbnb</h2>
+            <p class="text-gray-600 mb-6">Ingresa los datos de una reserva de Airbnb manualmente.</p>
+            <form id="airbnb-form" class="space-y-4">
+                <input type="text" id="airbnb-nombre" placeholder="Nombre del Huésped" required class="block w-full px-3 py-2 border border-gray-300 rounded-md">
+                <input type="text" id="airbnb-reserva" placeholder="Código de Reserva" required class="block w-full px-3 py-2 border border-gray-300 rounded-md">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="airbnb-llegada" class="text-sm">Llegada</label>
+                        <input type="date" id="airbnb-llegada" required class="block w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label for="airbnb-salida" class="text-sm">Salida</label>
+                        <input type="date" id="airbnb-salida" required class="block w-full px-3 py-2 border border-gray-300 rounded-md">
+                    </div>
+                </div>
+                <button type="submit" class="w-full sm:w-auto inline-flex justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">
+                    Guardar Reserva Airbnb
+                </button>
+            </form>
+            <div id="airbnb-status" class="mt-4 p-4 rounded-md hidden"></div>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { fetchAPI } from '../api.js';
+
+    const syncDriveBtn = document.getElementById('sync-drive-btn');
+    const syncStatus = document.getElementById('sync-status');
+    const airbnbForm = document.getElementById('airbnb-form');
+    const airbnbStatus = document.getElementById('airbnb-status');
+
+    function showStatus(element, message, isError = false) {
+        element.innerHTML = message;
+        element.className = `mt-4 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`;
+        element.classList.remove('hidden');
+    }
+
+    syncDriveBtn.addEventListener('click', async () => {
+        syncDriveBtn.disabled = true;
+        syncDriveBtn.textContent = 'Sincronizando...';
+        showStatus(syncStatus, 'Iniciando conexión con Google Drive. Esto puede tardar un momento...');
+        try {
+            const result = await fetchAPI('/api/sincronizar-drive', {
+                method: 'POST'
+            });
+            showStatus(syncStatus, `<strong>${result.message}</strong>`, false);
+        } catch (error) {
+            console.error('Error al sincronizar:', error);
+            showStatus(syncStatus, `<strong>Error:</strong> ${error.message}`, true);
+        } finally {
+            syncDriveBtn.disabled = false;
+            syncDriveBtn.textContent = 'Sincronizar desde Google Drive';
+        }
+    });
+    
+    airbnbForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = e.target.querySelector('button');
+        btn.disabled = true;
+        btn.textContent = 'Guardando...';
+
+        const reserva = {
+            nombre: document.getElementById('airbnb-nombre').value,
+            reservaId: document.getElementById('airbnb-reserva').value,
+            llegada: document.getElementById('airbnb-llegada').value,
+            salida: document.getElementById('airbnb-salida').value,
+            canal: 'Airbnb'
+        };
+
+        showStatus(airbnbStatus, 'Enviando reserva de Airbnb...');
+
+        try {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const result = { message: `Reserva para ${reserva.nombre} guardada (simulación).` };
+
+            showStatus(airbnbStatus, `<strong>Éxito:</strong> ${result.message}`, false);
+            airbnbForm.reset();
+        } catch (error) {
+            console.error('Error al guardar reserva de Airbnb:', error);
+            showStatus(airbnbStatus, `<strong>Error:</strong> ${error.message}. Recuerda que el endpoint del backend aún no está implementado.`, true);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Guardar Reserva Airbnb';
+        }
+    });
+</script>

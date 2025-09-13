@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Reservas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100">
+    <div id="loader" class="text-center p-8">
+        <p class="text-gray-500">Verificando sesión...</p>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <aside id="sidebar" class="sidebar">
+            <div class="flex items-center justify-between p-4">
+                <h1 id="sidebar-title" class="text-xl font-bold text-white">Gestor de Reservas</h1>
+                <button id="sidebar-toggle-desktop" class="p-2 rounded-md text-gray-300 hover:bg-gray-700 hover:text-white hidden md:block">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+            </div>
+            <nav id="main-nav" class="mt-4">
+                </nav>
+        </aside>
+
+        <div id="main-content" class="main-content">
+            <header class="bg-white shadow-sm">
+                <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+                    <button id="sidebar-toggle-mobile" class="p-2 rounded-md text-gray-500 hover:bg-gray-100 md:hidden">
+                        <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div class="flex-grow"></div>
+                    <div id="auth-info" class="flex items-center space-x-4"></div>
+                </div>
+            </header>
+            <main id="view-content" class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                </main>
+        </div>
+    </div>
+
+    <script type="module">
+        import { checkSession, logout } from './api.js';
+        import { initRouter } from './router.js';
+
+        const loader = document.getElementById('loader');
+        const appContainer = document.getElementById('app-container');
+        const authInfo = document.getElementById('auth-info');
+        
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContainer.classList.add('flex');
+            appContainer.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            
+            initRouter();
+
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const sidebarTitle = document.getElementById('sidebar-title');
+            const nav = document.getElementById('main-nav');
+            const toggleMobileBtn = document.getElementById('sidebar-toggle-mobile');
+            const toggleDesktopBtn = document.getElementById('sidebar-toggle-desktop');
+
+            toggleMobileBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+            toggleDesktopBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('collapsed');
+            });
+        }
+    </script>
+</body>
+</html>

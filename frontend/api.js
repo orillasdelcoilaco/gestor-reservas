@@ -16,16 +16,13 @@ export async function fetchAPI(endpoint, options = {}) {
     'Authorization': `Bearer ${token}`,
   };
 
-  // Si no es un archivo, añadimos la cabecera JSON. Si es un archivo, dejamos que el navegador la ponga.
   if (!isFormData) {
     headers['Content-Type'] = 'application/json';
   }
   
-  // Preparamos la configuración para fetch, separando el cuerpo del resto.
   const config = {
       method: options.method || 'GET',
       headers: headers,
-      // Si el cuerpo existe, lo añadimos. Si es JSON, lo convertimos. Si es FormData, lo pasamos directamente.
       ...(options.body && { body: isFormData ? options.body : JSON.stringify(options.body) })
   };
 

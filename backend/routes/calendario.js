@@ -37,9 +37,13 @@ module.exports = (db) => {
                     const fechaSalidaDate = data.fechaSalida.toDate();
                     fechaSalidaDate.setUTCHours(12, 0, 0, 0);
 
+                    // --- INICIO DE LA MODIFICACIÓN ---
+                    const uniqueTitle = [...new Set((data.clienteNombre || '').split('\n'))].join(' ').trim();
+                    // --- FIN DE LA MODIFICACIÓN ---
+
                     eventos.push({
                         id: doc.id,
-                        title: data.clienteNombre,
+                        title: uniqueTitle, // <-- Usar el título limpio
                         start: data.fechaLlegada.toDate().toISOString(),
                         end: fechaSalidaDate.toISOString(),
                         resourceId: data.alojamiento,

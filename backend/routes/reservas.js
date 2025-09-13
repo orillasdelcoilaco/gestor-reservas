@@ -267,9 +267,13 @@ module.exports = (db) => {
                     const fechaSalidaDate = data.fechaSalida.toDate();
                     fechaSalidaDate.setUTCHours(12, 0, 0, 0);
 
+                    // --- INICIO DE LA MODIFICACIÓN ---
+                    const uniqueTitle = [...new Set((data.clienteNombre || '').split('\n'))].join(' ').trim();
+                    // --- FIN DE LA MODIFICACIÓN ---
+
                     reservasDelMes.push({
                         id: doc.id,
-                        title: data.clienteNombre,
+                        title: uniqueTitle, // <-- Usar el título limpio
                         start: data.fechaLlegada.toDate().toISOString(),
                         end: fechaSalidaDate.toISOString(),
                         resourceId: data.alojamiento,
@@ -422,7 +426,7 @@ module.exports = (db) => {
         }
     });
 
-    // --- INICIO DE LA MODIFICACIÓN: RECHAZAR PROPUESTA CON MOTIVO ---
+    // --- RECHAZAR PROPUESTA CON MOTIVO ---
     router.post('/reservas/propuestas/:reservaIdOriginal/rechazar', jsonParser, async (req, res) => {
         const { reservaIdOriginal } = req.params;
         const { motivo, nota } = req.body;
@@ -460,7 +464,6 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    // --- FIN DE LA MODIFICACIÓN ---
 
     // --- CORREGIDO: CORREGIR IDENTIDAD DE RESERVA (MOVER DATOS) ---
     router.post('/reservas/corregir-identidad', jsonParser, async (req, res) => {

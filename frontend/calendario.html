@@ -121,9 +121,8 @@
                             currentMonthYearEl.textContent = currentDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric', timeZone: 'UTC' });
                         },
                         eventContent: (arg) => {
-                            const uniqueTitle = [...new Set((arg.event.title || '').split('\n'))].join(' ').trim();
                             const b = document.createElement('b');
-                            b.textContent = uniqueTitle;
+                            b.textContent = arg.event.title;
                             return { domNodes: [b] };
                         },
                         eventDidMount: info => {

@@ -45,7 +45,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     const allReservas = [];
     reservasSnapshot.forEach(doc => {
         const data = doc.data();
-        if (data.estado !== 'Cancelada' && 
+        if (data.estado === 'Confirmada' && 
             getUTCDate(data.fechaSalida.toDate()) > startDate && 
             getUTCDate(data.fechaLlegada.toDate()) <= endDate) {
             allReservas.push({ id: doc.id, ...data });
@@ -70,9 +70,7 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
             canales: {}
         };
     });
-    // --- INICIO DE LA MODIFICACIÓN ---
     const reservasPorCanalGeneral = {};
-    // --- FIN DE LA MODIFICACIÓN ---
     
     for (let d = new Date(startDate); d <= endDate; d.setUTCDate(d.getUTCDate() + 1)) {
         const currentDate = getUTCDate(d);
@@ -111,14 +109,12 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
         ingresoTotalReal += ingresoRealReserva;
         analisisPorCabaña[reserva.alojamiento].ingresoRealTotal += ingresoRealReserva;
         
-        // --- INICIO DE LA MODIFICACIÓN ---
         const canal = reserva.canal;
         if (!reservasPorCanalGeneral[canal]) {
             reservasPorCanalGeneral[canal] = { count: 0, ingreso: 0 };
         }
         reservasPorCanalGeneral[canal].count++;
         reservasPorCanalGeneral[canal].ingreso += ingresoRealReserva;
-        // --- FIN DE LA MODIFICACIÓN ---
 
         if (reserva.valorPotencialCLP && reserva.valorPotencialCLP > 0) {
            const valorNochePotencial = reserva.valorPotencialCLP / reserva.totalNoches;

@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Reservas</title>
-
     <script>
         if (window.location.hostname.startsWith('www.')) {
             window.location.href = window.location.href.replace('www.', '');
@@ -47,8 +46,8 @@
     </div>
 
     <script type="module">
-        import { checkSession, logout } from './api.js';
-        import { initRouter } from './router.js';
+        import { checkSession, logout } from '/gestor-reservas/api.js';
+        import { initRouter } from '/gestor-reservas/router.js';
 
         const loader = document.getElementById('loader');
         const appContainer = document.getElementById('app-container');

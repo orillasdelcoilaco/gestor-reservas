@@ -34,8 +34,6 @@
 
 <script type="module">
     import { fetchAPI } from '/gestor-reservas/api.js';
-
-
     
     const loadingState = document.getElementById('loading-state');
     const searchInput = document.getElementById('search-input');
@@ -92,7 +90,7 @@
         
         let statusHtml;
         if (accionParaMarcar) {
-            const url = `mensajes.html?reservaId=${grupo.reservaIdOriginal}&accion=${accionParaMarcar}`;
+            const url = `#/mensajes?reservaId=${grupo.reservaIdOriginal}&accion=${accionParaMarcar}`;
             statusHtml = `<a href="${url}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</a>`;
         } else {
              statusHtml = `<span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>`;
@@ -103,7 +101,7 @@
             : '';
         
         const kpiIcon = grupo.potencialCalculado ? '<span class="ml-1" title="Valor Potencial ya calculado">🧮</span>' : '';
-        const clienteLink = `<a href="clientes.html?openModalFor=${grupo.clienteId}" class="ml-4 text-lg font-bold text-gray-800 hover:text-indigo-600" title="Abrir ficha del cliente">${grupo.clienteNombre}</a>`;
+        const clienteLink = `<a href="#/clientes?clienteId=${grupo.clienteId}" class="ml-4 text-lg font-bold text-gray-800 hover:text-indigo-600" title="Abrir ficha del cliente">${grupo.clienteNombre}</a>`;
 
         card.innerHTML = `
             <div class="flex items-center mb-2">

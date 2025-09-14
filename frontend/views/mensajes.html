@@ -58,8 +58,6 @@
 <script type="module">
     import { fetchAPI } from '/gestor-reservas/api.js';
 
-
-
     const seleccionSection = document.getElementById('seleccion-reserva-section');
     const marcarEnviadoContainer = document.getElementById('marcar-enviado-container');
     const btnMarcarEnviado = document.getElementById('btn-marcar-enviado');
@@ -357,7 +355,8 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
         window.open(url, '_blank');
     }
 
-    const urlParams = new URLSearchParams(window.location.search);
+    const queryString = window.location.hash.split('?')[1] || '';
+    const urlParams = new URLSearchParams(queryString);
     reservaIdOriginalFromUrl = urlParams.get('reservaId');
     accionFromUrl = urlParams.get('accion');
 
@@ -386,10 +385,8 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
                 method: 'POST',
                 body: formData
             });
-            // En la nueva arquitectura, no redirigimos, notificamos al router
-            // (Esta parte requerirá un manejador de navegación en el router principal)
-            alert('Acción completada. Volviendo al panel de gestión...');
-            window.history.back(); // Una forma simple de volver
+            
+            window.location.hash = '#/gestion-diaria';
         } catch (error) {
             alert('Error al marcar como enviado: ' + error.message);
             btnMarcarEnviado.disabled = false;

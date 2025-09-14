@@ -61,8 +61,6 @@
 </div>
 
 <script type="module">
-    // --- INICIO DE LA MODIFICACIÓN ---
-    // Importamos fetchAPI directamente aquí, ya que cada vista es modular.
     import { fetchAPI } from '../api.js';
 
     let fullKpiResults = null;
@@ -104,18 +102,18 @@
         const ingresoProyectadoActual = ingresoPotencialBase * (proyeccionActual / 100);
 
         const kpiCardsContainer = document.getElementById('kpi-cards');
-        kpiCardsContainer.innerHTML = \`
-          <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">Ocupación</div><div class="text-2xl font-bold text-gray-900">\${kpisGenerales.tasaOcupacion}%</div></div>
-          <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">ADR</div><div class="text-2xl font-bold text-gray-900">\${formatCurrency(kpisGenerales.adr)}</div></div>
-          <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">RevPAR</div><div class="text-2xl font-bold text-gray-900">\${formatCurrency(kpisGenerales.revPar)}</div></div>
-          <div class="p-4 bg-green-100 rounded-lg"><div class="text-sm font-medium text-green-700">Ingreso Real</div><div class="text-2xl font-bold text-green-900">\${formatCurrency(kpisGenerales.ingresoTotal)}</div></div>
-          <div class="p-4 bg-blue-100 rounded-lg"><div class="text-sm font-medium text-blue-700">Ingreso Proyectado</div><div id="ingreso-proyectado-valor" class="text-2xl font-bold text-blue-900">\${formatCurrency(ingresoProyectadoActual)}</div></div>
-          <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuento Real</div><div class="text-2xl font-bold text-red-900">\${formatCurrency(kpisGenerales.descuentosTotalesReales)}</div></div>
-        \`;
+        kpiCardsContainer.innerHTML = `
+          <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">Ocupación</div><div class="text-2xl font-bold text-gray-900">${kpisGenerales.tasaOcupacion}%</div></div>
+          <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">ADR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.adr)}</div></div>
+          <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">RevPAR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.revPar)}</div></div>
+          <div class="p-4 bg-green-100 rounded-lg"><div class="text-sm font-medium text-green-700">Ingreso Real</div><div class="text-2xl font-bold text-green-900">${formatCurrency(kpisGenerales.ingresoTotal)}</div></div>
+          <div class="p-4 bg-blue-100 rounded-lg"><div class="text-sm font-medium text-blue-700">Ingreso Proyectado</div><div id="ingreso-proyectado-valor" class="text-2xl font-bold text-blue-900">${formatCurrency(ingresoProyectadoActual)}</div></div>
+          <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuento Real</div><div class="text-2xl font-bold text-red-900">${formatCurrency(kpisGenerales.descuentosTotalesReales)}</div></div>
+        `;
         
         const canalDetailsTable = document.getElementById('canal-details-table');
         const canalData = kpisGenerales.reservasPorCanal;
-        let canalTableHtml = \`
+        let canalTableHtml = `
           <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                   <tr>
@@ -125,35 +123,35 @@
                   </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                  \${Object.entries(canalData).map(([canal, data]) => \`
+                  ${Object.entries(canalData).map(([canal, data]) => `
                       <tr>
-                          <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">\${canal}</td>
-                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">\${data.count}</td>
-                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">\${formatCurrency(data.ingreso)}</td>
+                          <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${canal}</td>
+                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${data.count}</td>
+                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(data.ingreso)}</td>
                       </tr>
-                  \`).join('')}
+                  `).join('')}
               </tbody>
           </table>
-        \`;
+        `;
         canalDetailsTable.innerHTML = canalTableHtml;
         
         const rankingTableBody = document.getElementById('ranking-table-body');
         rankingTableBody.innerHTML = '';
         results.rankingCabañas.forEach((cabaña, index) => {
             const row = document.createElement('tr');
-            row.id = \`ranking-row-\${index}\`;
+            row.id = `ranking-row-${index}`;
             row.setAttribute('data-cabaña-nombre', cabaña.nombre);
             
             const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccionActual / 100);
             const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
 
-            row.innerHTML = \`
-              <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">\${cabaña.nombre}</td>
-              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">\${cabaña.nochesOcupadas}</td>
-              <td class="noches-faltantes-cell px-4 py-3 whitespace-nowrap text-sm text-gray-700">\${Math.round(nochesFaltantesProyectadas)}</td>
-              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">\${formatCurrency(cabaña.ingresoRealTotal)}</td>
-              <td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">\${formatCurrency(cabaña.descuentoTotal)}</td>
-            \`;
+            row.innerHTML = `
+              <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${cabaña.nombre}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${cabaña.nochesOcupadas}</td>
+              <td class="noches-faltantes-cell px-4 py-3 whitespace-nowrap text-sm text-gray-700">${Math.round(nochesFaltantesProyectadas)}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(cabaña.ingresoRealTotal)}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">${formatCurrency(cabaña.descuentoTotal)}</td>
+            `;
             rankingTableBody.appendChild(row);
         });
     }
@@ -166,11 +164,11 @@
         const title = document.getElementById('detail-modal-title');
         const content = document.getElementById('detail-modal-content');
 
-        title.textContent = \`Detalle por Canal - \${cabañaNombre}\`;
+        title.textContent = `Detalle por Canal - ${cabañaNombre}`;
         
-        let tableHtml = \`<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>\`;
+        let tableHtml = `<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>`;
         if (cabañaData.canales && Object.keys(cabañaData.canales).length > 0) {
-            tableHtml = \`
+            tableHtml = `
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                   <tr>
@@ -180,22 +178,21 @@
                   </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
-                  \${Object.entries(cabañaData.canales).map(([canal, data]) => \`
+                  ${Object.entries(cabañaData.canales).map(([canal, data]) => `
                       <tr>
-                          <td class="px-4 py-2 text-sm font-medium">\${canal}</td>
-                          <td class="px-4 py-2 text-sm">\${data.noches}</td>
-                          <td class="px-4 py-2 text-sm text-red-600">\${formatCurrency(data.descuento)}</td>
+                          <td class="px-4 py-2 text-sm font-medium">${canal}</td>
+                          <td class="px-4 py-2 text-sm">${data.noches}</td>
+                          <td class="px-4 py-2 text-sm text-red-600">${formatCurrency(data.descuento)}</td>
                       </tr>
-                  \`).join('')}
+                  `).join('')}
               </tbody>
-            </table>\`;
+            </table>`;
         }
         
         content.innerHTML = tableHtml;
         modal.classList.remove('hidden');
     }
 
-    // --- Vinculación de eventos ---
     const calculateBtn = document.getElementById('kpi-calculate-btn');
     const fechaInicioInput = document.getElementById('kpi-fecha-inicio');
     const fechaFinInput = document.getElementById('kpi-fecha-fin');
@@ -220,7 +217,7 @@
         warningContainer.classList.add('hidden');
         calculateBtn.disabled = true;
         try {
-            const apiUrl = \`/api/kpi?fechaInicio=\${fechaInicio}&fechaFin=\${fechaFin}\`;
+            const apiUrl = `/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
             const kpiResults = await fetchAPI(apiUrl);
             
             if (kpiResults.warning) {
@@ -230,8 +227,8 @@
             
             displayKPIs(kpiResults);
         } catch (error) {
-            alert(\`Error al calcular KPIs: \${error.message}\`);
-            resultsContainer.innerHTML = \`<p class="text-red-500 font-semibold">Error al calcular KPIs: \${error.message}</p>\`;
+            alert(`Error al calcular KPIs: ${error.message}`);
+            resultsContainer.innerHTML = `<p class="text-red-500 font-semibold">Error al calcular KPIs: ${error.message}</p>`;
         } finally {
             loadingIndicator.classList.add('hidden');
             resultsContainer.classList.remove('hidden');
@@ -252,5 +249,4 @@
         }
     });
     detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
-    // --- FIN DE LA MODIFICACIÓN ---
 </script>

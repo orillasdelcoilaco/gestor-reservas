@@ -1,0 +1,19 @@
+<div class="bg-white p-6 md:p-8 rounded-lg shadow">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+        <h2 class="text-2xl font-semibold text-gray-900">Calendario de Ocupación</h2>
+        <div id="calendar-navigation" class="flex items-center space-x-2 mt-4 md:mt-0">
+            <button id="prev-month-btn" class="px-3 py-1 bg-gray-200 rounded-md">&lt; Mes Anterior</button>
+            <h3 id="current-month-year" class="text-lg font-medium text-gray-800 w-48 text-center"></h3>
+            <button id="next-month-btn" class="px-3 py-1 bg-gray-200 rounded-md">Mes Siguiente &gt;</button>
+        </div>
+    </div>
+    <div id="calendar-container" class="border rounded-lg p-2">
+        <div id="calendario"></div>
+    </div>
+</div>
+
+<script type="module">
+    import { fetchAPI } from '../api.js';
+    
+    // ... (El resto del script de calendario.html va aquí)
+</script>

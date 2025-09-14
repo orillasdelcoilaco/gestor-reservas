@@ -1,0 +1,67 @@
+<div class="bg-white p-6 md:p-8 rounded-lg shadow">
+    <h2 class="text-2xl font-semibold text-gray-900 mb-2">Cargar Archivo CSV del Valor del Dólar</h2>
+    <p class="text-gray-600 mb-6">Selecciona un archivo CSV (ej: Dolar 2022.csv), ingresa el año correspondiente y presiona "Cargar". Repite el proceso para cada archivo.</p>
+    <form id="upload-form" class="mt-4 space-y-4">
+        <div>
+            <label for="year-input" class="block text-sm font-medium text-gray-700">Año del Archivo</label>
+            <input type="number" id="year-input" name="year" placeholder="Ej: 2022" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"/>
+        </div>
+        <div>
+            <label for="dolar-file-input" class="block text-sm font-medium text-gray-700">Archivo CSV</label>
+            <input type="file" id="dolar-file-input" name="dolarFile" accept=".csv" required class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"/>
+        </div>
+        <button type="submit" id="upload-btn" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700">
+            Cargar Archivo
+        </button>
+    </form>
+    <div id="upload-status" class="mt-6 p-4 rounded-md hidden"></div>
+</div>
+
+<script type="module">
+    import { fetchAPI } from '../api.js';
+    const uploadForm = document.getElementById('upload-form');
+    const fileInput = document.getElementById('dolar-file-input');
+    const yearInput = document.getElementById('year-input');
+    const uploadBtn = document.getElementById('upload-btn');
+    const uploadStatus = document.getElementById('upload-status');
+
+    function showStatus(message, isError = false) {
+        uploadStatus.innerHTML = message;
+        uploadStatus.className = `mt-6 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
+        uploadStatus.classList.remove('hidden');
+    }
+
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const year = yearInput.value;
+        if (!fileInput.files.length) {
+            showStatus('Por favor, selecciona un archivo.', true);
+            return;
+        }
+        if (!year) {
+            showStatus('Por favor, ingresa el año.', true);
+            return;
+        }
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Cargando...';
+        showStatus('Enviando archivo al servidor...', false);
+        const formData = new FormData();
+        formData.append('dolarFile', fileInput.files[0]);
+        formData.append('year', year);
+        
+        try {
+            const result = await fetchAPI('/api/dolar/upload-csv', {
+                method: 'POST',
+                body: formData
+            });
+            showStatus(`<strong>Éxito para el año ${year}:</strong> ${result.message}<br>Se procesaron ${result.summary.processed} registros.`, false);
+            uploadForm.reset();
+        } catch (error) {
+            console.error('Error al subir el archivo:', error);
+            showStatus(`<strong>Error:</strong> ${error.message}`, true);
+        } finally {
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Cargar Archivo';
+        }
+    });
+</script>

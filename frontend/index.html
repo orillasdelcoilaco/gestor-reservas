@@ -45,9 +45,8 @@
     const loginError = document.getElementById('login-error');
     const loginBtn = document.getElementById('login-btn');
 
-    // Limpiamos cualquier token o email antiguo al llegar a la página de login
     localStorage.removeItem('firebaseIdToken');
-    sessionStorage.removeItem('userEmail'); // Limpiamos también el email
+    sessionStorage.removeItem('userEmail');
 
     loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -59,19 +58,11 @@
         const password = loginForm['login-password'].value;
 
         try {
-            // 1. Autenticar con Firebase
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            
-            // 2. Obtener el token de ID del usuario
             const idToken = await userCredential.user.getIdToken();
-
-            // 3. Guardar el token y el email en la memoria del navegador
             localStorage.setItem('firebaseIdToken', idToken);
-            // --- LÍNEA CLAVE AÑADIDA ---
             sessionStorage.setItem('userEmail', userCredential.user.email);
-
-            // 4. Redirigir al dashboard
-            window.location.href = 'dashboard.html';
+            window.location.href = 'app.html'; // <-- INICIO DE LA MODIFICACIÓN
 
         } catch (error) {
             console.error("Falló el inicio de sesión:", error);

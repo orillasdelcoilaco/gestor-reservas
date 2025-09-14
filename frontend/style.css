@@ -1,0 +1,79 @@
+/* Estilos Generales */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+#app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar (Menú Lateral) */
+.sidebar {
+    width: 260px;
+    background-color: #1f2937; /* gray-800 */
+    color: white;
+    position: fixed;
+    left: -260px;
+    top: 0;
+    bottom: 0;
+    transition: left 0.3s ease-in-out;
+    z-index: 40;
+}
+
+.sidebar.open {
+    left: 0;
+}
+
+/* Contenido Principal */
+.main-content {
+    flex-grow: 1;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+/* Estilos de Navegación del Menú */
+.menu-category {
+    margin-bottom: 1.5rem;
+}
+
+.category-title {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #9ca3af; /* gray-400 */
+    text-transform: uppercase;
+    display: block;
+}
+
+.nav-link {
+    display: block;
+    padding: 0.75rem 1rem 0.75rem 2.5rem; /* Indentación para hijos */
+    font-size: 0.875rem;
+    color: #d1d5db; /* gray-300 */
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.nav-link.single-link {
+    padding-left: 1rem; /* Sin indentación para padres */
+    font-weight: 500;
+}
+
+
+.nav-link:hover {
+    background-color: #374151; /* gray-700 */
+    color: white;
+}
+
+/* Estilos para Pantallas Grandes (Escritorio) */
+@media (min-width: 768px) {
+    .sidebar {
+        left: 0;
+    }
+    .main-content {
+        margin-left: 260px;
+    }
+    #menu-toggle {
+        display: none; /* Ocultar el botón de hamburguesa en escritorio */
+    }
+}

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Reservas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100">
+    <div id="loader" class="text-center p-8">
+        <p class="text-gray-500">Verificando sesión...</p>
+    </div>
+
+    <div id="app-container" class="hidden">
+        <aside id="sidebar" class="sidebar">
+            <h1 class="text-xl font-bold text-white p-4">Gestor de Reservas</h1>
+            <nav id="main-nav" class="mt-8">
+                </nav>
+        </aside>
+
+        <div id="main-content" class="main-content">
+            <header class="bg-white shadow-sm">
+                <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+                    <button id="menu-toggle" class="p-2 rounded-md text-gray-500 hover:bg-gray-100">
+                        <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <div id="auth-info" class="flex items-center space-x-4"></div>
+                </div>
+            </header>
+            <main id="view-content" class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                </main>
+        </div>
+    </div>
+
+    <script type="module">
+        import { checkSession, logout } from './api.js';
+        import { initRouter, navigateTo } from './router.js';
+
+        const loader = document.getElementById('loader');
+        const appContainer = document.getElementById('app-container');
+        const authInfo = document.getElementById('auth-info');
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+        
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContainer.classList.add('flex'); // Mostrar la app
+            appContainer.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            
+            initRouter(); // Inicializar el router que cargará las vistas
+
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+        }
+    </script>
+</body>
+</html>

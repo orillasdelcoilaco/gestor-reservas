@@ -1,0 +1,63 @@
+<div class="bg-white p-6 md:p-8 rounded-lg shadow">
+    <h2 class="text-2xl font-semibold text-gray-900 mb-2">URLs de Sincronización de Calendarios (iCal)</h2>
+    <p class="text-gray-600 mb-6">
+        Usa estas URLs para sincronizar la disponibilidad desde este gestor hacia otros canales como SODC (WordPress), Booking o Airbnb. Copia la URL de cada cabaña y pégala en la sección de "importar" o "sincronizar calendarios externos" de la plataforma correspondiente.
+    </p>
+    <div id="loading-state" class="text-center p-8">
+        <p class="text-gray-500">Cargando listado de cabañas...</p>
+    </div>
+    <div id="ical-links-container" class="space-y-4">
+        </div>
+</div>
+
+<script type="module">
+    import { fetchAPI } from '../api.js';
+
+    const loadingState = document.getElementById('loading-state');
+    const linksContainer = document.getElementById('ical-links-container');
+    const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+
+    async function loadIcalLinks() {
+        try {
+            const cabanas = await fetchAPI('/api/cabanas');
+            if (cabanas.length === 0) {
+                loadingState.innerHTML = '<p class="text-gray-500">No hay cabañas configuradas para generar links.</p>';
+                return;
+            }
+            
+            linksContainer.innerHTML = cabanas.map(cabana => {
+                const cabanaNombreUrl = cabana.nombre.replace(/\s/g, '-');
+                const icalUrl = `${API_BASE_URL}/ical/${cabanaNombreUrl}.ics`;
+                return `
+                    <div class="p-4 border rounded-lg flex flex-col md:flex-row items-start md:items-center justify-between">
+                        <div class="mb-2 md:mb-0">
+                            <p class="font-semibold text-gray-800">${cabana.nombre}</p>
+                            <input type="text" readonly value="${icalUrl}" class="text-sm text-gray-500 w-full md:w-96 mt-1 p-1 border rounded bg-gray-50">
+                        </div>
+                        <button data-url="${icalUrl}" class="copy-btn w-full md:w-auto bg-blue-100 text-blue-800 px-3 py-2 text-sm font-medium rounded-md hover:bg-blue-200">
+                            Copiar URL
+                        </button>
+                    </div>
+                `;
+            }).join('');
+            
+            loadingState.style.display = 'none';
+
+            document.querySelectorAll('.copy-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const url = e.target.dataset.url;
+                    navigator.clipboard.writeText(url).then(() => {
+                        const originalText = e.target.textContent;
+                        e.target.textContent = '¡Copiado!';
+                        setTimeout(() => { e.target.textContent = originalText; }, 2000);
+                    });
+                });
+            });
+
+        } catch (error) {
+            loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar las cabañas: ${error.message}</p>`;
+        }
+    }
+
+    loadIcalLinks();
+</script>

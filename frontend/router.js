@@ -4,6 +4,7 @@ import { fetchAPI } from './api.js';
 function getBasePath() {
     const path = window.location.pathname;
     const basePath = path.substring(0, path.lastIndexOf('/') + 1);
+    console.log('[DEBUG] Base path calculado:', basePath); // LOG 1
     return basePath;
 }
 
@@ -73,19 +74,29 @@ const menuConfig = [
     }
 ];
 
-const loadView = async () => {
-    const fullPath = location.hash.slice(1).toLowerCase() || '/';
-    const path = fullPath.split('?')[0];
+const resolveRoute = () => {
+    const path = location.hash.slice(1).toLowerCase() || '/';
+    console.log('[DEBUG] Ruta resuelta desde el hash:', path); // LOG 2
+    return path;
+};
 
+const loadView = async () => {
+    const path = resolveRoute();
     const viewContainer = document.getElementById('view-content');
     viewContainer.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
     
     const viewFile = routes[path] || `${basePath}views/404.html`;
+    
+    // --- INICIO DE LA MODIFICACIÓN: AÑADIR LOGS ---
+    console.log(`[DEBUG] Intentando cargar la vista desde: ${viewFile}`); // LOG 3
+    // --- FIN DE LA MODIFICACIÓN ---
 
     try {
         const response = await fetch(viewFile);
+        console.log('[DEBUG] Respuesta de fetch recibida. Estado:', response.status, 'OK:', response.ok); // LOG 4
         
         if (!response.ok) {
+            console.error('[DEBUG] La respuesta del fetch NO fue exitosa. URL final:', response.url); // LOG 5
             throw new Error(`Página no encontrada (Estado: ${response.status})`);
         }
         
@@ -114,6 +125,7 @@ const loadView = async () => {
         }
 
     } catch (error) {
+        console.error('[DEBUG] Error capturado en el bloque CATCH de loadView:', error); // LOG 6
         viewContainer.innerHTML = `<p class="text-center text-red-500">Error al cargar la página: ${error.message}</p>`;
     }
 };

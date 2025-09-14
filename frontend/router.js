@@ -1,13 +1,11 @@
 // frontend/router.js
 import { fetchAPI } from './api.js';
 
-// --- INICIO DE LA MODIFICACIÓN ---
-// Ya no hardcodeamos la ruta base. La calcularemos dinámicamente.
 function getBasePath() {
     const path = window.location.pathname;
-    // Esto encontrará la ruta hasta 'gestor-reservas/', asegurando que funcione
-    // sin importar si está en la raíz o en una subcarpeta.
-    return path.substring(0, path.lastIndexOf('/') + 1);
+    const basePath = path.substring(0, path.lastIndexOf('/') + 1);
+    console.log('[DEBUG] Base path calculado:', basePath); // LOG 1
+    return basePath;
 }
 
 const basePath = getBasePath();
@@ -31,7 +29,6 @@ const routes = {
     '/autorizar': `${basePath}views/autorizar.html`,
     '/mantenimiento': `${basePath}views/mantenimiento.html`
 };
-// --- FIN DE LA MODIFICACIÓN ---
 
 const menuConfig = [
     { name: '📊 Dashboard', path: '/', id: 'dashboard' },
@@ -79,6 +76,7 @@ const menuConfig = [
 
 const resolveRoute = () => {
     const path = location.hash.slice(1).toLowerCase() || '/';
+    console.log('[DEBUG] Ruta resuelta desde el hash:', path); // LOG 2
     return path;
 };
 
@@ -89,9 +87,19 @@ const loadView = async () => {
     
     const viewFile = routes[path] || `${basePath}views/404.html`;
     
+    // --- INICIO DE LA MODIFICACIÓN: AÑADIR LOGS ---
+    console.log(`[DEBUG] Intentando cargar la vista desde: ${viewFile}`); // LOG 3
+    // --- FIN DE LA MODIFICACIÓN ---
+
     try {
         const response = await fetch(viewFile);
-        if (!response.ok) throw new Error('Página no encontrada');
+        console.log('[DEBUG] Respuesta de fetch recibida. Estado:', response.status, 'OK:', response.ok); // LOG 4
+        
+        if (!response.ok) {
+            console.error('[DEBUG] La respuesta del fetch NO fue exitosa. URL final:', response.url); // LOG 5
+            throw new Error(`Página no encontrada (Estado: ${response.status})`);
+        }
+        
         const html = await response.text();
         viewContainer.innerHTML = ''; 
 
@@ -117,6 +125,7 @@ const loadView = async () => {
         }
 
     } catch (error) {
+        console.error('[DEBUG] Error capturado en el bloque CATCH de loadView:', error); // LOG 6
         viewContainer.innerHTML = `<p class="text-center text-red-500">Error al cargar la página: ${error.message}</p>`;
     }
 };

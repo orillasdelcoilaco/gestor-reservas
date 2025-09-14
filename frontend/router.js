@@ -3,7 +3,6 @@ import { fetchAPI } from './api.js';
 
 function getBasePath() {
     const path = window.location.pathname;
-    // Asegura que la ruta base siempre termine con una barra
     const basePath = path.substring(0, path.lastIndexOf('/') + 1);
     return basePath;
 }
@@ -75,18 +74,12 @@ const menuConfig = [
 ];
 
 const loadView = async () => {
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Tomamos la ruta completa del hash (ej: /mensajes?reservaId=123)
     const fullPath = location.hash.slice(1).toLowerCase() || '/';
-    // Separamos la ruta base de los parámetros de consulta
-    const path = fullPath.split('?')[0]; // Esto nos dará solo '/mensajes'
-    // --- FIN DE LA CORRECCIÓN ---
+    const path = fullPath.split('?')[0];
 
     const viewContainer = document.getElementById('view-content');
     viewContainer.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
     
-    // Usamos el 'path' limpio para encontrar el archivo, pero el hash completo sigue disponible en la URL
-    // para que la vista 'mensajes.html' pueda leer los parámetros.
     const viewFile = routes[path] || `${basePath}views/404.html`;
 
     try {

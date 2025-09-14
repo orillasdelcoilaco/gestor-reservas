@@ -1,24 +1,37 @@
+// frontend/router.js
 import { fetchAPI } from './api.js';
 
+// --- INICIO DE LA MODIFICACIÓN ---
+// Ya no hardcodeamos la ruta base. La calcularemos dinámicamente.
+function getBasePath() {
+    const path = window.location.pathname;
+    // Esto encontrará la ruta hasta 'gestor-reservas/', asegurando que funcione
+    // sin importar si está en la raíz o en una subcarpeta.
+    return path.substring(0, path.lastIndexOf('/') + 1);
+}
+
+const basePath = getBasePath();
+
 const routes = {
-    '/': 'views/dashboard.html',
-    '/gestion-diaria': 'views/gestion.html',
-    '/calendario': 'views/calendario.html',
-    '/reportes': 'views/reportes.html',
-    '/agregar-propuesta': 'views/agregar-reserva.html',
-    '/gestionar-propuestas': 'views/propuestas.html',
-    '/clientes': 'views/clientes.html',
-    '/mensajes': 'views/mensajes.html',
-    '/sincronizar-drive': 'views/sincronizar.html',
-    '/procesar': 'views/procesar.html',
-    '/sincronizar-ical': 'views/sincronizacion-ical.html',
-    '/cabanas': 'views/gestion-cabanas.html',
-    '/tarifas': 'views/tarifas.html',
-    '/reservas': 'views/reservas.html',
-    '/cargar-dolar': 'views/dolar.html',
-    '/autorizar': 'views/autorizar.html',
-    '/mantenimiento': 'views/mantenimiento.html'
+    '/': `${basePath}views/dashboard.html`,
+    '/gestion-diaria': `${basePath}views/gestion.html`,
+    '/calendario': `${basePath}views/calendario.html`,
+    '/reportes': `${basePath}views/reportes.html`,
+    '/agregar-propuesta': `${basePath}views/agregar-reserva.html`,
+    '/gestionar-propuestas': `${basePath}views/propuestas.html`,
+    '/clientes': `${basePath}views/clientes.html`,
+    '/mensajes': `${basePath}views/mensajes.html`,
+    '/sincronizar-drive': `${basePath}views/sincronizar.html`,
+    '/procesar': `${basePath}views/procesar.html`,
+    '/sincronizar-ical': `${basePath}views/sincronizacion-ical.html`,
+    '/cabanas': `${basePath}views/gestion-cabanas.html`,
+    '/tarifas': `${basePath}views/tarifas.html`,
+    '/reservas': `${basePath}views/reservas.html`,
+    '/cargar-dolar': `${basePath}views/dolar.html`,
+    '/autorizar': `${basePath}views/autorizar.html`,
+    '/mantenimiento': `${basePath}views/mantenimiento.html`
 };
+// --- FIN DE LA MODIFICACIÓN ---
 
 const menuConfig = [
     { name: '📊 Dashboard', path: '/', id: 'dashboard' },
@@ -65,7 +78,6 @@ const menuConfig = [
 ];
 
 const resolveRoute = () => {
-    // Con hash routing, la ruta es lo que viene después del '#'
     const path = location.hash.slice(1).toLowerCase() || '/';
     return path;
 };
@@ -75,11 +87,11 @@ const loadView = async () => {
     const viewContainer = document.getElementById('view-content');
     viewContainer.innerHTML = '<p class="text-center text-gray-500">Cargando...</p>';
     
-    const viewFile = routes[path] || 'views/404.html';
+    const viewFile = routes[path] || `${basePath}views/404.html`;
     
     try {
         const response = await fetch(viewFile);
-        if (!response.ok) throw new Error('Página no encontrada (404)');
+        if (!response.ok) throw new Error('Página no encontrada');
         const html = await response.text();
         viewContainer.innerHTML = ''; 
 
@@ -119,7 +131,6 @@ const buildMenu = () => {
                             <span class="category-title">${item.name}</span>
                             <ul>`;
             item.children.forEach(child => {
-                // Los enlaces ahora apuntan a hashes
                 menuHtml += `<li><a href="#${child.path}" class="nav-link">${child.name}</a></li>`;
             });
             menuHtml += `</ul></div>`;
@@ -133,14 +144,11 @@ const buildMenu = () => {
 export const initRouter = () => {
     buildMenu();
     
-    // Escuchar cambios en el hash de la URL
     window.addEventListener('hashchange', loadView);
     
-    // Si al cargar no hay un hash, lo establecemos a la ruta raíz para cargar el dashboard.
     if (!location.hash) {
         location.hash = '#/';
     } else {
-        // Si ya hay un hash, cargamos la vista correspondiente.
         loadView();
     }
 };

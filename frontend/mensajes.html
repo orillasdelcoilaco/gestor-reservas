@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Mensajes - Gestor de Reservas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        textarea { white-space: pre-wrap; }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="loader" class="text-center p-8">
+        <p class="text-gray-500">Verificando sesión...</p>
+    </div>
+
+    <div id="app-content" class="min-h-screen hidden">
+        <nav class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
+                    <div id="auth-info" class="flex items-center space-x-4"></div>
+                </div>
+            </div>
+        </nav>
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="bg-white p-6 md:p-8 rounded-lg shadow">
+                <div id="seleccion-reserva-section">
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-4">Generador de Mensajes para WhatsApp</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-b pb-6 mb-6">
+                        <div>
+                            <label for="fecha-filtro" class="block text-sm font-medium text-gray-700">1. Selecciona una fecha para buscar</label>
+                            <input type="date" id="fecha-filtro" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                        <div>
+                            <label for="reserva-select" class="block text-sm font-medium text-gray-700">2. Elige una reserva activa</label>
+                            <select id="reserva-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md" disabled>
+                                <option>Primero selecciona una fecha</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="generador-section" class="hidden">
+                    <div id="marcar-enviado-container" class="mb-6 pb-6 border-b hidden">
+                         <button id="btn-marcar-enviado" class="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-md hover:bg-green-700">
+                            Marcar Acción como Completada y Volver al Panel
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="md:col-span-1">
+                            <h3 class="text-lg font-medium text-gray-900">Detalles de la Reserva</h3>
+                            <div id="detalles-reserva" class="mt-2 text-sm text-gray-600 space-y-1"></div>
+                            <div class="mt-4">
+                                <label for="abono-input" class="block text-sm font-medium text-gray-700">Ingresar Abono (CLP)</label>
+                                <input type="number" id="abono-input" placeholder="Ej: 50000" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                        </div>
+                        <div class="md:col-span-2 space-y-6">
+                            <div>
+                                <h3 class="text-lg font-medium text-gray-900">Mensaje de Cobro</h3>
+                                <textarea id="mensaje-cobro" rows="15" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"></textarea>
+                                <div class="mt-2 flex space-x-2">
+                                    <button id="btn-generar-cobro" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Generar</button>
+                                    <button id="btn-copiar-cobro" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
+                                    <button id="btn-whatsapp-cobro" class="bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600">Abrir WhatsApp</button>
+                                    </div>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-medium text-gray-900">Mensaje de Bienvenida</h3>
+                                <textarea id="mensaje-bienvenida" rows="15" class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"></textarea>
+                                <div class="mt-2 flex space-x-2">
+                                    <button id="btn-generar-bienvenida" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Generar</button>
+                                    <button id="btn-copiar-bienvenida" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
+                                    <button id="btn-whatsapp-bienvenida" class="bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600">Abrir WhatsApp</button>
+                                    </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+<script type="module">
+    import { checkSession, logout, fetchAPI } from './api.js';
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const loader = document.getElementById('loader');
+        const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
+        const seleccionSection = document.getElementById('seleccion-reserva-section');
+        const marcarEnviadoContainer = document.getElementById('marcar-enviado-container');
+        const btnMarcarEnviado = document.getElementById('btn-marcar-enviado');
+
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContent.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
+
+            const fechaFiltro = document.getElementById('fecha-filtro');
+            const reservaSelect = document.getElementById('reserva-select');
+            const generadorSection = document.getElementById('generador-section');
+            const detallesReservaDiv = document.getElementById('detalles-reserva');
+            const abonoInput = document.getElementById('abono-input');
+            const mensajeCobroText = document.getElementById('mensaje-cobro');
+            const btnGenerarCobro = document.getElementById('btn-generar-cobro');
+            const btnCopiarCobro = document.getElementById('btn-copiar-cobro');
+            const btnWhatsappCobro = document.getElementById('btn-whatsapp-cobro');
+            const mensajeBienvenidaText = document.getElementById('mensaje-bienvenida');
+            const btnGenerarBienvenida = document.getElementById('btn-generar-bienvenida');
+            const btnCopiarBienvenida = document.getElementById('btn-copiar-bienvenida');
+            const btnWhatsappBienvenida = document.getElementById('btn-whatsapp-bienvenida');
+            let reservaSeleccionada = null;
+            let reservaIdOriginalFromUrl = null;
+            let accionFromUrl = null;
+            
+            const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+            function formatDate(date) {
+                const day = date.getUTCDate();
+                const month = monthNames[date.getUTCMonth()];
+                const year = date.getUTCFullYear();
+                return `${month} - ${day} - ${year}`;
+            }
+
+            async function cargarDetalleReserva(reservaIdOriginal) {
+                detallesReservaDiv.innerHTML = '<p>Cargando detalles...</p>';
+                try {
+                    reservaSeleccionada = await fetchAPI(`/api/mensajes/detalle-reserva/${reservaIdOriginal}`);
+                    if (reservaSeleccionada) {
+                        reservaSeleccionada.info.llegada = new Date(reservaSeleccionada.info.llegada);
+                        reservaSeleccionada.info.salida = new Date(reservaSeleccionada.info.salida);
+                        
+                        abonoInput.value = reservaSeleccionada.info.totalAbonado || 0;
+                        
+                        mostrarDetalles();
+                        generadorSection.classList.remove('hidden');
+                        mensajeCobroText.value = '';
+                        mensajeBienvenidaText.value = '';
+
+                        if (accionFromUrl === 'marcar_bienvenida_enviada') {
+                            generarMensajeBienvenida();
+                        } else if (accionFromUrl === 'marcar_cobro_enviado') {
+                            generarMensajeCobro();
+                        }
+                    }
+                } catch (error) {
+                    console.error(error);
+                    detallesReservaDiv.innerHTML = `<p class="text-red-500">Error al cargar detalles.</p>`;
+                }
+            }
+
+            fechaFiltro.addEventListener('change', async () => {
+                const fecha = fechaFiltro.value;
+                if (!fecha) return;
+                reservaSelect.innerHTML = '<option>Cargando...</option>';
+                reservaSelect.disabled = true;
+                generadorSection.classList.add('hidden');
+                try {
+                    const reservas = await fetchAPI(`/api/mensajes/reservas-por-fecha?fecha=${fecha}`);
+                    if (reservas.length === 0) {
+                        reservaSelect.innerHTML = '<option>No hay reservas para esta fecha</option>';
+                        return;
+                    }
+                    reservaSelect.innerHTML = '<option value="">-- Elige una reserva --</option>';
+                    reservas.forEach(res => {
+                        const option = document.createElement('option');
+                        option.value = res.reservaIdOriginal;
+                        option.textContent = `${res.nombre} - Llegada: ${res.llegada} (ID: ${res.reservaIdOriginal})`;
+                        reservaSelect.appendChild(option);
+                    });
+                    reservaSelect.disabled = false;
+                } catch (error) {
+                    console.error(error);
+                    reservaSelect.innerHTML = `<option>Error: ${error.message}</option>`;
+                }
+            });
+
+            reservaSelect.addEventListener('change', () => {
+                const reservaIdOriginal = reservaSelect.value;
+                if (!reservaIdOriginal) {
+                    generadorSection.classList.add('hidden');
+                    return;
+                }
+                cargarDetalleReserva(reservaIdOriginal);
+            });
+            
+            function mostrarDetalles() {
+                if (!reservaSeleccionada || !reservaSeleccionada.info) return;
+                const { info, cabanas } = reservaSeleccionada;
+                let cabanasHtml = cabanas.map(c => `<li>${c.alojamiento}</li>`).join('');
+                detallesReservaDiv.innerHTML = `
+                    <p><strong>Cliente:</strong> ${info.nombre}</p>
+                    <p><strong>Teléfono:</strong> ${info.telefono}</p>
+                    <p><strong>Llegada:</strong> ${info.llegada.toLocaleDateString('es-CL', { timeZone: 'UTC' })}</p>
+                    <p><strong>Salida:</strong> ${info.salida.toLocaleDateString('es-CL', { timeZone: 'UTC' })}</p>
+                    <p><strong>Total Noches:</strong> ${info.totalNoches}</p>
+                    <p><strong>Valor Total:</strong> $${info.totalCLP.toLocaleString('es-CL')}</p>
+                    <p><strong>Total Abonado:</strong> $${info.totalAbonado.toLocaleString('es-CL')}</p>
+                    <p><strong>Cabañas:</strong><ul>${cabanasHtml}</ul></p>
+                `;
+            }
+
+            function generarMensajeCobro() {
+                if (!reservaSeleccionada) return;
+                const { info, cabanas } = reservaSeleccionada;
+                const abono = parseInt(abonoInput.value) || 0;
+                const saldo = info.totalCLP - abono;
+                const nombreCliente = info.nombre.split(' ')[0];
+                const cabanasTexto = cabanas.map(c => c.alojamiento).join(', ');
+
+                let totalReservaTexto = `Total reserva: *$${info.totalCLP.toLocaleString('es-CL')}*`;
+                if (info.canal === 'Booking' && info.valorOriginalUSD && info.valorDolarDia) {
+                    totalReservaTexto = `Total reserva: *USD ${info.valorOriginalUSD.toFixed(2)}*
+(Valor dólar día: $${info.valorDolarDia.toLocaleString('es-CL')})
+Total en pesos: *$${info.totalCLP.toLocaleString('es-CL')}*`;
+                }
+
+                const mensaje = `*Hola ${nombreCliente},*
+Este es el detalle de tu reserva N.° *${info.reservaIdOriginal}*:
+
+Fecha de llegada:
+*${formatDate(info.llegada)}*
+Fecha de salida:
+*${formatDate(info.salida)}*
+Cantidad de noches: *${info.totalNoches}*
+
+Cabaña: *${cabanasTexto}*
+
+${totalReservaTexto}
+Abono: $${abono.toLocaleString('es-CL')}
+Saldo pendiente: $${saldo.toLocaleString('es-CL')}
+
+*****************
+*Transferir a:*
+INMOB. E INV. SACATINES SPA
+77.623.058-8
+Prepago Los Heroes
+Cuenta Vista
+177623058
+administrador@orillasdelcoilaco.cl
+
+*****************
+Favor enviar copia de la transferencia a este chat.
+Recuerda que el pago es en el check-in, gracias
+******************
+
+Esta es nuestra página para futuras reservas:
+https://orillasdelcoilaco.cl/wp/
+
+¡Muchas gracias!`;
+                mensajeCobroText.value = mensaje;
+            }
+
+            function generarMensajeBienvenida() {
+                if (!reservaSeleccionada) return;
+                const { info, cabanas } = reservaSeleccionada;
+                const nombreCliente = info.nombre.split(' ')[0];
+                const cabanasTexto = cabanas.map(c => c.alojamiento).join(', ');
+                 const mensaje = `*Hola ${nombreCliente},*
+Este es el detalle de tu reserva N.° *${info.reservaIdOriginal}*:
+
+Fecha de llegada:
+*${formatDate(info.llegada)}*
+Fecha de salida:
+*${formatDate(info.salida)}*
+Cantidad de noches: *${info.totalNoches}*
+
+Cabaña: *${cabanasTexto}*
+
+Como Llegar
+***********
+Desde Pucón, camino internacional hacia Caburgua, tomar ruta S-907 camino termas del Huife.
+Por ese camino hay un pueblo llamado *Villa San Pedro*, en la mitad del pueblo, a mano derecha, hay un letrero que dice *Trufulco*.
+Por ese camino debes contar *4 postes de luz*, en el cuarto poste a mano izquierda está el acceso al complejo.
+
+Con el siguiente link puedes usar el GPS de tu teléfono:
+
+📍 https://maps.app.goo.gl/TRbTkD1K7qfPdWmf6/
+
+*******************************
+O usa la siguiente dirección Plus Code en Google Maps:
+
+📍 *P6H8+V7 Villa San Pedro, Pucón*
+
+******************
+*Ingreso y Salida*
+******************
+🕒 Check-in: *Desde las 15:00 hasta las 23:59*
+🕛 Check-out: *Hasta las 12:00 PM*
+
+******************
+*Uso de la tinaja*
+******************
+🛁 El uso de la tinaja no tiene costo ni restricciones.
+Cada cabaña tiene su propia tinaja de uso exclusivo.
+
+🔥 *Solo se cobra el saco de leña para encenderla:*
+- En *invierno* usa *2 sacos*.
+- En *verano* usa *1 saco*.
+💰 *Cada saco cuesta $5.000*.
+⏳ La tinaja demora entre *6 a 8 horas en calentarse*.
+
+📢 *Puedes pedir encender la tinaja en este chat.*
+⏰ *La hora máxima para pedir encender la tinaja es hasta las 14:00.*
+⚠️ *Avísame si quieres usar la tinaja para encenderla temprano, gracias.*
+
+*********************************
+🔗 *Que hacer y donde comprar*
+*********************************
+📜 Revisa una selección de actividades y locales comerciales cercanos :
+👉 https://orillasdelcoilaco.cl/wp/blog/
+
+*****************
+*Redes WiFi*
+*****************
+🌐 *Redes exteriores:*
+- *Piscina* - Clave: *piscina2022*
+- *Gimnasio* - Clave: *gimnasio2022*
+- *Entrada* - Clave: *entrada2022*
+- *Entrada invitados* - *Sin clave*
+
+📶 *Redes por cabaña:*
+- *Casa 10* - Clave: *casa102022*
+- *Casa 2* - Clave: *Casa22022*
+- *Casa 1* - Clave: *casa12022*
+- *Casa 3* - Clave: *casa32022*
+- *Casa 9* - Clave: *casa92022*
+
+*******************
+*Toallas*
+*******************
+🛁 *Cada cabaña incluye un juego de toallas por baño:*
+- 1 toalla de cara
+- 1 toalla de cuerpo
+
+⚠️ *No se proporciona una toalla por persona.*
+*Se recomienda traer una toalla de cuerpo adicional por persona.*
+
+*********************************
+*Normas Principales del complejo*
+*********************************
+🚫 *Zona de piscina:*
+- Prohibido el uso de *pelotas*.
+- Prohibido *poner música fuerte*.
+
+🚫 *Otros:*
+- No sacar *los muebles* de las casas ni de las terrazas.
+- No mover *los juegos* de la zona de juegos.
+
+*********************************
+*Mascotas*
+*********************************
+🐾 *Se permiten mascotas pequeñas* (perros de raza pequeña, gatos, etc.)
+⚠️ *Deben ser informadas previamente a la administración.*
+
+🐕 *La mascota siempre debe andar acompañada y con arnés y correa.*
+⚠️ *Tenemos un pastor alemán que no se lleva bien con otros animales.*
+No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda suelta* y *entra a su territorio*.
+
+🚫 *Las mascotas no pueden entrar a la piscina.*
+
+*********************************
+🔗 *Términos y Condiciones*
+*********************************
+📜 Revisa todas nuestras normas y condiciones aquí:
+👉 https://orillasdelcoilaco.cl/wp/terminos-y-condiciones/`;
+                 mensajeBienvenidaText.value = mensaje;
+            }
+            
+            function copiarTexto(textarea, button) {
+                if (!textarea.value) return;
+                navigator.clipboard.writeText(textarea.value).then(() => {
+                    const originalText = button.textContent;
+                    button.textContent = '¡Copiado!';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                    }, 2000);
+                });
+            }
+
+            // --- INICIO DE LA MODIFICACIÓN: Nueva función para abrir WhatsApp ---
+            function abrirWhatsApp(textarea) {
+                if (!reservaSeleccionada || !reservaSeleccionada.info || !reservaSeleccionada.info.telefono || !textarea.value) {
+                    alert('No hay suficiente información para abrir WhatsApp.');
+                    return;
+                }
+                const telefono = reservaSeleccionada.info.telefono.replace(/\D/g, '');
+                const texto = encodeURIComponent(textarea.value);
+                const url = `https://api.whatsapp.com/send?phone=${telefono}&text=${texto}`;
+                window.open(url, '_blank');
+            }
+            // --- FIN DE LA MODIFICACIÓN ---
+
+            const urlParams = new URLSearchParams(window.location.search);
+            reservaIdOriginalFromUrl = urlParams.get('reservaId');
+            accionFromUrl = urlParams.get('accion');
+
+            if (reservaIdOriginalFromUrl) {
+                seleccionSection.style.display = 'none';
+                marcarEnviadoContainer.classList.remove('hidden');
+                cargarDetalleReserva(reservaIdOriginalFromUrl);
+            }
+
+            btnMarcarEnviado.addEventListener('click', async () => {
+                if (!reservaSeleccionada || !accionFromUrl) return;
+                
+                btnMarcarEnviado.disabled = true;
+                btnMarcarEnviado.textContent = 'Procesando...';
+
+                const formData = new FormData();
+                const idsIndividuales = reservaSeleccionada.cabanas.map(c => c.id);
+                
+                formData.append('accion', accionFromUrl);
+                formData.append('idsIndividuales', JSON.stringify(idsIndividuales));
+                formData.append('reservaIdOriginal', reservaSeleccionada.info.reservaIdOriginal);
+                formData.append('detalles', JSON.stringify({ sinDocumento: true }));
+
+                try {
+                    await fetchAPI(`/api/gestion/actualizar-estado`, {
+                        method: 'POST',
+                        body: formData
+                    });
+                    window.location.href = 'gestion.html';
+                } catch (error) {
+                    alert('Error al marcar como enviado: ' + error.message);
+                    btnMarcarEnviado.disabled = false;
+                    btnMarcarEnviado.textContent = 'Marcar Acción como Completada y Volver al Panel';
+                }
+            });
+
+            btnGenerarCobro.addEventListener('click', generarMensajeCobro);
+            btnGenerarBienvenida.addEventListener('click', generarMensajeBienvenida);
+
+            btnCopiarCobro.addEventListener('click', () => copiarTexto(mensajeCobroText, btnCopiarCobro));
+            btnCopiarBienvenida.addEventListener('click', () => copiarTexto(mensajeBienvenidaText, btnCopiarBienvenida));
+
+            // --- INICIO DE LA MODIFICACIÓN: Se asigna la nueva función a los botones ---
+            btnWhatsappCobro.addEventListener('click', () => abrirWhatsApp(mensajeCobroText));
+            btnWhatsappBienvenida.addEventListener('click', () => abrirWhatsApp(mensajeBienvenidaText));
+            // --- FIN DE LA MODIFICACIÓN ---
+            
+            abonoInput.addEventListener('input', () => {
+                if (mensajeCobroText.value) {
+                    generarMensajeCobro();
+                }
+            });
+        }
+    });
+</script>
+</body>
+</html>

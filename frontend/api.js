@@ -1,21 +1,55 @@
-// frontend/api.js - CÓDIGO CORREGIDO Y FINAL
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Reservas</title>
+    <script>
+        if (window.location.hostname.startsWith('www.')) {
+            window.location.href = window.location.href.replace('www.', '');
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-gray-100">
+    <div id="loader" class="text-center p-8">
+        <p class="text-gray-500">Verificando sesión...</p>
+    </div>
 
-const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+    <div id="app-container" class="hidden">
+        <aside id="sidebar" class="sidebar">
+            <div class="flex items-center justify-between p-4">
+                <h1 id="sidebar-title" class="text-xl font-bold text-white">Gestor de Reservas</h1>
+                <button id="sidebar-toggle-desktop" class="p-2 rounded-md text-gray-300 hover:bg-gray-700 hover:text-white hidden md:block">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
+                </button>
+            </div>
+            <nav id="main-nav" class="mt-4">
+                </nav>
+        </aside>
 
-export async function fetchAPI(endpoint, options = {}) {
-  const token = localStorage.getItem('firebaseIdToken');
-  if (!token) {
-    console.error('No se encontró token. Redirigiendo al login.');
-    window.location.href = 'index.html';
-    throw new Error('No autenticado');
-  }
+        <div id="main-content" class="main-content">
+            <header class="bg-white shadow-sm">
+                <div class="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+                    <button id="sidebar-toggle-mobile" class="p-2 rounded-md text-gray-500 hover:bg-gray-100 md:hidden">
+                        <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div class="flex-grow"></div>
+                    <div id="auth-info" class="flex items-center space-x-4"></div>
+                </div>
+            </header>
+            <main id="view-content" class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                </main>
+        </div>
+    </div>
 
-  const isFormData = options.body instanceof FormData;
-  const headers = {
-    ...options.headers,
-    'Authorization': `Bearer ${token}`,
-  };
+    <script type="module">
+        import { checkSession, logout } from '/gestor-reservas/api.js';
+        import { initRouter } from '/gestor-reservas/router.js';
 
+<<<<<<< HEAD
   if (!isFormData) {
     headers['Content-Type'] = 'application/json';
   }
@@ -25,44 +59,36 @@ export async function fetchAPI(endpoint, options = {}) {
       headers: headers,
       ...(options.body && { body: isFormData ? options.body : JSON.stringify(options.body) })
   };
+=======
+        const loader = document.getElementById('loader');
+        const appContainer = document.getElementById('app-container');
+        const authInfo = document.getElementById('auth-info');
+        
+        const session = checkSession();
+        if (session) {
+            loader.style.display = 'none';
+            appContainer.classList.add('flex');
+            appContainer.classList.remove('hidden');
+            authInfo.innerHTML = `
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            
+            initRouter();
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
 
-  try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const toggleMobileBtn = document.getElementById('sidebar-toggle-mobile');
+            const toggleDesktopBtn = document.getElementById('sidebar-toggle-desktop');
 
-    if (response.status === 401) {
-      console.error('Token inválido o expirado. Redirigiendo al login.');
-      logout();
-      throw new Error('No autorizado');
-    }
-
-    if (!response.ok) {
-      const errorResult = await response.json().catch(() => ({ error: 'Error desconocido del servidor' }));
-      throw new Error(errorResult.error || `Error en la solicitud: ${response.statusText}`);
-    }
-
-    if (response.status === 204) {
-      return null;
-    }
-
-    return await response.json();
-  } catch (error) {
-    console.error(`Error en fetchAPI para el endpoint ${endpoint}:`, error);
-    throw error;
-  }
-}
-
-export function checkSession() {
-  const token = localStorage.getItem('firebaseIdToken');
-  const userEmail = sessionStorage.getItem('userEmail');
-  if (!token || !userEmail) {
-    window.location.href = 'index.html';
-    return null;
-  }
-  return { userEmail };
-}
-
-export function logout() {
-  localStorage.removeItem('firebaseIdToken');
-  sessionStorage.removeItem('userEmail');
-  window.location.href = 'index.html';
-}
+            toggleMobileBtn.addEventListener('click', () => sidebar.classList.toggle('open'));
+            toggleDesktopBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('collapsed');
+                mainContent.classList.toggle('collapsed');
+            });
+        }
+    </script>
+</body>
+</html>

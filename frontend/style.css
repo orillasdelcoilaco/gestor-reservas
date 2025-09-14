@@ -17,8 +17,14 @@ body {
     left: -260px;
     top: 0;
     bottom: 0;
+<<<<<<< HEAD
     transition: left 0.3s ease-in-out;
     z-index: 40;
+=======
+    transition: all 0.3s ease-in-out;
+    z-index: 40;
+    flex-shrink: 0;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
 }
 
 .sidebar.open {
@@ -43,6 +49,10 @@ body {
     color: #9ca3af; /* gray-400 */
     text-transform: uppercase;
     display: block;
+<<<<<<< HEAD
+=======
+    white-space: nowrap;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
 }
 
 .nav-link {
@@ -52,6 +62,10 @@ body {
     color: #d1d5db; /* gray-300 */
     text-decoration: none;
     transition: background-color 0.2s;
+<<<<<<< HEAD
+=======
+    white-space: nowrap;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
 }
 
 .nav-link.single-link {
@@ -59,7 +73,10 @@ body {
     font-weight: 500;
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
 .nav-link:hover {
     background-color: #374151; /* gray-700 */
     color: white;
@@ -73,7 +90,39 @@ body {
     .main-content {
         margin-left: 260px;
     }
+<<<<<<< HEAD
     #menu-toggle {
         display: none; /* Ocultar el botón de hamburguesa en escritorio */
+=======
+    #sidebar-toggle-mobile {
+        display: none;
+    }
+
+    /* Estilos para el menú colapsado en escritorio */
+    .sidebar.collapsed {
+        width: 80px;
+    }
+    .sidebar.collapsed #sidebar-title,
+    .sidebar.collapsed .nav-link,
+    .sidebar.collapsed .category-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .sidebar.collapsed .category-title {
+       font-size: 0.6rem;
+       padding-left: 0.5rem;
+       padding-right: 0.5rem;
+       text-align: center;
+    }
+     .sidebar.collapsed .nav-link {
+        padding-left: 0;
+        justify-content: center;
+        display: flex;
+    }
+    
+    .main-content.collapsed {
+        margin-left: 80px;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
     }
 }

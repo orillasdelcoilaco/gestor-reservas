@@ -61,8 +61,11 @@
 </div>
 
 <script type="module">
+<<<<<<< HEAD
     // --- INICIO DE LA MODIFICACIÓN ---
     // Importamos fetchAPI directamente aquí, ya que cada vista es modular.
+=======
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
     import { fetchAPI } from '../api.js';
 
     let fullKpiResults = null;
@@ -104,6 +107,7 @@
         const ingresoProyectadoActual = ingresoPotencialBase * (proyeccionActual / 100);
 
         const kpiCardsContainer = document.getElementById('kpi-cards');
+<<<<<<< HEAD
         kpiCardsContainer.innerHTML = \`
           <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">Ocupación</div><div class="text-2xl font-bold text-gray-900">\${kpisGenerales.tasaOcupacion}%</div></div>
           <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">ADR</div><div class="text-2xl font-bold text-gray-900">\${formatCurrency(kpisGenerales.adr)}</div></div>
@@ -116,6 +120,20 @@
         const canalDetailsTable = document.getElementById('canal-details-table');
         const canalData = kpisGenerales.reservasPorCanal;
         let canalTableHtml = \`
+=======
+        kpiCardsContainer.innerHTML = `
+          <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">Ocupación</div><div class="text-2xl font-bold text-gray-900">${kpisGenerales.tasaOcupacion}%</div></div>
+          <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">ADR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.adr)}</div></div>
+          <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">RevPAR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.revPar)}</div></div>
+          <div class="p-4 bg-green-100 rounded-lg"><div class="text-sm font-medium text-green-700">Ingreso Real</div><div class="text-2xl font-bold text-green-900">${formatCurrency(kpisGenerales.ingresoTotal)}</div></div>
+          <div class="p-4 bg-blue-100 rounded-lg"><div class="text-sm font-medium text-blue-700">Ingreso Proyectado</div><div id="ingreso-proyectado-valor" class="text-2xl font-bold text-blue-900">${formatCurrency(ingresoProyectadoActual)}</div></div>
+          <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuento Real</div><div class="text-2xl font-bold text-red-900">${formatCurrency(kpisGenerales.descuentosTotalesReales)}</div></div>
+        `;
+        
+        const canalDetailsTable = document.getElementById('canal-details-table');
+        const canalData = kpisGenerales.reservasPorCanal;
+        let canalTableHtml = `
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
           <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                   <tr>
@@ -125,6 +143,7 @@
                   </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
+<<<<<<< HEAD
                   \${Object.entries(canalData).map(([canal, data]) => \`
                       <tr>
                           <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">\${canal}</td>
@@ -135,18 +154,35 @@
               </tbody>
           </table>
         \`;
+=======
+                  ${Object.entries(canalData).map(([canal, data]) => `
+                      <tr>
+                          <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${canal}</td>
+                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${data.count}</td>
+                          <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(data.ingreso)}</td>
+                      </tr>
+                  `).join('')}
+              </tbody>
+          </table>
+        `;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
         canalDetailsTable.innerHTML = canalTableHtml;
         
         const rankingTableBody = document.getElementById('ranking-table-body');
         rankingTableBody.innerHTML = '';
         results.rankingCabañas.forEach((cabaña, index) => {
             const row = document.createElement('tr');
+<<<<<<< HEAD
             row.id = \`ranking-row-\${index}\`;
+=======
+            row.id = `ranking-row-${index}`;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
             row.setAttribute('data-cabaña-nombre', cabaña.nombre);
             
             const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccionActual / 100);
             const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
 
+<<<<<<< HEAD
             row.innerHTML = \`
               <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">\${cabaña.nombre}</td>
               <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">\${cabaña.nochesOcupadas}</td>
@@ -154,6 +190,15 @@
               <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">\${formatCurrency(cabaña.ingresoRealTotal)}</td>
               <td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">\${formatCurrency(cabaña.descuentoTotal)}</td>
             \`;
+=======
+            row.innerHTML = `
+              <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${cabaña.nombre}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${cabaña.nochesOcupadas}</td>
+              <td class="noches-faltantes-cell px-4 py-3 whitespace-nowrap text-sm text-gray-700">${Math.round(nochesFaltantesProyectadas)}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(cabaña.ingresoRealTotal)}</td>
+              <td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">${formatCurrency(cabaña.descuentoTotal)}</td>
+            `;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
             rankingTableBody.appendChild(row);
         });
     }
@@ -166,11 +211,19 @@
         const title = document.getElementById('detail-modal-title');
         const content = document.getElementById('detail-modal-content');
 
+<<<<<<< HEAD
         title.textContent = \`Detalle por Canal - \${cabañaNombre}\`;
         
         let tableHtml = \`<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>\`;
         if (cabañaData.canales && Object.keys(cabañaData.canales).length > 0) {
             tableHtml = \`
+=======
+        title.textContent = `Detalle por Canal - ${cabañaNombre}`;
+        
+        let tableHtml = `<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>`;
+        if (cabañaData.canales && Object.keys(cabañaData.canales).length > 0) {
+            tableHtml = `
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
             <table class="min-w-full divide-y divide-gray-200">
               <thead class="bg-gray-50">
                   <tr>
@@ -180,6 +233,7 @@
                   </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-200">
+<<<<<<< HEAD
                   \${Object.entries(cabañaData.canales).map(([canal, data]) => \`
                       <tr>
                           <td class="px-4 py-2 text-sm font-medium">\${canal}</td>
@@ -189,13 +243,27 @@
                   \`).join('')}
               </tbody>
             </table>\`;
+=======
+                  ${Object.entries(cabañaData.canales).map(([canal, data]) => `
+                      <tr>
+                          <td class="px-4 py-2 text-sm font-medium">${canal}</td>
+                          <td class="px-4 py-2 text-sm">${data.noches}</td>
+                          <td class="px-4 py-2 text-sm text-red-600">${formatCurrency(data.descuento)}</td>
+                      </tr>
+                  `).join('')}
+              </tbody>
+            </table>`;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
         }
         
         content.innerHTML = tableHtml;
         modal.classList.remove('hidden');
     }
 
+<<<<<<< HEAD
     // --- Vinculación de eventos ---
+=======
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
     const calculateBtn = document.getElementById('kpi-calculate-btn');
     const fechaInicioInput = document.getElementById('kpi-fecha-inicio');
     const fechaFinInput = document.getElementById('kpi-fecha-fin');
@@ -220,7 +288,11 @@
         warningContainer.classList.add('hidden');
         calculateBtn.disabled = true;
         try {
+<<<<<<< HEAD
             const apiUrl = \`/api/kpi?fechaInicio=\${fechaInicio}&fechaFin=\${fechaFin}\`;
+=======
+            const apiUrl = `/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
             const kpiResults = await fetchAPI(apiUrl);
             
             if (kpiResults.warning) {
@@ -230,8 +302,13 @@
             
             displayKPIs(kpiResults);
         } catch (error) {
+<<<<<<< HEAD
             alert(\`Error al calcular KPIs: \${error.message}\`);
             resultsContainer.innerHTML = \`<p class="text-red-500 font-semibold">Error al calcular KPIs: \${error.message}</p>\`;
+=======
+            alert(`Error al calcular KPIs: ${error.message}`);
+            resultsContainer.innerHTML = `<p class="text-red-500 font-semibold">Error al calcular KPIs: ${error.message}</p>`;
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
         } finally {
             loadingIndicator.classList.add('hidden');
             resultsContainer.classList.remove('hidden');
@@ -252,5 +329,8 @@
         }
     });
     detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+<<<<<<< HEAD
     // --- FIN DE LA MODIFICACIÓN ---
+=======
+>>>>>>> 3289b388955acde3b3e3f0db3241b8d35060cf72
 </script>

@@ -1,3 +1,4 @@
+// backend/index.js
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
@@ -20,16 +21,22 @@ const cabanasRoutes = require('./routes/cabanas');
 const presupuestosRoutes = require('./routes/presupuestos');
 const icalRoutes = require('./routes/ical');
 const calendarioRoutes = require('./routes/calendario');
-const reportesRoutes = require('./routes/reportes'); // <-- INICIO DE LA MODIFICACIÓN
+const reportesRoutes = require('./routes/reportes');
 
-//--- INICIO DE LA CORRECCIÓN ---
 // Lista de dominios permitidos
-const allowedOrigins = ['https://www.orillasdelcoilaco.cl', 'https://orillasdelcoilaco.cl'];
+const allowedOrigins = [
+    'https://orillasdelcoilaco.cl',
+    'https://www.orillasdelcoilaco.cl',
+    // Añadido para desarrollo local
+    'http://localhost',
+    'http://127.0.0.1'
+];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permite solicitudes sin origen (como las de Postman o apps móviles) y las de la lista
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    // Permite solicitudes sin 'origin' (como Postman) o si el origen está en la lista blanca.
+    // Se ajusta para permitir cualquier puerto de localhost.
+    if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
       callback(null, true);
     } else {
       callback(new Error('No permitido por CORS'));
@@ -37,8 +44,6 @@ const corsOptions = {
   },
   optionsSuccessStatus: 200
 };
-//--- FIN DE LA CORRECCIÓN ---
-
 
 //--- Inicialización de Firebase Admin SDK ---
 const serviceAccount = process.env.RENDER 
@@ -88,7 +93,7 @@ privateRouter.use(gestionRoutes(db));
 privateRouter.use(cabanasRoutes(db));
 privateRouter.use(presupuestosRoutes(db));
 privateRouter.use(calendarioRoutes(db));
-privateRouter.use(reportesRoutes(db)); // <-- INICIO DE LA MODIFICACIÓN
+privateRouter.use(reportesRoutes(db));
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 

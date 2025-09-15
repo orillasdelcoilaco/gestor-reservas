@@ -195,10 +195,18 @@ async function processChannel(db, channel) {
                     continue;
                 }
 
-                // --- INICIO DE LA MODIFICACIÓN: Lógica anti-duplicados ---
-                if (allExistingReservations.has(idCompuesto)) {
-                    console.log(`Saltando reserva ya existente (${channel}): ${idCompuesto}`);
-                    continue; // Si la reserva ya existe, simplemente la saltamos.
+                // --- INICIO DE LA MODIFICACIÓN: Lógica de actualización y anti-duplicados ---
+                const reservaExistente = allExistingReservations.get(idCompuesto);
+                if (reservaExistente) {
+                    if (reservaExistente.estado !== reservaData.estado && !reservaExistente.valorManual && reservaExistente.estadoGestion !== 'Facturado') {
+                        const reservaRef = db.collection('reservas').doc(idCompuesto);
+                        batch.update(reservaRef, { estado: reservaData.estado });
+                        reservasActualizadas++;
+                        console.log(`Actualizando estado de reserva existente (${channel}): ${idCompuesto} a ${reservaData.estado}`);
+                    } else {
+                        console.log(`Saltando reserva ya existente sin cambios de estado (${channel}): ${idCompuesto}`);
+                    }
+                    continue; 
                 }
                 // --- FIN DE LA MODIFICACIÓN ---
                 

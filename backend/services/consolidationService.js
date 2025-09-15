@@ -1,8 +1,8 @@
-// backend/services/consolidationService.js - CÓDIGO ACTUALIZADO Y LIMPIO
+// backend/services/consolidationService.js - CÓDIGO ACTUALIZADO Y CORREGIDO
 
 const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
-const { createGoogleContact, getContactPhoneByName } = require('./googleContactsService');
+const { createGoogleContact } = require('./googleContactsService');
 const { cleanCabanaName, parseDate, parseCurrency, cleanPhoneNumber } = require('../utils/helpers');
 
 function extractCabanaNameFromAirbnb(anuncio) {
@@ -29,9 +29,19 @@ async function processChannel(db, channel) {
 
     let clientesNuevos = 0, reservasCreadas = 0, reservasActualizadas = 0;
 
-    const allExistingReservations = new Map();
+    // Estructura optimizada para buscar por ID original
+    const reservationsByOriginalId = new Map();
     const allReservasSnapshot = await db.collection('reservas').get();
-    allReservasSnapshot.forEach(doc => allExistingReservations.set(doc.id, doc.data()));
+    allReservasSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.reservaIdOriginal && data.canal) {
+            const key = `${data.canal.toUpperCase()}_${data.reservaIdOriginal}`;
+            if (!reservationsByOriginalId.has(key)) {
+                reservationsByOriginalId.set(key, []);
+            }
+            reservationsByOriginalId.get(key).push({ id: doc.id, data: doc.data() });
+        }
+    });
 
     const existingClientsByPhone = new Map();
     const allClientsSnapshot = await db.collection('clientes').get();
@@ -39,19 +49,6 @@ async function processChannel(db, channel) {
         const clientData = doc.data();
         if (clientData.phone) existingClientsByPhone.set(clientData.phone, doc.id);
     });
-
-    const airbnbReservationsByOriginalId = new Map();
-    if (channel === 'Airbnb') {
-        allExistingReservations.forEach((data, id) => {
-            if (data.canal === 'Airbnb') {
-                airbnbReservationsByOriginalId.set(data.reservaIdOriginal, { id, data });
-            }
-        });
-    }
-
-    const obsoleteReservations = new Map();
-    const obsoleteSnapshot = await db.collection('reservas_obsoletas').get();
-    obsoleteSnapshot.forEach(doc => obsoleteReservations.set(doc.id, doc.data()));
 
     const batch = db.batch();
     const genericPhone = '56999999999';
@@ -62,199 +59,104 @@ async function processChannel(db, channel) {
         const isSodc = channel === 'SODC';
         const isAirbnb = channel === 'Airbnb';
 
+        let reservaData;
+
         if (isAirbnb) {
             if (rawData['Tipo'] !== 'Reservación') continue;
-
             const parseAirbnbDate = (dateStr) => {
                 if (!dateStr || typeof dateStr !== 'string' || !/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) return null;
                 const [month, day, year] = dateStr.split('/');
                 const isoDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T00:00:00Z`;
-                const date = new Date(isoDate);
-                return !isNaN(date) ? date : null;
+                return new Date(isoDate);
             };
 
-            const reservaIdOriginal = rawData['Código de confirmación'];
-            const cabanaCorrecta = extractCabanaNameFromAirbnb(rawData['Anuncio']);
-            const fechaLlegada = parseAirbnbDate(rawData['Fecha de inicio']);
-            const fechaSalida = parseAirbnbDate(rawData['Fecha de finalización']);
-
-            if (!fechaLlegada || !fechaSalida || !reservaIdOriginal || !cabanaCorrecta) {
-                console.warn(`Saltando fila de Airbnb por datos inválidos. Código: ${reservaIdOriginal}`);
-                continue;
-            }
-            
-            const idCompuestoCorrecto = `AIRBNB_${reservaIdOriginal}_${cabanaCorrecta.replace(/\s+/g, '')}`;
-            
-            if (obsoleteReservations.has(idCompuestoCorrecto)) {
-                console.log(`Saltando reserva obsoleta (Airbnb): ${idCompuestoCorrecto}. Redirigida a ${obsoleteReservations.get(idCompuestoCorrecto).nuevaReservaId}`);
-                batch.delete(doc.ref);
-                continue;
-            }
-
-            const existingReservation = airbnbReservationsByOriginalId.get(reservaIdOriginal);
-
-            if (existingReservation) {
-                const idCompuestoIncorrecto = existingReservation.id;
-                if (idCompuestoIncorrecto !== idCompuestoCorrecto) {
-                    console.log(`Moviendo reserva Airbnb ${reservaIdOriginal}: de ${idCompuestoIncorrecto} a ${idCompuestoCorrecto}`);
-                    
-                    const oldReservaRef = db.collection('reservas').doc(idCompuestoIncorrecto);
-                    batch.delete(oldReservaRef);
-
-                    const newReservaRef = db.collection('reservas').doc(idCompuestoCorrecto);
-                    const newData = { ...existingReservation.data, alojamiento: cabanaCorrecta };
-                    batch.set(newReservaRef, newData, { merge: true });
-
-                    reservasActualizadas++;
-                }
-            } else {
-                reservasCreadas++;
-                clientesNuevos++;
-                const newClientRef = db.collection('clientes').doc();
-                const clienteId = newClientRef.id;
-                const nombreCompleto = rawData['Huésped'] || 'Cliente Airbnb';
-
-                const contactData = {
-                    name: `${nombreCompleto} Airbnb ${reservaIdOriginal}`,
-                    phone: genericPhone,
-                    email: null
-                };
-                const syncSuccess = await createGoogleContact(db, contactData);
-
-                batch.set(newClientRef, {
-                    firstname: nombreCompleto.split(' ')[0],
-                    lastname: nombreCompleto.split(' ').slice(1).join(' '),
-                    email: null,
-                    phone: genericPhone,
-                    googleContactSynced: syncSuccess
-                });
-                
-                const dataToSave = {
-                    reservaIdOriginal,
-                    clienteId,
-                    clienteNombre: nombreCompleto,
-                    canal: 'Airbnb',
-                    estado: 'Confirmada',
-                    fechaReserva: parseAirbnbDate(rawData['Fecha de la reservación']),
-                    fechaLlegada: admin.firestore.Timestamp.fromDate(fechaLlegada),
-                    fechaSalida: admin.firestore.Timestamp.fromDate(fechaSalida),
-                    totalNoches: parseInt(rawData['Noches'] || 0),
-                    invitados: 0,
-                    alojamiento: cabanaCorrecta,
-                    monedaOriginal: 'CLP',
-                    valorOriginal: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
-                    valorCLP: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
-                    correo: null,
-                    telefono: genericPhone,
-                    pais: null,
-                    valorDolarDia: null,
-                    comision: parseCurrency(rawData['Tarifa por servicio'], 'CLP'),
-                    iva: 0,
-                    valorConIva: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
-                    abono: 0,
-                    fechaAbono: null,
-                    fechaPago: null,
-                    pagado: false,
-                    pendiente: parseCurrency(rawData['Ingresos brutos'], 'CLP'),
-                    boleta: false,
-                    estadoGestion: 'Pendiente Bienvenida'
-                };
-                
-                const reservaRef = db.collection('reservas').doc(idCompuestoCorrecto);
-                batch.set(reservaRef, dataToSave, { merge: true });
-            }
-
+            reservaData = {
+                reservaIdOriginal: rawData['Código de confirmación'],
+                alojamientos: [extractCabanaNameFromAirbnb(rawData['Anuncio'])],
+                nombreCompleto: rawData['Huésped'] || 'Cliente Airbnb',
+                telefono: genericPhone,
+                email: null,
+                fechaLlegada: parseAirbnbDate(rawData['Fecha de inicio']),
+                fechaSalida: parseAirbnbDate(rawData['Fecha de finalización']),
+                estado: 'Confirmada',
+                fechaReserva: parseAirbnbDate(rawData['Fecha de la reservación']),
+                totalNoches: parseInt(rawData['Noches'] || 0),
+                valorCLP: parseCurrency(rawData['Ingresos brutos'], 'CLP')
+            };
         } else {
-            const alojamientosRaw = (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento']);
-            const alojamientosLimpios = (alojamientosRaw || "").toString().split(',').map(c => cleanCabanaName(c));
-            const nombreCompletoRaw = (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre";
-            
-            let telefonoReporte = cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']);
-
-            const reservaData = {
+            reservaData = {
                 reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString() || null,
-                nombreCompleto: nombreCompletoRaw,
+                alojamientos: (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento'] || "").toString().split(',').map(c => cleanCabanaName(c)),
+                nombreCompleto: (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre",
+                telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']) || genericPhone,
                 email: rawData['Email'] || rawData['Correo'] || null,
-                telefono: telefonoReporte || genericPhone,
                 fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),
                 fechaSalida: parseDate(isBooking ? rawData['Salida'] : rawData['Día de salida']),
                 estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
-                alojamientos: alojamientosLimpios,
-                pais: (isBooking ? rawData['País del cliente'] : rawData['País']) || null
+                fechaReserva: parseDate(isBooking ? rawData['Fecha de reserva'] : rawData['Fecha']),
             };
+        }
 
-            if (!reservaData.fechaLlegada || !reservaData.fechaSalida || !reservaData.reservaIdOriginal) continue;
+        if (!reservaData.fechaLlegada || !reservaData.fechaSalida || !reservaData.reservaIdOriginal || reservaData.alojamientos.length === 0) {
+            continue;
+        }
+
+        const lookupKey = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}`;
+        const existingGroup = reservationsByOriginalId.get(lookupKey);
+
+        if (existingGroup) {
+            const firstExisting = existingGroup[0].data;
+            if (firstExisting.estado !== reservaData.estado && !firstExisting.valorManual && firstExisting.estadoGestion !== 'Facturado') {
+                existingGroup.forEach(res => {
+                    const reservaRef = db.collection('reservas').doc(res.id);
+                    batch.update(reservaRef, { estado: reservaData.estado });
+                });
+                reservasActualizadas++;
+                console.log(`Actualizando estado del grupo ${lookupKey} a ${reservaData.estado}`);
+            }
+        } else {
+            // Es una reserva nueva, proceder a crearla
+            reservasCreadas++;
             
+            let clienteId;
+            if (reservaData.telefono !== genericPhone && existingClientsByPhone.has(reservaData.telefono)) {
+                clienteId = existingClientsByPhone.get(reservaData.telefono);
+            } else {
+                clientesNuevos++;
+                const newClientRef = db.collection('clientes').doc();
+                clienteId = newClientRef.id;
+                const contactData = { name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaIdOriginal}`, phone: reservaData.telefono, email: reservaData.email };
+                createGoogleContact(db, contactData).catch(err => console.error("Error al sincronizar con Google Contacts:", err.message));
+                batch.set(newClientRef, {
+                    firstname: reservaData.nombreCompleto.split(' ')[0],
+                    lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
+                    email: reservaData.email,
+                    phone: reservaData.telefono,
+                    googleContactSynced: false
+                });
+                if (reservaData.telefono !== genericPhone) {
+                    existingClientsByPhone.set(reservaData.telefono, clienteId);
+                }
+            }
+
             for (const cabana of reservaData.alojamientos) {
-                 if (!cabana) continue;
-                
+                if (!cabana) continue;
+
                 const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
-                
-                if (obsoleteReservations.has(idCompuesto)) {
-                    console.log(`Saltando reserva obsoleta (${channel}): ${idCompuesto}. Redirigida a ${obsoleteReservations.get(idCompuesto).nuevaReservaId}`);
-                    continue;
-                }
-
-                // --- INICIO DE LA MODIFICACIÓN: Lógica de actualización y anti-duplicados ---
-                const reservaExistente = allExistingReservations.get(idCompuesto);
-                if (reservaExistente) {
-                    if (reservaExistente.estado !== reservaData.estado && !reservaExistente.valorManual && reservaExistente.estadoGestion !== 'Facturado') {
-                        const reservaRef = db.collection('reservas').doc(idCompuesto);
-                        batch.update(reservaRef, { estado: reservaData.estado });
-                        reservasActualizadas++;
-                        console.log(`Actualizando estado de reserva existente (${channel}): ${idCompuesto} a ${reservaData.estado}`);
-                    } else {
-                        console.log(`Saltando reserva ya existente sin cambios de estado (${channel}): ${idCompuesto}`);
-                    }
-                    continue; 
-                }
-                // --- FIN DE LA MODIFICACIÓN ---
-                
-                reservasCreadas++;
                 const reservaRef = db.collection('reservas').doc(idCompuesto);
-                let clienteId;
-
-                if (reservaData.telefono !== genericPhone && existingClientsByPhone.has(reservaData.telefono)) {
-                    clienteId = existingClientsByPhone.get(reservaData.telefono);
-                } else {
-                    clientesNuevos++;
-                    const newClientRef = db.collection('clientes').doc();
-                    clienteId = newClientRef.id;
-
-                    const contactData = {
-                        name: `${reservaData.nombreCompleto} ${channel} ${reservaData.reservaIdOriginal}`,
-                        phone: reservaData.telefono,
-                        email: reservaData.email
-                    };
-                    
-                    const syncSuccess = await createGoogleContact(db, contactData);
-
-                    batch.set(newClientRef, {
-                        firstname: reservaData.nombreCompleto.split(' ')[0],
-                        lastname: reservaData.nombreCompleto.split(' ').slice(1).join(' '),
-                        email: reservaData.email,
-                        phone: reservaData.telefono,
-                        googleContactSynced: syncSuccess
-                    });
-                    
-                    if (reservaData.telefono !== genericPhone) {
-                        existingClientsByPhone.set(reservaData.telefono, clienteId);
-                    }
-                }
-                
                 const valorOriginal = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
                 const valorDolarDia = isBooking ? await getValorDolar(db, reservaData.fechaLlegada) : null;
                 const precioPorCabana = reservaData.alojamientos.length > 0 ? (valorOriginal / reservaData.alojamientos.length) : 0;
                 const valorCLPCalculado = isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : precioPorCabana;
                 const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
-                
+
                 const dataToSave = {
                     reservaIdOriginal: reservaData.reservaIdOriginal,
                     clienteId: clienteId,
                     clienteNombre: reservaData.nombreCompleto,
                     canal: channel,
                     estado: reservaData.estado,
-                    fechaReserva: parseDate(isBooking ? rawData['Fecha de reserva'] : rawData['Fecha']),
+                    fechaReserva: reservaData.fechaReserva,
                     fechaLlegada: admin.firestore.Timestamp.fromDate(reservaData.fechaLlegada),
                     fechaSalida: admin.firestore.Timestamp.fromDate(reservaData.fechaSalida),
                     totalNoches: totalNoches > 0 ? totalNoches : 1,
@@ -262,30 +164,28 @@ async function processChannel(db, channel) {
                     alojamiento: cabana,
                     monedaOriginal: isBooking ? 'USD' : 'CLP',
                     valorOriginal: precioPorCabana,
-                    valorCLP: valorCLPCalculado,
+                    valorCLP: isAirbnb ? reservaData.valorCLP : valorCLPCalculado,
                     correo: reservaData.email,
                     telefono: reservaData.telefono,
-                    pais: reservaData.pais,
+                    pais: (isBooking ? rawData['País del cliente'] : rawData['País']) || null,
                     valorDolarDia: valorDolarDia,
-                    comision: isBooking ? parseCurrency(rawData['Importe de la comisión'], 'USD') / reservaData.alojamientos.length : null,
-                    iva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 0.19) : null,
-                    valorConIva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : valorCLPCalculado,
+                    comision: isBooking ? parseCurrency(rawData['Importe de la comisión'], 'USD') / reservaData.alojamientos.length : (isAirbnb ? parseCurrency(rawData['Tarifa por servicio'], 'CLP') : null),
+                    iva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 0.19) : 0,
+                    valorConIva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : (isAirbnb ? reservaData.valorCLP : valorCLPCalculado),
                     abono: 0,
-                    fechaAbono: null,
-                    fechaPago: null,
                     pagado: false,
-                    pendiente: valorCLPCalculado,
                     boleta: false,
                     estadoGestion: 'Pendiente Bienvenida'
                 };
-
                 batch.set(reservaRef, dataToSave, { merge: true });
             }
         }
         batch.delete(doc.ref);
     }
 
-    await batch.commit();
+    if (clientesNuevos > 0 || reservasCreadas > 0 || reservasActualizadas > 0) {
+        await batch.commit();
+    }
     
     return {
         reportesEncontrados: rawDocsSnapshot.size,

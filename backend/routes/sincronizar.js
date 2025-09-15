@@ -56,33 +56,35 @@ async function saveDataToFirestore(db, collectionName, data) {
 
 
 async function performDriveSync(db) {
-    console.log('[DIAGNÓSTICO] La función performDriveSync ha comenzado.');
+    console.log('[Sincronización] La función performDriveSync ha comenzado.');
+    const summary = {
+        sodc: { file: 'No encontrado', records: 0 },
+        booking: { file: 'No encontrado', records: 0 },
+        airbnb: { file: 'No encontrado', records: 0 }
+    };
+
     try {
-        console.log('Iniciando proceso de sincronización en segundo plano...');
+        console.log('Iniciando proceso de sincronización...');
         const drive = driveService.getDriveClient();
-        console.log('[DIAGNÓSTICO] Cliente de Google Drive inicializado correctamente.');
+        console.log('[Sincronización] Cliente de Google Drive inicializado.');
         
         const folderId = config.DRIVE_FOLDER_ID;
 
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // Se añade la búsqueda del archivo de Airbnb en paralelo
         const [sodcFile, bookingFile, airbnbFile] = await Promise.all([
             driveService.findLatestFile(drive, folderId, config.SODC_FILE_PATTERN),
             driveService.findLatestFile(drive, folderId, config.BOOKING_FILE_PATTERN),
             driveService.findLatestFile(drive, folderId, config.AIRBNB_FILE_PATTERN)
         ]);
-        // --- FIN DE LA MODIFICACIÓN ---
         
-        console.log('[DIAGNÓSTICO] Búsqueda de archivos completada.');
+        console.log('[Sincronización] Búsqueda de archivos completada.');
 
         if (sodcFile) {
             console.log(`Descargando y procesando archivo SODC: ${sodcFile.name}`);
             const fileStream = await driveService.downloadFile(drive, sodcFile.id);
             const sodcData = await parseCsvStream(fileStream);
             await saveDataToFirestore(db, 'reportes_sodc_raw', sodcData);
+            summary.sodc = { file: sodcFile.name, records: sodcData.length };
             console.log(`Archivo ${sodcFile.name} procesado. Se guardaron ${sodcData.length} registros.`);
-        } else {
-            console.log('No se encontró archivo nuevo de SODC.');
         }
 
         if (bookingFile) {
@@ -90,43 +92,40 @@ async function performDriveSync(db) {
             const fileStream = await driveService.downloadFile(drive, bookingFile.id);
             const bookingData = await parseExcelStream(fileStream);
             await saveDataToFirestore(db, 'reportes_booking_raw', bookingData);
+            summary.booking = { file: bookingFile.name, records: bookingData.length };
             console.log(`Archivo ${bookingFile.name} procesado. Se guardaron ${bookingData.length} registros.`);
-        } else {
-            console.log('No se encontró archivo nuevo de Booking.');
         }
 
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // Se añade la lógica para procesar el archivo de Airbnb
         if (airbnbFile) {
             console.log(`Descargando y procesando archivo Airbnb: ${airbnbFile.name}`);
             const fileStream = await driveService.downloadFile(drive, airbnbFile.id);
             const airbnbData = await parseCsvStream(fileStream);
             await saveDataToFirestore(db, 'reportes_airbnb_raw', airbnbData);
+            summary.airbnb = { file: airbnbFile.name, records: airbnbData.length };
             console.log(`Archivo ${airbnbFile.name} procesado. Se guardaron ${airbnbData.length} registros.`);
-        } else {
-            console.log('No se encontró archivo nuevo de Airbnb.');
         }
-        // --- FIN DE LA MODIFICACIÓN ---
 
-        console.log('--- Sincronización en segundo plano completada. ---');
+        console.log('--- Sincronización completada. ---');
+        return summary;
     } catch (error) {
-        console.error('Error fatal durante la sincronización en segundo plano:', error);
+        console.error('Error fatal durante la sincronización:', error);
+        throw error;
     }
 }
 
 module.exports = (db) => {
-    router.post('/sincronizar-drive', (req, res) => {
+    router.post('/sincronizar-drive', async (req, res) => {
         console.log('Solicitud recibida para sincronizar desde Google Drive...');
-
-        res.status(202).json({
-            message: 'El proceso de sincronización ha comenzado en segundo plano. Revisa los logs del servidor para ver el progreso.'
-        });
-
-        setTimeout(() => {
-            performDriveSync(db).catch(err => {
-                console.error('[DIAGNÓSTICO] Error no capturado en performDriveSync:', err);
+        try {
+            const summary = await performDriveSync(db);
+            res.status(200).json({
+                message: 'Proceso de sincronización finalizado.',
+                summary: summary
             });
-        }, 100);
+        } catch (error) {
+            console.error('[DIAGNÓSTICO] Error en la ruta /sincronizar-drive:', error);
+            res.status(500).json({ error: 'Falló el proceso de sincronización.', message: error.message });
+        }
     });
 
     return router;

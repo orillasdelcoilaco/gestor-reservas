@@ -59,57 +59,66 @@
             const consolidateBtn = document.getElementById('consolidate-btn');
             const consolidateStatus = document.getElementById('consolidate-status');
 
-            function showStatus(element, message, isError = false) {
-                element.innerHTML = message;
-                let statusClass = isError ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800';
-                 if (message.includes('¡Proceso de consolidación finalizado!')) {
-                    statusClass = 'bg-green-100 text-green-800';
+            function showStatus(element, message, type = 'info') {
+                let bgColor, textColor;
+                switch(type) {
+                    case 'error': bgColor = 'bg-red-100'; textColor = 'text-red-800'; break;
+                    case 'success': bgColor = 'bg-green-100'; textColor = 'text-green-800'; break;
+                    default: bgColor = 'bg-blue-100'; textColor = 'text-blue-800';
                 }
-                element.className = `mt-6 p-4 rounded-md text-sm ${statusClass}`;
+                element.innerHTML = message;
+                element.className = `mt-6 p-4 rounded-md text-sm ${bgColor} ${textColor}`;
                 element.classList.remove('hidden');
             }
 
             consolidateBtn.addEventListener('click', async () => {
                 consolidateBtn.disabled = true;
                 consolidateBtn.textContent = 'Procesando...';
-                showStatus(consolidateStatus, 'Iniciando consolidación. Esto puede tardar varios segundos...');
+                showStatus(consolidateStatus, 'Iniciando consolidación. Esto puede tardar varios segundos...', 'info');
                 try {
                     const result = await fetchAPI('/api/consolidar', {
                         method: 'POST'
                     });
                     
-                    // --- NUEVA LÓGICA PARA MOSTRAR EL RESUMEN DETALLADO ---
-                    const sodc = result.summary.sodc;
-                    const booking = result.summary.booking;
+                    const { sodc, booking, airbnb } = result.summary;
 
                     let summaryHtml = `
-                        <strong>¡Proceso de consolidación finalizado!</strong>
-                        <div class="grid grid-cols-2 gap-4 mt-2">
+                        <strong>${result.message}</strong>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
                             <div>
                                 <h4 class="font-semibold">SODC</h4>
                                 <ul class="list-disc list-inside text-sm">
-                                    <li>Reportes procesados: <strong>${sodc.reportesEncontrados}</strong></li>
-                                    <li>Reservas creadas: <strong>${sodc.reservasCreadas}</strong></li>
-                                    <li>Reservas actualizadas: <strong>${sodc.reservasActualizadas}</strong></li>
-                                    <li>Clientes nuevos: <strong>${sodc.clientesNuevos}</strong></li>
+                                    <li>Reportes: <strong>${sodc.reportesEncontrados}</strong></li>
+                                    <li>Nuevas Reservas: <strong>${sodc.reservasCreadas}</strong></li>
+                                    <li>Reservas Actualizadas: <strong>${sodc.reservasActualizadas}</strong></li>
+                                    <li>Nuevos Clientes: <strong>${sodc.clientesNuevos}</strong></li>
                                 </ul>
                             </div>
                             <div>
                                 <h4 class="font-semibold">Booking</h4>
                                 <ul class="list-disc list-inside text-sm">
-                                    <li>Reportes procesados: <strong>${booking.reportesEncontrados}</strong></li>
-                                    <li>Reservas creadas: <strong>${booking.reservasCreadas}</strong></li>
-                                    <li>Reservas actualizadas: <strong>${booking.reservasActualizadas}</strong></li>
-                                    <li>Clientes nuevos: <strong>${booking.clientesNuevos}</strong></li>
+                                    <li>Reportes: <strong>${booking.reportesEncontrados}</strong></li>
+                                    <li>Nuevas Reservas: <strong>${booking.reservasCreadas}</strong></li>
+                                    <li>Reservas Actualizadas: <strong>${booking.reservasActualizadas}</strong></li>
+                                    <li>Nuevos Clientes: <strong>${booking.clientesNuevos}</strong></li>
+                                </ul>
+                            </div>
+                             <div>
+                                <h4 class="font-semibold">Airbnb</h4>
+                                <ul class="list-disc list-inside text-sm">
+                                    <li>Reportes: <strong>${airbnb.reportesEncontrados}</strong></li>
+                                    <li>Nuevas Reservas: <strong>${airbnb.reservasCreadas}</strong></li>
+                                    <li>Reservas Actualizadas: <strong>${airbnb.reservasActualizadas}</strong></li>
+                                    <li>Nuevos Clientes: <strong>${airbnb.clientesNuevos}</strong></li>
                                 </ul>
                             </div>
                         </div>
                     `;
-                    showStatus(consolidateStatus, summaryHtml);
+                    showStatus(consolidateStatus, summaryHtml, 'success');
 
                 } catch (error) {
                     console.error('Error al consolidar:', error);
-                    showStatus(consolidateStatus, `<strong>Error:</strong> ${error.message}`, true);
+                    showStatus(consolidateStatus, `<strong>Error:</strong> ${error.message}`, 'error');
                 } finally {
                     consolidateBtn.disabled = false;
                     consolidateBtn.textContent = 'Iniciar Proceso de Consolidación';

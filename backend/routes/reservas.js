@@ -264,18 +264,13 @@ module.exports = (db) => {
             querySnapshot.forEach(doc => {
                 const data = doc.data();
                 if (data.estado === 'Confirmada') {
-                    const fechaSalidaDate = data.fechaSalida.toDate();
-                    fechaSalidaDate.setUTCHours(12, 0, 0, 0);
-
-                    // --- INICIO DE LA MODIFICACIÓN ---
                     const uniqueTitle = [...new Set((data.clienteNombre || '').split('\n'))].join(' ').trim();
-                    // --- FIN DE LA MODIFICACIÓN ---
 
                     reservasDelMes.push({
                         id: doc.id,
-                        title: uniqueTitle, // <-- Usar el título limpio
-                        start: data.fechaLlegada.toDate().toISOString(),
-                        end: fechaSalidaDate.toISOString(),
+                        title: uniqueTitle,
+                        start: data.fechaLlegada.toDate().toISOString().split('T')[0],
+                        end: data.fechaSalida.toDate().toISOString().split('T')[0],
                         resourceId: data.alojamiento,
                         extendedProps: {
                             canal: data.canal,

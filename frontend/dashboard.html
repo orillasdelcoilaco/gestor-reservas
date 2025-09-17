@@ -87,7 +87,11 @@
             <div class="bg-white p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <a href="gestion.html" class="bg-red-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-700 transition shadow"><span class="text-3xl">!</span><p class="mt-2">Gestión Diaria</p></a>
+                    <a href="gestion.html" class="relative bg-red-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-700 transition shadow">
+                        <span id="gestion-badge" class="absolute -top-2 -right-2 bg-red-800 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center hidden"></span>
+                        <span class="text-3xl">!</span>
+                        <p class="mt-2">Gestión Diaria</p>
+                    </a>
                     <a href="calendario.html" class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow flex items-center justify-center"><p>Calendario de Ocupación</p></a>
                     <a href="agregar-reserva.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow flex items-center justify-center"><p>Agregar Propuesta</p></a>
                     <a href="propuestas.html" class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow flex items-center justify-center"><p>Gestionar Propuestas</p></a>
@@ -302,6 +306,21 @@
           const detailModal = document.getElementById('detail-modal');
           const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
           const rankingTableBody = document.getElementById('ranking-table-body');
+
+          async function loadPendingTasksCount() {
+              try {
+                  const pendingTasks = await fetchAPI('/api/gestion/pendientes');
+                  const badge = document.getElementById('gestion-badge');
+                  if (badge && pendingTasks.length > 0) {
+                      badge.textContent = pendingTasks.length;
+                      badge.classList.remove('hidden');
+                  }
+              } catch (error) {
+                  console.error("Error al cargar el contador de tareas pendientes:", error);
+              }
+          }
+
+          loadPendingTasksCount();
 
           calculateBtn.addEventListener('click', async () => {
               const fechaInicio = fechaInicioInput.value;

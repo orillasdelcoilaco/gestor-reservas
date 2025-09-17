@@ -6,24 +6,31 @@ function getTodayUTC() {
 }
 
 async function getReservasPendientes(db) {
-    const clientsSnapshot = await db.collection('clientes').get();
+    const [clientsSnapshot, reservasSnapshot, notasSnapshot] = await Promise.all([
+        db.collection('clientes').get(),
+        db.collection('reservas').where('estado', '==', 'Confirmada').where('estadoGestion', '!=', 'Facturado').get(),
+        db.collection('gestion_notas').get()
+    ]);
+
     const clientsMap = new Map();
     clientsSnapshot.forEach(doc => {
         clientsMap.set(doc.id, doc.data());
     });
 
-    const snapshot = await db.collection('reservas')
-        .where('estado', '==', 'Confirmada')
-        .where('estadoGestion', '!=', 'Facturado')
-        .get();
+    const notesCountMap = new Map();
+    notasSnapshot.forEach(doc => {
+        const nota = doc.data();
+        const id = nota.reservaIdOriginal;
+        notesCountMap.set(id, (notesCountMap.get(id) || 0) + 1);
+    });
 
-    if (snapshot.empty) {
+    if (reservasSnapshot.empty) {
         return [];
     }
 
     const reservasAgrupadas = new Map();
 
-    snapshot.docs.forEach(doc => {
+    reservasSnapshot.docs.forEach(doc => {
         const data = doc.data();
         const reservaId = data.reservaIdOriginal;
 
@@ -33,9 +40,7 @@ async function getReservasPendientes(db) {
 
             reservasAgrupadas.set(reservaId, {
                 reservaIdOriginal: reservaId,
-                // --- INICIO DE LA MODIFICACIÓN ---
-                clienteId: data.clienteId, // Se añade el ID del cliente al grupo
-                // --- FIN DE LA MODIFICACIÓN ---
+                clienteId: data.clienteId,
                 clienteNombre: data.clienteNombre,
                 telefono: telefonoActualizado || 'N/A',
                 fechaLlegada: data.fechaLlegada ? data.fechaLlegada.toDate() : null,
@@ -46,7 +51,8 @@ async function getReservasPendientes(db) {
                 valorCLP: 0,
                 abono: 0,
                 valorPotencialTotal: 0,
-                potencialCalculado: false 
+                potencialCalculado: false,
+                notasCount: notesCountMap.get(reservaId) || 0
             });
         }
 

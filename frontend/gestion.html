@@ -139,6 +139,10 @@
         
         const kpiIcon = grupo.potencialCalculado ? '<span class="ml-1" title="Valor Potencial ya calculado">🧮</span>' : '';
         const clienteLink = `<a href="clientes.html?openModalFor=${grupo.clienteId}" class="ml-4 text-lg font-bold text-gray-800 hover:text-indigo-600" title="Abrir ficha del cliente">${grupo.clienteNombre}</a>`;
+        
+        const badgeHtml = grupo.notasCount > 0 
+            ? `<span class="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">${grupo.notasCount}</span>`
+            : '';
 
         card.innerHTML = `
             <div class="flex items-center mb-2">
@@ -163,7 +167,10 @@
                     <button data-gestion="ajuste_tarifa" class="gestion-btn px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-md hover:bg-yellow-200">Ajustar Tarifa ${kpiIcon}</button>
                     <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
                     <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
-                    <button data-gestion="bitacora" class="gestion-btn px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-md hover:bg-gray-200">Bitácora 🗂️</button>
+                    <div class="relative">
+                        <button data-gestion="bitacora" class="gestion-btn px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-md hover:bg-gray-200">Bitácora 🗂️</button>
+                        ${badgeHtml}
+                    </div>
                 </div>
             </div>`;
         card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));

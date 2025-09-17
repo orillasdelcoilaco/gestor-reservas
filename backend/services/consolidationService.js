@@ -83,6 +83,13 @@ async function processChannel(db, channel) {
                 valorCLP: parseCurrency(rawData['Ingresos brutos'], 'CLP')
             };
         } else {
+            const getBookingStatus = (statusValue) => {
+                const status = String(statusValue || '').toLowerCase();
+                if (status === 'ok') return 'Confirmada';
+                if (status === 'cancelled' || status === 'cancelada') return 'Cancelada';
+                return 'Cancelada'; 
+            };
+
             reservaData = {
                 reservaIdOriginal: String((isBooking ? rawData['Número de reserva'] || rawData['Book number'] : rawData['Identidad']) || '').trim(),
                 alojamientos: String(isBooking ? rawData['Tipo de unidad'] || rawData['Unit type'] : rawData['Alojamiento'] || '').split(',').map(c => cleanCabanaName(c)),
@@ -91,7 +98,7 @@ async function processChannel(db, channel) {
                 email: rawData['Email'] || rawData['E-mail'] || null,
                 fechaLlegada: parseDate(isBooking ? rawData['Entrada'] || rawData['Check-in'] : rawData['Día de llegada']),
                 fechaSalida: parseDate(isBooking ? rawData['Salida'] || rawData['Check-out'] : rawData['Día de salida']),
-                estado: isBooking ? ((rawData['Estado'] || rawData['Status']) === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
+                estado: isBooking ? getBookingStatus(rawData['Estado'] || rawData['Status']) : rawData['Estado'],
                 fechaReserva: parseDate(isBooking ? rawData['Fecha de reserva'] || rawData['Booked on'] : rawData['Fecha']),
             };
         }

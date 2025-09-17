@@ -163,28 +163,39 @@ async function calculatePrice(db, items, startDate, endDate, isSegmented = false
         const totalNights = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
         return { totalPrice, nights: totalNights, details: priceDetails };
     } else {
-        const nights = Math.max(1, Math.round((endDate - startDate) / (1000 * 60 * 60 * 24)));
+        const nights = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+        if (nights === 0) {
+            return { totalPrice: 0, nights: 0, details: [] };
+        }
+
         for (const cabana of items) {
-            let cabanaPrice = 0;
-            const q = db.collection('tarifas')
-                .where('nombreCabaña', '==', cabana.nombre)
-                .where('fechaInicio', '<=', admin.firestore.Timestamp.fromDate(startDate))
-                .orderBy('fechaInicio', 'desc')
-                .limit(1);
-            const snapshot = await q.get();
-            if (!snapshot.empty) {
-                const tarifa = snapshot.docs[0].data();
-                if (tarifa.fechaTermino.toDate() >= startDate) {
-                    if (tarifa.tarifasPorCanal && tarifa.tarifasPorCanal.SODC) {
-                        cabanaPrice = tarifa.tarifasPorCanal.SODC.valor * nights;
+            let cabanaTotalPrice = 0;
+            
+            for (let d = new Date(startDate); d < endDate; d.setDate(d.getDate() + 1)) {
+                const currentDate = new Date(d);
+                const q = db.collection('tarifas')
+                    .where('nombreCabaña', '==', cabana.nombre)
+                    .where('fechaInicio', '<=', admin.firestore.Timestamp.fromDate(currentDate))
+                    .orderBy('fechaInicio', 'desc')
+                    .limit(1);
+                
+                const snapshot = await q.get();
+
+                if (!snapshot.empty) {
+                    const tarifa = snapshot.docs[0].data();
+                    if (tarifa.fechaTermino.toDate() >= currentDate) {
+                        if (tarifa.tarifasPorCanal && tarifa.tarifasPorCanal.SODC) {
+                            cabanaTotalPrice += tarifa.tarifasPorCanal.SODC.valor;
+                        }
                     }
                 }
             }
-            totalPrice += cabanaPrice;
+            
+            totalPrice += cabanaTotalPrice;
             priceDetails.push({
                 nombre: cabana.nombre,
-                precioTotal: cabanaPrice,
-                precioPorNoche: cabanaPrice > 0 ? cabanaPrice / nights : 0,
+                precioTotal: cabanaTotalPrice,
+                precioPorNoche: cabanaTotalPrice > 0 ? cabanaTotalPrice / nights : 0,
             });
         }
         return { totalPrice, nights, details: priceDetails };

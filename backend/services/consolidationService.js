@@ -84,15 +84,15 @@ async function processChannel(db, channel) {
             };
         } else {
             reservaData = {
-                reservaIdOriginal: String((isBooking ? rawData['Número de reserva'] : rawData['Identidad']) || '').trim(),
-                alojamientos: String(isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento'] || '').split(',').map(c => cleanCabanaName(c)),
-                nombreCompleto: (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre",
-                telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']) || genericPhone,
-                email: rawData['Email'] || rawData['Correo'] || null,
-                fechaLlegada: parseDate(isBooking ? rawData['Entrada'] : rawData['Día de llegada']),
-                fechaSalida: parseDate(isBooking ? rawData['Salida'] : rawData['Día de salida']),
-                estado: isBooking ? (rawData['Estado'] === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
-                fechaReserva: parseDate(isBooking ? rawData['Fecha de reserva'] : rawData['Fecha']),
+                reservaIdOriginal: String((isBooking ? rawData['Número de reserva'] || rawData['Book number'] : rawData['Identidad']) || '').trim(),
+                alojamientos: String(isBooking ? rawData['Tipo de unidad'] || rawData['Unit type'] : rawData['Alojamiento'] || '').split(',').map(c => cleanCabanaName(c)),
+                nombreCompleto: (isBooking ? rawData['Nombre del cliente (o clientes)'] || rawData['Book name'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre",
+                telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Phone']) || genericPhone,
+                email: rawData['Email'] || rawData['E-mail'] || null,
+                fechaLlegada: parseDate(isBooking ? rawData['Entrada'] || rawData['Check-in'] : rawData['Día de llegada']),
+                fechaSalida: parseDate(isBooking ? rawData['Salida'] || rawData['Check-out'] : rawData['Día de salida']),
+                estado: isBooking ? ((rawData['Estado'] || rawData['Status']) === 'ok' ? 'Confirmada' : 'Cancelada') : rawData['Estado'],
+                fechaReserva: parseDate(isBooking ? rawData['Fecha de reserva'] || rawData['Booked on'] : rawData['Fecha']),
             };
         }
 
@@ -142,7 +142,7 @@ async function processChannel(db, channel) {
 
                 const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
                 const reservaRef = db.collection('reservas').doc(idCompuesto);
-                const valorOriginal = parseCurrency(isBooking ? rawData['Precio'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
+                const valorOriginal = parseCurrency(isBooking ? rawData['Precio'] || rawData['Room revenue'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
                 const valorDolarDia = isBooking ? await getValorDolar(db, reservaData.fechaLlegada) : null;
                 const precioPorCabana = reservaData.alojamientos.length > 0 ? (valorOriginal / reservaData.alojamientos.length) : 0;
                 const valorCLPCalculado = isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : precioPorCabana;
@@ -158,16 +158,16 @@ async function processChannel(db, channel) {
                     fechaLlegada: admin.firestore.Timestamp.fromDate(reservaData.fechaLlegada),
                     fechaSalida: admin.firestore.Timestamp.fromDate(reservaData.fechaSalida),
                     totalNoches: totalNoches > 0 ? totalNoches : 1,
-                    invitados: parseInt(isBooking ? rawData['Adultos/Invitados'] : rawData['Personas'] || 0),
+                    invitados: parseInt(isBooking ? rawData['Adultos/Invitados'] || rawData['Persons'] : rawData['Personas'] || 0),
                     alojamiento: cabana,
                     monedaOriginal: isBooking ? 'USD' : 'CLP',
                     valorOriginal: precioPorCabana,
                     valorCLP: isAirbnb ? reservaData.valorCLP : valorCLPCalculado,
                     correo: reservaData.email,
                     telefono: reservaData.telefono,
-                    pais: (isBooking ? rawData['País del cliente'] : rawData['País']) || null,
+                    pais: (isBooking ? rawData['País del cliente'] || rawData['Guest Country'] : rawData['País']) || null,
                     valorDolarDia: valorDolarDia,
-                    comision: isBooking ? parseCurrency(rawData['Importe de la comisión'], 'USD') / reservaData.alojamientos.length : (isAirbnb ? parseCurrency(rawData['Tarifa por servicio'], 'CLP') : null),
+                    comision: isBooking ? parseCurrency(rawData['Importe de la comisión'] || rawData['Commision Amount'], 'USD') / reservaData.alojamientos.length : (isAirbnb ? parseCurrency(rawData['Tarifa por servicio'], 'CLP') : null),
                     iva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 0.19) : 0,
                     valorConIva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : (isAirbnb ? reservaData.valorCLP : valorCLPCalculado),
                     abono: 0,

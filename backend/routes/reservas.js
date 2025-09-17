@@ -265,12 +265,14 @@ module.exports = (db) => {
                 const data = doc.data();
                 if (data.estado === 'Confirmada') {
                     const uniqueTitle = [...new Set((data.clienteNombre || '').split('\n'))].join(' ').trim();
+                    const fechaSalida = data.fechaSalida.toDate();
+                    fechaSalida.setDate(fechaSalida.getDate() + 1);
 
                     reservasDelMes.push({
                         id: doc.id,
                         title: uniqueTitle,
                         start: data.fechaLlegada.toDate().toISOString().split('T')[0],
-                        end: data.fechaSalida.toDate().toISOString().split('T')[0],
+                        end: fechaSalida.toISOString().split('T')[0],
                         resourceId: data.alojamiento,
                         extendedProps: {
                             canal: data.canal,

@@ -264,19 +264,27 @@
                 if(cabana.linkFotos) detalleAlojamiento += `📸 Fotos y más información: ${cabana.linkFotos}\n\n`;
             });
 
-            let resumenValores = '```\n---------------------------------------------------\n';
-            resumenValores += 'Cabaña'.padEnd(12) + '| V. Noche'.padEnd(11) + '| Noches'.padEnd(8) + '| Total\n';
-            resumenValores += '---------------------------------------------------\n';
-            data.detallesAlojamiento.forEach(detail => {
-                resumenValores += `${detail.nombre.padEnd(12)}| ${formatCurrency(detail.valorPorNoche).padEnd(10)}| ${data.noches.toString().padEnd(7)}| ${formatCurrency(detail.valorTotal)}\n`;
+            let resumenValores = '📊 *Alojamiento / Valor Noche*\n';
+            resumenValores += '----------------------------------\n';
+            data.detallesAlojamiento.forEach((detail, index) => {
+                resumenValores += `(${index + 1}) ${detail.nombre} - ${formatCurrency(detail.valorPorNoche)}\n`;
             });
-            resumenValores += '---------------------------------------------------\n';
-            resumenValores += `${''.padEnd(32)}Subtotal: ${formatCurrency(data.valorPotencial)}\n`;
+
+            resumenValores += "\n📈 *Total Noches / Valor*\n";
+            resumenValores += "----------------------------------\n";
+            data.detallesAlojamiento.forEach((detail, index) => {
+                resumenValores += `(${index + 1}) ${data.noches} Noches = ${formatCurrency(detail.valorTotal)}\n`;
+            });
+            
+            resumenValores += "----------------------------------\n";
+            resumenValores += `Subtotal: ${formatCurrency(data.valorPotencial)}\n`;
+
             if (descuento > 0) {
                 const pct = data.valorPotencial > 0 ? ((descuento / data.valorPotencial) * 100).toFixed(0) : 0;
-                resumenValores += `${''.padEnd(32)}${'Desc. (' + pct + '%)'.padEnd(12)}: -${formatCurrency(descuento)}\n`;
+                resumenValores += `Desc. (${pct}%): -${formatCurrency(descuento)}\n`;
             }
-            resumenValores += `${''.padEnd(25)}TOTAL A PAGAR: ${formatCurrency(data.valorTotal)} (IVA incluido)\n\`\`\``;
+
+            resumenValores += `*TOTAL A PAGAR: ${formatCurrency(data.valorTotal)}* (IVA incluido)`;
 
             return `📌 Propuesta de Reserva #${data.reservaIdOriginal}\nFecha de emisión: ${hoy.toLocaleDateString('es-CL')}\nCliente: ${data.cliente.nombre}\nEstadía:\n\nFechas: ${fechasEstadiaStr}\nNoches: ${data.noches}\nPersonas: ${data.personas}\n\nDetalle del alojamiento:\n${detalleAlojamiento}\nResumen de valores:\n${resumenValores}\n\n⚠️ Condiciones de la propuesta:\nEsta propuesta tiene una vigencia de 24 horas a contar de su emisión (vence el ${vencimiento.toLocaleDateString('es-CL')} a las 23:59 hrs).\nPara mantener la reserva activa, debe realizarse un abono del 10% (${formatCurrency(abono)}) dentro del plazo indicado.\nSi no se realiza el abono en el tiempo establecido, la propuesta quedará automáticamente anulada.\n\n✅ Confirmación de la reserva:\nPara validar el abono, solicitamos enviar el comprobante de transferencia al WhatsApp: +56 9 7518 0855.\n\nLa reserva quedará confirmada una vez recibido el comprobante.\n\nAtentamente,\nPablo Meza\n+56 9 7518 0855\nwww.orillasdelcoilaco.cl`;
         }

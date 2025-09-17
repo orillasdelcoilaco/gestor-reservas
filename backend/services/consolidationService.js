@@ -29,7 +29,6 @@ async function processChannel(db, channel) {
 
     let clientesNuevos = 0, reservasCreadas = 0, reservasActualizadas = 0;
 
-    // Estructura optimizada para buscar por ID original
     const reservationsByOriginalId = new Map();
     const allReservasSnapshot = await db.collection('reservas').get();
     allReservasSnapshot.forEach(doc => {
@@ -85,8 +84,8 @@ async function processChannel(db, channel) {
             };
         } else {
             reservaData = {
-                reservaIdOriginal: (isBooking ? rawData['Número de reserva'] : rawData['Identidad'])?.toString() || null,
-                alojamientos: (isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento'] || "").toString().split(',').map(c => cleanCabanaName(c)),
+                reservaIdOriginal: String((isBooking ? rawData['Número de reserva'] : rawData['Identidad']) || '').trim(),
+                alojamientos: String(isBooking ? rawData['Tipo de unidad'] : rawData['Alojamiento'] || '').split(',').map(c => cleanCabanaName(c)),
                 nombreCompleto: (isBooking ? rawData['Nombre del cliente (o clientes)'] : `${rawData['Nombre'] || ''} ${rawData['Apellido'] || ''}`.trim()) || "Cliente sin Nombre",
                 telefono: cleanPhoneNumber(rawData['Teléfono'] || rawData['Número de teléfono']) || genericPhone,
                 email: rawData['Email'] || rawData['Correo'] || null,
@@ -97,7 +96,7 @@ async function processChannel(db, channel) {
             };
         }
 
-        if (!reservaData.fechaLlegada || !reservaData.fechaSalida || !reservaData.reservaIdOriginal || reservaData.alojamientos.length === 0) {
+        if (!reservaData.fechaLlegada || !reservaData.fechaSalida || !reservaData.reservaIdOriginal || reservaData.alojamientos.length === 0 || reservaData.alojamientos[0] === '') {
             continue;
         }
 
@@ -115,7 +114,6 @@ async function processChannel(db, channel) {
                 console.log(`Actualizando estado del grupo ${lookupKey} a ${reservaData.estado}`);
             }
         } else {
-            // Es una reserva nueva, proceder a crearla
             reservasCreadas++;
             
             let clienteId;

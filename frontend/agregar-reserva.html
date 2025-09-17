@@ -601,7 +601,7 @@
                 }
             });
 
-            let resumenValores = '---------------------------------------------------\n';
+            let resumenValores = '```\n---------------------------------------------------\n';
             resumenValores += 'Cabaña'.padEnd(12) + '| V. Noche'.padEnd(11) + '| Noches'.padEnd(8) + '| Total\n';
             resumenValores += '---------------------------------------------------\n';
 
@@ -624,7 +624,7 @@
             }
 
             const totalFinalLabel = ''.padEnd(25);
-            resumenValores += `${totalFinalLabel}TOTAL A PAGAR: ${formatCurrency(precioFinal)} (IVA incluido)`;
+            resumenValores += `${totalFinalLabel}TOTAL A PAGAR: ${formatCurrency(precioFinal)} (IVA incluido)\n\`\`\``;
 
             const summary = `📌 Propuesta de Reserva #${reservaId}
 Fecha de emisión: ${hoy.toLocaleDateString('es-CL')}

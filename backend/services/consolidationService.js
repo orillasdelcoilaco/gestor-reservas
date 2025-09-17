@@ -142,7 +142,7 @@ async function processChannel(db, channel) {
 
                 const idCompuesto = `${channel.toUpperCase()}_${reservaData.reservaIdOriginal}_${cabana.replace(/\s+/g, '')}`;
                 const reservaRef = db.collection('reservas').doc(idCompuesto);
-                const valorOriginal = parseCurrency(isBooking ? rawData['Precio'] || rawData['Room revenue'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
+                const valorOriginal = parseCurrency(isBooking ? rawData['Precio'] || rawData['Room revenue'] || rawData['Price'] : rawData['Total'], isBooking ? 'USD' : 'CLP');
                 const valorDolarDia = isBooking ? await getValorDolar(db, reservaData.fechaLlegada) : null;
                 const precioPorCabana = reservaData.alojamientos.length > 0 ? (valorOriginal / reservaData.alojamientos.length) : 0;
                 const valorCLPCalculado = isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : precioPorCabana;
@@ -167,7 +167,7 @@ async function processChannel(db, channel) {
                     telefono: reservaData.telefono,
                     pais: (isBooking ? rawData['País del cliente'] || rawData['Guest Country'] : rawData['País']) || null,
                     valorDolarDia: valorDolarDia,
-                    comision: isBooking ? parseCurrency(rawData['Importe de la comisión'] || rawData['Commision Amount'], 'USD') / reservaData.alojamientos.length : (isAirbnb ? parseCurrency(rawData['Tarifa por servicio'], 'CLP') : null),
+                    comision: isBooking ? parseCurrency(rawData['Importe de la comisión'] || rawData['Commision Amount'] || rawData['Commiss Amount'], 'USD') / reservaData.alojamientos.length : (isAirbnb ? parseCurrency(rawData['Tarifa por servicio'], 'CLP') : null),
                     iva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 0.19) : 0,
                     valorConIva: isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : (isAirbnb ? reservaData.valorCLP : valorCLPCalculado),
                     abono: 0,

@@ -382,6 +382,64 @@ module.exports = (db) => {
         }
     });
     
+    // --- OBTENER DETALLES DE UNA PROPUESTA PARA REGENERAR TEXTO ---
+    router.get('/reservas/propuestas/detalles/:reservaIdOriginal', async (req, res) => {
+        const { reservaIdOriginal } = req.params;
+        try {
+            const q = db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal);
+            const snapshot = await q.get();
+
+            if (snapshot.empty) {
+                return res.status(404).json({ error: 'No se encontraron reservas para esta propuesta.' });
+            }
+
+            const clienteId = snapshot.docs[0].data().clienteId;
+            const clienteDoc = await db.collection('clientes').doc(clienteId).get();
+            const clienteData = clienteDoc.exists ? clienteDoc.data() : { nombre: 'N/A' };
+
+            const cabanaNombres = snapshot.docs.map(doc => doc.data().alojamiento);
+            const cabanasSnapshot = await db.collection('cabanas').where('nombre', 'in', cabanaNombres).get();
+            const cabanasMap = new Map(cabanasSnapshot.docs.map(doc => [doc.data().nombre, doc.data()]));
+
+            const primeraReserva = snapshot.docs[0].data();
+            const propuesta = {
+                reservaIdOriginal,
+                cliente: {
+                    nombre: primeraReserva.clienteNombre,
+                    empresa: clienteData.fuente || ''
+                },
+                fechaLlegada: primeraReserva.fechaLlegada.toDate().toISOString().split('T')[0],
+                fechaSalida: primeraReserva.fechaSalida.toDate().toISOString().split('T')[0],
+                personas: primeraReserva.invitados,
+                noches: primeraReserva.totalNoches,
+                valorTotal: 0,
+                valorPotencial: 0,
+                detallesAlojamiento: []
+            };
+
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                propuesta.valorTotal += data.valorCLP || 0;
+                propuesta.valorPotencial += data.valorPotencialCLP || 0;
+                const cabanaInfo = cabanasMap.get(data.alojamiento);
+                if (cabanaInfo) {
+                    propuesta.detallesAlojamiento.push({
+                        nombre: cabanaInfo.nombre,
+                        descripcion: cabanaInfo.descripcion || '',
+                        linkFotos: cabanaInfo.linkFotos || '',
+                        valorPorNoche: (data.valorPotencialCLP || 0) / data.totalNoches,
+                        valorTotal: data.valorPotencialCLP || 0
+                    });
+                }
+            });
+
+            res.status(200).json(propuesta);
+        } catch (error) {
+            console.error("Error al obtener detalles de la propuesta:", error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+    
     // --- ACTUALIZAR ESTADO DE PROPUESTA (CONFIRMAR/CANCELAR) ---
     router.post('/reservas/propuestas/:reservaIdOriginal/estado', jsonParser, async (req, res) => {
         const { reservaIdOriginal } = req.params;

@@ -9,7 +9,7 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
         thead th { position: sticky; top: 0; }
-        #reject-modal { background-color: rgba(0, 0, 0, 0.5); }
+        #reject-modal, #summary-modal { background-color: rgba(0, 0, 0, 0.5); }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -81,6 +81,18 @@
             </form>
         </div>
     </div>
+    
+    <div id="summary-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
+             <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Resumen de la Propuesta</h3>
+             <p class="text-sm text-gray-600 mb-4">Copia el siguiente resumen y envíalo al cliente.</p>
+             <textarea id="summary-text" rows="15" class="w-full p-2 border rounded-md bg-gray-50 text-xs font-mono"></textarea>
+             <div class="mt-4 flex justify-end space-x-2">
+                <button id="copy-summary-btn" class="px-4 py-2 bg-blue-600 text-white rounded-md">Copiar</button>
+                <button id="close-summary-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md">Cerrar</button>
+             </div>
+        </div>
+    </div>
 
 
 <script type="module">
@@ -95,6 +107,10 @@
         const rejectModal = document.getElementById('reject-modal');
         const rejectForm = document.getElementById('reject-form');
         const rejectCancelBtn = document.getElementById('reject-cancel-btn');
+        const summaryModal = document.getElementById('summary-modal');
+        const summaryText = document.getElementById('summary-text');
+        const copySummaryBtn = document.getElementById('copy-summary-btn');
+        const closeSummaryBtn = document.getElementById('close-summary-btn');
         let currentProposalId = null;
 
         const session = checkSession();
@@ -135,6 +151,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${p.cabañas.join(', ')}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold">$${p.valorTotal.toLocaleString('es-CL')}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                        <button data-id="${p.id}" class="view-btn px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600">Ver</button>
                         <button data-id="${p.id}" class="confirm-btn px-2 py-1 bg-green-500 text-white text-xs rounded hover:bg-green-600">Confirmar</button>
                         <button data-id="${p.id}" class="cancel-btn px-2 py-1 bg-yellow-500 text-white text-xs rounded hover:bg-yellow-600">Cancelar</button>
                         <button data-id="${p.id}" class="reject-btn px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600">Rechazar</button>
@@ -143,6 +160,7 @@
                 tableBody.appendChild(row);
             });
 
+            document.querySelectorAll('.view-btn').forEach(b => b.addEventListener('click', e => handleViewProposal(e.target.dataset.id)));
             document.querySelectorAll('.confirm-btn').forEach(b => b.addEventListener('click', e => handleStateChange(e.target.dataset.id, 'Confirmada')));
             document.querySelectorAll('.cancel-btn').forEach(b => b.addEventListener('click', e => handleStateChange(e.target.dataset.id, 'Cancelada')));
             document.querySelectorAll('.reject-btn').forEach(b => b.addEventListener('click', e => openRejectModal(e.target.dataset.id)));
@@ -206,6 +224,71 @@
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Confirmar Rechazo';
             }
+        });
+
+        async function handleViewProposal(id) {
+            summaryText.value = 'Cargando detalles de la propuesta...';
+            summaryModal.classList.remove('hidden');
+            try {
+                const data = await fetchAPI(`/api/reservas/propuestas/detalles/${id}`);
+                const generatedText = generateSummaryText(data);
+                summaryText.value = generatedText;
+            } catch (error) {
+                summaryText.value = `Error al cargar la propuesta: ${error.message}`;
+            }
+        }
+
+        function generateSummaryText(data) {
+            const hoy = new Date();
+            const vencimiento = new Date(hoy);
+            vencimiento.setDate(hoy.getDate() + 1);
+
+            const llegada = new Date(data.fechaLlegada + 'T00:00:00Z');
+            const salida = new Date(data.fechaSalida + 'T00:00:00Z');
+            const formatCurrency = (value) => `$${(Math.round(value) || 0).toLocaleString('es-CL')}`;
+            const formatFullDate = (date) => new Intl.DateTimeFormat('es-CL', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(date);
+            
+            let fechasEstadiaStr;
+            if (llegada.getUTCMonth() === salida.getUTCMonth()) {
+                fechasEstadiaStr = `${llegada.getUTCDate()} al ${formatFullDate(salida)}`;
+            } else {
+                fechasEstadiaStr = `${formatFullDate(llegada)} al ${formatFullDate(salida)}`;
+            }
+
+            const abono = Math.round(data.valorTotal * 0.10);
+            const descuento = data.valorPotencial - data.valorTotal;
+
+            let detalleAlojamiento = '';
+            data.detallesAlojamiento.forEach(cabana => {
+                detalleAlojamiento += `${cabana.nombre}: ${cabana.descripcion}\n`;
+                if(cabana.linkFotos) detalleAlojamiento += `📸 Fotos y más información: ${cabana.linkFotos}\n\n`;
+            });
+
+            let resumenValores = '---------------------------------------------------\n';
+            resumenValores += 'Cabaña'.padEnd(12) + '| V. Noche'.padEnd(11) + '| Noches'.padEnd(8) + '| Total\n';
+            resumenValores += '---------------------------------------------------\n';
+            data.detallesAlojamiento.forEach(detail => {
+                resumenValores += `${detail.nombre.padEnd(12)}| ${formatCurrency(detail.valorPorNoche).padEnd(10)}| ${data.noches.toString().padEnd(7)}| ${formatCurrency(detail.valorTotal)}\n`;
+            });
+            resumenValores += '---------------------------------------------------\n';
+            resumenValores += `${''.padEnd(32)}Subtotal: ${formatCurrency(data.valorPotencial)}\n`;
+            if (descuento > 0) {
+                const pct = data.valorPotencial > 0 ? ((descuento / data.valorPotencial) * 100).toFixed(0) : 0;
+                resumenValores += `${''.padEnd(32)}${'Desc. (' + pct + '%)'.padEnd(12)}: -${formatCurrency(descuento)}\n`;
+            }
+            resumenValores += `${''.padEnd(25)}TOTAL A PAGAR: ${formatCurrency(data.valorTotal)} (IVA incluido)`;
+
+            return `📌 Propuesta de Reserva #${data.reservaIdOriginal}\nFecha de emisión: ${hoy.toLocaleDateString('es-CL')}\nCliente: ${data.cliente.nombre}\nEstadía:\n\nFechas: ${fechasEstadiaStr}\nNoches: ${data.noches}\nPersonas: ${data.personas}\n\nDetalle del alojamiento:\n${detalleAlojamiento}\nResumen de valores:\n${resumenValores}\n\n⚠️ Condiciones de la propuesta:\nEsta propuesta tiene una vigencia de 24 horas a contar de su emisión (vence el ${vencimiento.toLocaleDateString('es-CL')} a las 23:59 hrs).\nPara mantener la reserva activa, debe realizarse un abono del 10% (${formatCurrency(abono)}) dentro del plazo indicado.\nSi no se realiza el abono en el tiempo establecido, la propuesta quedará automáticamente anulada.\n\n✅ Confirmación de la reserva:\nPara validar el abono, solicitamos enviar el comprobante de transferencia al WhatsApp: +56 9 7518 0855.\n\nLa reserva quedará confirmada una vez recibido el comprobante.\n\nAtentamente,\nPablo Meza\n+56 9 7518 0855\nwww.orillasdelcoilaco.cl`;
+        }
+
+        copySummaryBtn.addEventListener('click', () => {
+            summaryText.select();
+            document.execCommand('copy');
+            copySummaryBtn.textContent = '¡Copiado!';
+            setTimeout(() => { copySummaryBtn.textContent = 'Copiar'; }, 2000);
+        });
+        closeSummaryBtn.addEventListener('click', () => {
+            summaryModal.classList.add('hidden');
         });
     });
 </script>

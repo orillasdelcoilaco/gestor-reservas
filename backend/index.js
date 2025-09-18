@@ -2,6 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
+const path = require('path'); // <-- Se añade el módulo 'path'
 
 // --- Importar Middlewares y Rutas ---
 const { checkFirebaseToken } = require('./utils/authMiddleware');
@@ -98,6 +99,14 @@ privateRouter.use(reportesRoutes(db));
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter); 
 app.use('/api', checkFirebaseToken, privateRouter); 
+
+// --- SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND ---
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
+
 
 //--- Iniciar el Servidor ---
 app.listen(PORT, () => {

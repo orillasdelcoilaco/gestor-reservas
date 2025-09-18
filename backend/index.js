@@ -28,6 +28,7 @@ const reportesRoutes = require('./routes/reportes');
 const allowedOrigins = [
     'https://orillasdelcoilaco.cl',
     'https://www.orillasdelcoilaco.cl',
+    'https://gestor-reservas.onrender.com', // <-- SE AÑADE LA URL DE RENDER
     // Añadido para desarrollo local
     'http://localhost',
     'http://127.0.0.1'
@@ -67,7 +68,6 @@ const PORT = process.env.PORT || 3001;
 app.use(cors(corsOptions));
 
 // --- 1. SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND ---
-// Esto debe ir ANTES de las rutas de la API para que tenga prioridad.
 app.use(express.static(path.join(__dirname, 'frontend')));
 
 //--- 2. DEFINIR Y APLICAR RUTAS DE LA API ---
@@ -77,7 +77,6 @@ const privateRouter = express.Router();
 //--- Configuración de Rutas Públicas (API) ---
 publicRouter.use('/auth', authRoutes(db)); 
 publicRouter.use(icalRoutes(db));
-// Se elimina la ruta publicRouter.get('/') que causaba el conflicto.
 
 //--- Configuración de Rutas Privadas (API) ---
 privateRouter.use(reservasRoutes(db));
@@ -101,8 +100,6 @@ app.use(publicRouter);
 app.use('/api', checkFirebaseToken, privateRouter); 
 
 // --- 3. CATCH-ALL PARA MANEJAR RUTAS DEL FRONTEND ---
-// Esta ruta debe ir al final. Si no es un archivo estático ni una ruta de API,
-// sirve el index.html para que el enrutamiento del lado del cliente funcione.
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });

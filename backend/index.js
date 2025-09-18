@@ -2,7 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
-const path = require('path'); // <-- Se añade el módulo 'path'
+const path = require('path');
 
 // --- Importar Middlewares y Rutas ---
 const { checkFirebaseToken } = require('./utils/authMiddleware');
@@ -35,8 +35,6 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Permite solicitudes sin 'origin' (como Postman) o si el origen está en la lista blanca.
-    // Se ajusta para permitir cualquier puerto de localhost.
     if (!origin || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
       callback(null, true);
     } else {
@@ -68,18 +66,20 @@ const PORT = process.env.PORT || 3001;
 //--- Middlewares Globales ---
 app.use(cors(corsOptions));
 
-//--- Creación de Routers Separados ---
+// --- 1. SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND ---
+// Esto debe ir ANTES de las rutas de la API para que tenga prioridad.
+app.use(express.static(path.join(__dirname, 'frontend')));
+
+//--- 2. DEFINIR Y APLICAR RUTAS DE LA API ---
 const publicRouter = express.Router();
 const privateRouter = express.Router();
 
-//--- Configuración de Rutas Públicas ---
+//--- Configuración de Rutas Públicas (API) ---
 publicRouter.use('/auth', authRoutes(db)); 
 publicRouter.use(icalRoutes(db));
-publicRouter.get('/', (req, res) => {
-  res.status(200).send('API del Gestor de Reservas funcionando correctamente.');
-});
+// Se elimina la ruta publicRouter.get('/') que causaba el conflicto.
 
-//--- Configuración de Rutas Privadas ---
+//--- Configuración de Rutas Privadas (API) ---
 privateRouter.use(reservasRoutes(db));
 privateRouter.use(sincronizarRoutes(db));
 privateRouter.use(consolidarRoutes(db));
@@ -100,15 +100,14 @@ privateRouter.use(reportesRoutes(db));
 app.use(publicRouter); 
 app.use('/api', checkFirebaseToken, privateRouter); 
 
-// --- SERVIR ARCHIVOS ESTÁTICOS DEL FRONTEND ---
-app.use(express.static(path.join(__dirname, 'frontend')));
-
+// --- 3. CATCH-ALL PARA MANEJAR RUTAS DEL FRONTEND ---
+// Esta ruta debe ir al final. Si no es un archivo estático ni una ruta de API,
+// sirve el index.html para que el enrutamiento del lado del cliente funcione.
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
-
 //--- Iniciar el Servidor ---
-app.listen(PORT, () => {
-  console.log(`Servidor escuchando en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor iniciado y escuchando en el puerto ${PORT}`);
 });

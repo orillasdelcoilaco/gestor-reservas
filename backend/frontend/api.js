@@ -1,6 +1,6 @@
 // frontend/api.js
 
-const API_BASE_URL = 'https://gestor-reservas.onrender.com';
+const API_BASE_URL = '';
 
 export async function fetchAPI(endpoint, options = {}) {
     const token = localStorage.getItem('firebaseIdToken');

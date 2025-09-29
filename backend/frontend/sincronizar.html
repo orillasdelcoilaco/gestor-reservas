@@ -58,7 +58,6 @@
             `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
-            // --- Lógica de la página ---
             const syncDriveBtn = document.getElementById('sync-drive-btn');
             const syncStatus = document.getElementById('sync-status');
             
@@ -74,7 +73,6 @@
                 element.classList.remove('hidden');
             }
 
-            // Lógica para el botón de Sincronizar Drive
             syncDriveBtn.addEventListener('click', async () => {
                 syncDriveBtn.disabled = true;
                 syncDriveBtn.textContent = 'Sincronizando...';
@@ -85,12 +83,21 @@
                     });
 
                     const summary = result.summary;
-                    let summaryHtml = `<strong>${result.message}</strong><ul class="list-disc list-inside mt-2 space-y-1">`;
-                    if (summary.sodc) summaryHtml += `<li><strong>SODC:</strong> ${summary.sodc.file} (${summary.sodc.records} registros)</li>`;
-                    if (summary.booking) summaryHtml += `<li><strong>Booking:</strong> ${summary.booking.file} (${summary.booking.records} registros)</li>`;
-                    if (summary.airbnb) summaryHtml += `<li><strong>Airbnb:</strong> ${summary.airbnb.file} (${summary.airbnb.records} registros)</li>`;
-                    summaryHtml += `</ul>`;
+                    let summaryHtml = `<strong>${result.message}</strong><div class="mt-2 space-y-2">`;
+                    
+                    const processChannel = (channelName, data) => {
+                        if (data.error) {
+                            return `<div class="p-2 bg-red-50 border border-red-200 rounded-md"><strong>${channelName}:</strong> ${data.file}<br><span class="text-red-700"><strong>Error:</strong> ${data.error}</span></div>`;
+                        } else {
+                            return `<div class="p-2 bg-green-50 border border-green-200 rounded-md"><strong>${channelName}:</strong> ${data.file} (${data.records} registros)</div>`;
+                        }
+                    };
 
+                    if (summary.sodc) summaryHtml += processChannel('SODC', summary.sodc);
+                    if (summary.booking) summaryHtml += processChannel('Booking', summary.booking);
+                    if (summary.airbnb) summaryHtml += processChannel('Airbnb', summary.airbnb);
+                    
+                    summaryHtml += `</div>`;
                     showStatus(syncStatus, summaryHtml, 'success');
                 } catch (error) {
                     console.error('Error al sincronizar:', error);

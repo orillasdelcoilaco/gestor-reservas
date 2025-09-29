@@ -58,9 +58,9 @@ async function saveDataToFirestore(db, collectionName, data) {
 async function performDriveSync(db) {
     console.log('[Sincronización] La función performDriveSync ha comenzado.');
     const summary = {
-        sodc: { file: 'No encontrado', records: 0 },
-        booking: { file: 'No encontrado', records: 0 },
-        airbnb: { file: 'No encontrado', records: 0 }
+        sodc: { file: 'No encontrado', records: 0, error: null },
+        booking: { file: 'No encontrado', records: 0, error: null },
+        airbnb: { file: 'No encontrado', records: 0, error: null }
     };
 
     try {
@@ -79,37 +79,52 @@ async function performDriveSync(db) {
         console.log('[Sincronización] Búsqueda de archivos completada.');
 
         if (sodcFile) {
-            console.log(`Descargando y procesando archivo SODC: ${sodcFile.name}`);
-            const fileStream = await driveService.downloadFile(drive, sodcFile.id);
-            const sodcData = await parseCsvStream(fileStream);
-            await saveDataToFirestore(db, 'reportes_sodc_raw', sodcData);
-            summary.sodc = { file: sodcFile.name, records: sodcData.length };
-            console.log(`Archivo ${sodcFile.name} procesado. Se guardaron ${sodcData.length} registros.`);
+            try {
+                console.log(`Descargando y procesando archivo SODC: ${sodcFile.name}`);
+                const fileStream = await driveService.downloadFile(drive, sodcFile.id, sodcFile.mimeType);
+                const sodcData = await parseCsvStream(fileStream);
+                await saveDataToFirestore(db, 'reportes_sodc_raw', sodcData);
+                summary.sodc = { file: sodcFile.name, records: sodcData.length, error: null };
+                console.log(`Archivo ${sodcFile.name} procesado. Se guardaron ${sodcData.length} registros.`);
+            } catch (err) {
+                console.error(`Error procesando el archivo SODC (${sodcFile.name}):`, err);
+                summary.sodc = { file: sodcFile.name, records: 0, error: `Fallo en el procesamiento: ${err.message}` };
+            }
         }
 
         if (bookingFile) {
-            console.log(`Descargando y procesando archivo Booking: ${bookingFile.name}`);
-            const fileStream = await driveService.downloadFile(drive, bookingFile.id);
-            const bookingData = await parseExcelStream(fileStream);
-            await saveDataToFirestore(db, 'reportes_booking_raw', bookingData);
-            summary.booking = { file: bookingFile.name, records: bookingData.length };
-            console.log(`Archivo ${bookingFile.name} procesado. Se guardaron ${bookingData.length} registros.`);
+             try {
+                console.log(`Descargando y procesando archivo Booking: ${bookingFile.name}`);
+                const fileStream = await driveService.downloadFile(drive, bookingFile.id, bookingFile.mimeType);
+                const bookingData = await parseExcelStream(fileStream);
+                await saveDataToFirestore(db, 'reportes_booking_raw', bookingData);
+                summary.booking = { file: bookingFile.name, records: bookingData.length, error: null };
+                console.log(`Archivo ${bookingFile.name} procesado. Se guardaron ${bookingData.length} registros.`);
+            } catch (err) {
+                console.error(`Error procesando el archivo Booking (${bookingFile.name}):`, err);
+                summary.booking = { file: bookingFile.name, records: 0, error: `Fallo en el procesamiento: ${err.message}` };
+            }
         }
 
         if (airbnbFile) {
-            console.log(`Descargando y procesando archivo Airbnb: ${airbnbFile.name}`);
-            const fileStream = await driveService.downloadFile(drive, airbnbFile.id);
-            const airbnbData = await parseCsvStream(fileStream);
-            await saveDataToFirestore(db, 'reportes_airbnb_raw', airbnbData);
-            summary.airbnb = { file: airbnbFile.name, records: airbnbData.length };
-            console.log(`Archivo ${airbnbFile.name} procesado. Se guardaron ${airbnbData.length} registros.`);
+            try {
+                console.log(`Descargando y procesando archivo Airbnb: ${airbnbFile.name}`);
+                const fileStream = await driveService.downloadFile(drive, airbnbFile.id, airbnbFile.mimeType);
+                const airbnbData = await parseCsvStream(fileStream);
+                await saveDataToFirestore(db, 'reportes_airbnb_raw', airbnbData);
+                summary.airbnb = { file: airbnbFile.name, records: airbnbData.length, error: null };
+                console.log(`Archivo ${airbnbFile.name} procesado. Se guardaron ${airbnbData.length} registros.`);
+            } catch (err) {
+                console.error(`Error procesando el archivo Airbnb (${airbnbFile.name}):`, err);
+                summary.airbnb = { file: airbnbFile.name, records: 0, error: `Fallo en el procesamiento: ${err.message}` };
+            }
         }
 
         console.log('--- Sincronización completada. ---');
         return summary;
     } catch (error) {
         console.error('Error fatal durante la sincronización:', error);
-        throw error;
+        throw error; // Este error es para fallos graves como no poder conectarse a Drive.
     }
 }
 

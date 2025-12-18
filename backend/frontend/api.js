@@ -21,7 +21,7 @@ export async function fetchAPI(endpoint, options = {}) {
             options.body = JSON.stringify(options.body);
         }
     }
-    
+
     const url = `${API_BASE_URL}${endpoint}`;
 
     try {
@@ -36,7 +36,7 @@ export async function fetchAPI(endpoint, options = {}) {
             const errorData = await response.json().catch(() => ({ message: response.statusText }));
             throw new Error(errorData.error || errorData.message || 'Error en la petición a la API');
         }
-        
+
         if (response.status === 204) {
             return { success: true, message: 'Operación completada con éxito.' };
         }
@@ -64,3 +64,4 @@ export function logout() {
     sessionStorage.removeItem('userEmail');
     window.location.href = 'index.html';
 }
+

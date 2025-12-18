@@ -22,7 +22,7 @@ module.exports = (db) => {
 
     router.post('/gestion/actualizar-estado', upload.single('documento'), async (req, res) => {
         const { accion, detalles, idsIndividuales, reservaIdOriginal } = req.body;
-        
+
         if (!accion || !idsIndividuales || !reservaIdOriginal) {
             return res.status(400).json({ error: 'Faltan datos clave para procesar la acción.' });
         }
@@ -45,9 +45,9 @@ module.exports = (db) => {
                 const destinationPath = `reservas/${year}/${reservaIdOriginal}/${fileName}`;
                 publicUrl = await storageService.uploadFile(req.file.buffer, destinationPath, req.file.mimetype);
             }
-            
+
             let totalValorGrupo = 0;
-            if(accion === 'registrar_pago' && individualIds.length > 1){
+            if (accion === 'registrar_pago' && individualIds.length > 1) {
                 const docs = await db.getAll(...individualIds.map(id => db.collection('reservas').doc(id)));
                 for (const doc of docs) {
                     totalValorGrupo += doc.data().valorCLP || 0;
@@ -56,7 +56,7 @@ module.exports = (db) => {
 
             for (const id of individualIds) {
                 const reservaRef = db.collection('reservas').doc(id);
-                
+
                 switch (accion) {
                     case 'marcar_bienvenida_enviada':
                         batch.update(reservaRef, { estadoGestion: 'Pendiente Cobro' });
@@ -70,9 +70,9 @@ module.exports = (db) => {
                         }
                         const transaccionesRef = reservaRef.collection('transacciones');
                         const newTransactionRef = transaccionesRef.doc();
-                        
+
                         let montoIndividual;
-                        if(individualIds.length > 1) {
+                        if (individualIds.length > 1) {
                             const reservaDoc = await db.collection('reservas').doc(id).get();
                             const valorCabana = reservaDoc.data().valorCLP || 0;
                             const proporcion = totalValorGrupo > 0 ? valorCabana / totalValorGrupo : 1 / individualIds.length;
@@ -80,7 +80,7 @@ module.exports = (db) => {
                         } else {
                             montoIndividual = parseFloat(detallesParseados.monto);
                         }
-                        
+
                         batch.set(newTransactionRef, {
                             monto: montoIndividual,
                             medioDePago: detallesParseados.medioDePago,
@@ -88,7 +88,7 @@ module.exports = (db) => {
                             fecha: admin.firestore.FieldValue.serverTimestamp(),
                             enlaceComprobante: publicUrl
                         });
-                        
+
                         if (detallesParseados.esPagoFinal) {
                             batch.update(reservaRef, { estadoGestion: 'Pendiente Boleta', pagado: true });
                         }
@@ -104,30 +104,30 @@ module.exports = (db) => {
                         break;
                     case 'gestionar_reserva':
                         if (publicUrl) {
-                           batch.update(reservaRef, { 'documentos.enlaceReserva': publicUrl });
+                            batch.update(reservaRef, { 'documentos.enlaceReserva': publicUrl });
                         }
                         break;
                 }
             }
 
             await batch.commit();
-            
+
             if (accion === 'registrar_pago') {
                 for (const id of individualIds) {
                     const reservaRef = db.collection('reservas').doc(id);
                     const transaccionesSnapshot = await reservaRef.collection('transacciones').get();
                     const totalAbonado = transaccionesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
-                    
+
                     const reservaDoc = await reservaRef.get();
                     const reservaData = reservaDoc.data();
-                    
+
                     const updatePayload = { abono: totalAbonado };
 
                     if (individualIds.length === 1 && totalAbonado > (reservaData.valorCLP || 0)) {
                         updatePayload.valorCLP = totalAbonado;
                         updatePayload.valorManual = true;
                     }
-                    
+
                     await reservaRef.update(updatePayload);
                 }
             }
@@ -135,6 +135,74 @@ module.exports = (db) => {
             res.status(200).json({ message: `Acción '${accion}' registrada para el grupo ${reservaIdOriginal}.` });
         } catch (error) {
             console.error(`Error al actualizar estado del grupo ${reservaIdOriginal}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    // Nueva Ruta: Cambiar Estado de Reserva (Confirmada <-> Cancelada, etc)
+    router.post('/gestion/cambiar-estado-reserva', jsonParser, async (req, res) => {
+        const { reservaIdOriginal, nuevoEstado } = req.body;
+
+        if (!reservaIdOriginal || !nuevoEstado) {
+            return res.status(400).json({ error: 'Faltan datos (ID o nuevo estado).' });
+        }
+
+        // Estados válidos según lógica de negocio
+        const ESTADOS_VALIDOS = ['Confirmada', 'Cancelada', 'No Presentado', 'Pendiente Aprobación', 'Abandonada'];
+        if (!ESTADOS_VALIDOS.includes(nuevoEstado)) {
+            return res.status(400).json({ error: 'Estado no válido.' });
+        }
+
+        try {
+            const batch = db.batch();
+            const snapshot = await db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal).get();
+
+            if (snapshot.empty) {
+                return res.status(404).json({ error: 'Reserva no encontrada.' });
+            }
+
+            snapshot.forEach(doc => {
+                batch.update(doc.ref, { estado: nuevoEstado });
+            });
+
+            // Si es Cancelada o No Presentado, opcionalmente podríamos limpiar otras banderas
+            // Pero el cambio de estado ya libera el calendario porque los queries filtran por 'Confirmada'
+
+            await batch.commit();
+            res.status(200).json({ message: `Reserva ${reservaIdOriginal} actualizada a estado: ${nuevoEstado}.` });
+        } catch (error) {
+            console.error(`Error al cambiar estado de reserva ${reservaIdOriginal}:`, error);
+            res.status(500).json({ error: 'Error interno del servidor.' });
+        }
+    });
+
+    // Nueva Ruta: Toggle "En Proceso Cancelación"
+    router.post('/gestion/toggle-proceso-cancelacion', jsonParser, async (req, res) => {
+        const { reservaIdOriginal, enProceso } = req.body; // enProceso boolean
+        console.log('[DEBUG] Toggle Cancel:', req.body); // Log incoming body
+
+        if (!reservaIdOriginal || enProceso === undefined) {
+            console.error('[DEBUG] Faltan datos:', { reservaIdOriginal, enProceso });
+            return res.status(400).json({ error: 'Faltan datos.' });
+        }
+
+        try {
+            const batch = db.batch();
+            const snapshot = await db.collection('reservas').where('reservaIdOriginal', '==', reservaIdOriginal).get();
+
+            if (snapshot.empty) {
+                return res.status(404).json({ error: 'Reserva no encontrada.' });
+            }
+
+            snapshot.forEach(doc => {
+                batch.update(doc.ref, { enProcesoCancelacion: enProceso });
+            });
+
+            const msg = enProceso ? 'marcada en proceso de cancelación' : 'desmarcada de proceso de cancelación';
+            await batch.commit();
+            res.status(200).json({ message: `Reserva ${reservaIdOriginal} ${msg}.` });
+        } catch (error) {
+            console.error(`Error al togglear proceso cancelación ${reservaIdOriginal}:`, error);
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
@@ -180,7 +248,7 @@ module.exports = (db) => {
                 const valorPotencial = Math.round(valorActual / (1 - (parseFloat(descuento) / 100)));
                 batch.update(reservaRef, { valorPotencialCLP: valorPotencial });
             });
-            
+
             await batch.commit();
             res.status(200).json({ message: 'Valor potencial calculado y guardado para el grupo.' });
         } catch (error) {
@@ -218,7 +286,7 @@ module.exports = (db) => {
                     const proporcionDescuento = totalActualGrupo > 0 ? valorOriginal / totalActualGrupo : 1 / snapshot.size;
                     const descuentoIndividual = Math.round(descuentoTotal * proporcionDescuento);
                     const nuevoValorIndividual = valorOriginal - descuentoIndividual;
-                    
+
                     batch.update(doc.ref, { valorCLP: nuevoValorIndividual, valorManual: true });
                 });
             }
@@ -230,7 +298,7 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    
+
     router.post('/gestion/transacciones-grupo', jsonParser, async (req, res) => {
         const { idsIndividuales } = req.body;
         if (!idsIndividuales || !Array.isArray(idsIndividuales)) {
@@ -267,7 +335,7 @@ module.exports = (db) => {
             const detallesParseados = JSON.parse(detalles);
             const individualIds = JSON.parse(idsIndividuales);
             const transaccionRef = db.collection('reservas').doc(reservaId).collection('transacciones').doc(transaccionId);
-            
+
             if (req.file) {
                 const reservaDoc = await db.collection('reservas').doc(reservaId).get();
                 const reservaData = reservaDoc.data();
@@ -281,7 +349,7 @@ module.exports = (db) => {
             }
 
             await transaccionRef.update(detallesParseados);
-            
+
             const batch = db.batch();
             let hayPagoFinal = false;
 
@@ -293,7 +361,7 @@ module.exports = (db) => {
                 }
             }
 
-            for(const id of individualIds) {
+            for (const id of individualIds) {
                 const reservaRef = db.collection('reservas').doc(id);
                 if (hayPagoFinal) {
                     batch.update(reservaRef, { estadoGestion: 'Pendiente Boleta', pagado: true });
@@ -303,20 +371,20 @@ module.exports = (db) => {
             }
             await batch.commit();
 
-            for(const id of individualIds) {
-                 const resRef = db.collection('reservas').doc(id);
-                 const transaccionesSnapshot = await resRef.collection('transacciones').get();
-                 const totalAbonado = transaccionesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
-                 
-                 const reservaDoc = await resRef.get();
-                 const reservaData = reservaDoc.data();
-                 const updatePayload = { abono: totalAbonado };
+            for (const id of individualIds) {
+                const resRef = db.collection('reservas').doc(id);
+                const transaccionesSnapshot = await resRef.collection('transacciones').get();
+                const totalAbonado = transaccionesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
 
-                 if (individualIds.length === 1 && totalAbonado > (reservaData.valorCLP || 0)) {
-                     updatePayload.valorCLP = totalAbonado;
-                     updatePayload.valorManual = true;
-                 }
-                 await resRef.update(updatePayload);
+                const reservaDoc = await resRef.get();
+                const reservaData = reservaDoc.data();
+                const updatePayload = { abono: totalAbonado };
+
+                if (individualIds.length === 1 && totalAbonado > (reservaData.valorCLP || 0)) {
+                    updatePayload.valorCLP = totalAbonado;
+                    updatePayload.valorManual = true;
+                }
+                await resRef.update(updatePayload);
             }
 
             res.status(200).json({ message: 'Transacción actualizada y total recalculado.' });
@@ -328,22 +396,22 @@ module.exports = (db) => {
 
     router.post('/gestion/transaccion/eliminar', jsonParser, async (req, res) => {
         const { reservaId, transaccionId, idsIndividuales } = req.body;
-         if (!reservaId || !transaccionId || !idsIndividuales) {
+        if (!reservaId || !transaccionId || !idsIndividuales) {
             return res.status(400).json({ error: 'Faltan datos para eliminar la transacción.' });
         }
         try {
             const reservaRef = db.collection('reservas').doc(reservaId);
             const transaccionRef = reservaRef.collection('transacciones').doc(transaccionId);
-            
+
             await transaccionRef.delete();
 
-            for(const id of idsIndividuales) {
-                 const resRef = db.collection('reservas').doc(id);
-                 const transaccionesSnapshot = await resRef.collection('transacciones').get();
-                 const totalAbonado = transaccionesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
-                 await resRef.update({ abono: totalAbonado });
+            for (const id of idsIndividuales) {
+                const resRef = db.collection('reservas').doc(id);
+                const transaccionesSnapshot = await resRef.collection('transacciones').get();
+                const totalAbonado = transaccionesSnapshot.docs.reduce((sum, doc) => sum + doc.data().monto, 0);
+                await resRef.update({ abono: totalAbonado });
             }
-            
+
             res.status(200).json({ message: 'Elemento eliminado correctamente.' });
         } catch (error) {
             console.error('Error al eliminar documento:', error);
@@ -378,10 +446,10 @@ module.exports = (db) => {
             if (snapshot.empty) {
                 return res.status(200).json({ message: 'No hay reservas para verificar.', repairedCount: 0 });
             }
-    
+
             const batch = db.batch();
             let repairedCount = 0;
-            
+
             snapshot.forEach(doc => {
                 const data = doc.data();
                 if (!data.hasOwnProperty('estadoGestion') && data.estado === 'Confirmada') {
@@ -390,7 +458,7 @@ module.exports = (db) => {
                     repairedCount++;
                 }
             });
-    
+
             if (repairedCount > 0) {
                 await batch.commit();
                 console.log(`Proceso completado. Se repararon ${repairedCount} reservas.`);
@@ -399,7 +467,7 @@ module.exports = (db) => {
                 console.log('No se encontraron reservas que necesitaran reparación.');
                 res.status(200).json({ message: 'No se encontraron reservas que necesitaran ser reparadas. Todo parece estar en orden.' });
             }
-    
+
         } catch (error) {
             console.error("Error al reparar estados de gestión:", error);
             res.status(500).json({ error: 'Error interno del servidor al reparar los estados.' });
@@ -417,10 +485,10 @@ module.exports = (db) => {
             const clientsCache = new Map();
             const batch = db.batch();
             let repairedCount = 0;
-            
+
             for (const doc of snapshot.docs) {
                 const data = doc.data();
-                
+
                 if ((!data.hasOwnProperty('telefono') || !data.telefono) && data.clienteId) {
                     let clientPhone = clientsCache.get(data.clienteId);
 
@@ -454,7 +522,7 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor al reparar los teléfonos.' });
         }
     });
-    
+
     router.post('/gestion/fix-cabana-names', async (req, res) => {
         try {
             console.log('Iniciando proceso para corregir nombres de cabañas...');
@@ -474,10 +542,10 @@ module.exports = (db) => {
             if (reservasSnapshot.empty) {
                 return res.status(200).json({ message: 'No hay reservas para verificar.', repairedCount: 0 });
             }
-    
+
             const batch = db.batch();
             let repairedCount = 0;
-            
+
             reservasSnapshot.forEach(doc => {
                 const data = doc.data();
                 const currentName = data.alojamiento;
@@ -490,7 +558,7 @@ module.exports = (db) => {
                     }
                 }
             });
-    
+
             if (repairedCount > 0) {
                 await batch.commit();
                 const message = `Proceso completado. Se corrigieron los nombres de ${repairedCount} registros de reservas.`;
@@ -501,20 +569,20 @@ module.exports = (db) => {
                 console.log(message);
                 res.status(200).json({ message: message });
             }
-    
+
         } catch (error) {
             console.error("Error al corregir nombres de cabañas:", error);
             res.status(500).json({ error: 'Error interno del servidor al realizar la corrección.' });
         }
     });
-    
+
     router.get('/gestion/notas/:reservaIdOriginal', async (req, res) => {
         const { reservaIdOriginal } = req.params;
         try {
             const snapshot = await db.collection('gestion_notas')
                 .where('reservaIdOriginal', '==', reservaIdOriginal)
                 .get(); // Se elimina el .orderBy()
-            
+
             if (snapshot.empty) {
                 return res.status(200).json([]);
             }
@@ -560,6 +628,6 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    
+
     return router;
 };

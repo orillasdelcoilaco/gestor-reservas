@@ -32,7 +32,7 @@ module.exports = (db) => {
         const fechaSalida = data.fechaSalida.toDate();
 
         if (fechaSalida > targetDate && data.estado !== 'Cancelada') {
-           reservasActivas.push({
+          reservasActivas.push({
             id: doc.id, // Se devuelve el ID completo del documento
             reservaIdOriginal: data.reservaIdOriginal,
             nombre: data.clienteNombre,
@@ -65,21 +65,33 @@ module.exports = (db) => {
       let clienteId = null;
       let totalAbonado = 0;
 
+      let minLlegada = null;
+      let maxSalida = null;
+
       // Usamos un bucle for...of para poder usar await dentro
       for (const doc of snapshot.docs) {
         const data = doc.data();
+        const llegada = data.fechaLlegada.toDate();
+        const salida = data.fechaSalida.toDate();
+
+        if (!minLlegada || llegada < minLlegada) minLlegada = llegada;
+        if (!maxSalida || salida > maxSalida) maxSalida = salida;
+
         // --- MODIFICACIÓN: AÑADIMOS EL ID DE CADA RESERVA INDIVIDUAL ---
         cabanas.push({
           id: doc.id,
           alojamiento: data.alojamiento,
-          valorCLP: data.valorCLP
+          valorCLP: data.valorCLP,
+          llegada: llegada,
+          salida: salida,
+          totalNoches: data.totalNoches
         });
         clienteId = data.clienteId;
 
         // --- LÓGICA PARA SUMAR ABONOS DE LA SUBCOLECCIÓN ---
         const transaccionesRef = doc.ref.collection('transacciones');
         const transaccionesSnapshot = await transaccionesRef.get();
-        
+
         if (!transaccionesSnapshot.empty) {
           transaccionesSnapshot.forEach(transDoc => {
             totalAbonado += transDoc.data().monto || 0;
@@ -91,13 +103,20 @@ module.exports = (db) => {
       const clienteDoc = await db.collection('clientes').doc(clienteId).get();
       const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
 
+      // Calcular noches totales globales (span real)
+      const diffTime = Math.abs(maxSalida - minLlegada);
+      const startOfLlegada = new Date(minLlegada); startOfLlegada.setHours(0, 0, 0, 0);
+      const startOfSalida = new Date(maxSalida); startOfSalida.setHours(0, 0, 0, 0);
+      // Simple diff in days
+      const totalNochesGlobal = Math.round((startOfSalida - startOfLlegada) / (1000 * 60 * 60 * 24));
+
       const infoGeneral = {
         reservaIdOriginal: primeraReserva.reservaIdOriginal,
         nombre: primeraReserva.clienteNombre,
         telefono: clienteData.phone || 'No disponible',
-        llegada: primeraReserva.fechaLlegada.toDate(),
-        salida: primeraReserva.fechaSalida.toDate(),
-        totalNoches: primeraReserva.totalNoches,
+        llegada: minLlegada,
+        salida: maxSalida,
+        totalNoches: totalNochesGlobal,
         totalCLP: cabanas.reduce((sum, c) => sum + c.valorCLP, 0),
         totalAbonado: totalAbonado, // <-- Se añade el total calculado
         canal: primeraReserva.canal,

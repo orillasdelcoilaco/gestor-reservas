@@ -6,7 +6,7 @@ const admin = require('firebase-admin');
 const jsonParser = express.json();
 
 module.exports = (db) => {
-    
+
     router.post('/presupuestos/generar', jsonParser, async (req, res) => {
         const { fechaLlegada, fechaSalida, personas, sinCamarotes, permitirCambios } = req.body;
 
@@ -21,7 +21,7 @@ module.exports = (db) => {
 
         try {
             const { availableCabanas, allCabanas, allTarifas, complexDetails, overlappingReservations } = await getAvailabilityData(db, startDate, endDate);
-            
+
             let result;
             let isSegmented = false;
 
@@ -31,7 +31,7 @@ module.exports = (db) => {
             } else {
                 result = findNormalCombination(availableCabanas, parseInt(personas), sinCamarotes);
             }
-            
+
             const { combination, capacity, dailyOptions } = result;
 
             if (combination.length === 0) {
@@ -53,7 +53,7 @@ module.exports = (db) => {
             });
         } catch (error) {
             console.error("Error al generar el presupuesto:", error);
-            res.status(500).json({ error: 'Error interno del servidor al generar el presupuesto.' });
+            res.status(500).json({ error: 'Error interno: ' + error.message, stack: error.stack });
         }
     });
 
@@ -72,7 +72,7 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor al recalcular.' });
         }
     });
-    
+
     router.post('/presupuestos/recalcular-segmentado', jsonParser, async (req, res) => {
         const { itinerary } = req.body;
         if (!itinerary || !Array.isArray(itinerary) || itinerary.length === 0) {
@@ -93,7 +93,7 @@ module.exports = (db) => {
 
             const pricing = await calculatePrice(db, items, firstDay, lastDay, true);
             res.status(200).json(pricing);
-        } catch(error) {
+        } catch (error) {
             console.error("Error al recalcular el itinerario segmentado:", error);
             res.status(500).json({ error: 'Error interno del servidor.' });
         }

@@ -1,12 +1,26 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { processDolarCsv } = require('../services/dolarService');
+const { processDolarCsv, getValorDolar } = require('../services/dolarService');
 
 // Configuración de Multer para guardar el archivo temporalmente en memoria
 const upload = multer({ storage: multer.memoryStorage() });
 
 module.exports = (db) => {
+  router.get('/dolar/valor', async (req, res) => {
+    const { fecha } = req.query;
+    if (!fecha) {
+      return res.status(400).json({ error: 'Se requiere una fecha.' });
+    }
+    try {
+      const valor = await getValorDolar(db, new Date(fecha + 'T00:00:00Z'));
+      res.status(200).json({ valor });
+    } catch (error) {
+      console.error('Error al obtener valor del dólar:', error);
+      res.status(500).json({ error: 'No se pudo obtener el valor del dólar.' });
+    }
+  });
+
   /**
    * POST /api/dolar/upload-csv
    * Recibe un archivo CSV y el año correspondiente, y procesa los valores del dólar.

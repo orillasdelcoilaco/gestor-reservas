@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,21 +8,43 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        #gestion-modal, #bitacora-modal { background-color: rgba(0, 0, 0, 0.5); }
-        .paste-zone { border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; }
-        .paste-zone.drag-over { background-color: #e0e7ff; border-color: #4f46e5; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        #gestion-modal,
+        #bitacora-modal {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .paste-zone {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .paste-zone.drag-over {
+            background-color: #e0e7ff;
+            border-color: #4f46e5;
+        }
     </style>
 </head>
+
 <body class="bg-gray-100">
-    <div id="loader" class="text-center p-8"><p class="text-gray-500">Verificando sesión...</p></div>
+    <div id="loader" class="text-center p-8">
+        <p class="text-gray-500">Verificando sesión...</p>
+    </div>
     <div id="app-content" class="min-h-screen hidden">
         <nav class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between h-16">
                     <div class="flex items-center space-x-4">
                         <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
-                        <a href="dashboard.html" class="hidden sm:block px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200">Volver al Dashboard</a>
+                        <a href="dashboard.html"
+                            class="hidden sm:block px-3 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200">Volver
+                            al Dashboard</a>
                     </div>
                     <div id="auth-info" class="flex items-center space-x-4"></div>
                 </div>
@@ -29,261 +52,418 @@
         </nav>
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                    <h2 class="text-2xl font-semibold text-gray-900">Panel de Gestión Diaria</h2>
-                    <input type="text" id="search-input" placeholder="Buscar por nombre, reserva, teléfono..." class="mt-4 md:mt-0 w-full md:w-1/3 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-0">Gestión Diaria de Reservas (v2.1)</h2>
+
+                    <div class="flex flex-col md:flex-row gap-2 w-full md:w-auto flex-grow justify-end">
+                        <!-- Filtros -->
+                        <select id="filter-canal" class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="all">Todos los Canales</option>
+                            <option value="App">App</option>
+                            <option value="Booking">Booking</option>
+                            <option value="SODC">SODC</option>
+                            <option value="Airbnb">Airbnb</option>
+                        </select>
+
+                        <select id="filter-estado-gestion"
+                            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm">
+                            <option value="all">Todos Estados Gestión</option>
+                            <option value="Pendiente Bienvenida">Pendiente Bienvenida</option>
+                            <option value="Pendiente Cobro">Pendiente Cobro</option>
+                            <option value="Pendiente Pago">Pendiente Pago</option>
+                            <option value="Pendiente Boleta">Pendiente Boleta</option>
+                        </select>
+
+                        <div class="flex items-center bg-gray-50 px-3 border rounded shadow-sm">
+                            <input type="checkbox" id="filter-proceso-cancelacion"
+                                class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded">
+                            <label for="filter-proceso-cancelacion" class="ml-2 block text-sm text-gray-900">En
+                                Cancelación</label>
+                        </div>
+
+                        <input type="text" id="search-input" placeholder="Buscar..."
+                            class="w-full md:w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                    </div>
                 </div>
-                <div id="loading-state" class="text-center py-8"><p class="text-gray-500">Cargando tareas pendientes...</p></div>
-                <div id="hoy-container" class="hidden"><h3 class="text-xl font-bold text-red-600 mb-4 border-b pb-2">Requiere Acción Hoy</h3><div id="hoy-list" class="space-y-4"></div></div>
-                <div id="proximas-container" class="mt-8 hidden"><h3 class="text-xl font-semibold text-blue-600 mb-4 border-b pb-2">Próximas Llegadas</h3><div id="proximas-list" class="space-y-4"></div></div>
-                <div id="no-pendientes" class="text-center py-12 hidden"><p class="text-2xl font-semibold text-green-600">¡Todo al día!</p><p class="text-gray-500 mt-2">No hay reservas con gestiones pendientes.</p></div>
+                <div id="loading-state" class="text-center py-8">
+                    <p class="text-gray-500">Cargando tareas pendientes...</p>
+                </div>
+                <div id="hoy-container" class="hidden">
+                    <h3 class="text-xl font-bold text-red-600 mb-4 border-b pb-2">Requiere Acción Hoy</h3>
+                    <div id="hoy-list" class="space-y-4"></div>
+                </div>
+                <div id="proximas-container" class="mt-8 hidden">
+                    <h3 class="text-xl font-semibold text-blue-600 mb-4 border-b pb-2">Próximas Llegadas</h3>
+                    <div id="proximas-list" class="space-y-4"></div>
+                </div>
+                <div id="no-pendientes" class="text-center py-12 hidden">
+                    <p class="text-2xl font-semibold text-green-600">¡Todo al día!</p>
+                    <p class="text-gray-500 mt-2">No hay reservas con gestiones pendientes.</p>
+                </div>
             </div>
         </main>
     </div>
 
     <div id="gestion-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="modal-title">Gestionar</h3>
             <div id="modal-content-container" class="space-y-4"></div>
-            <button type="button" id="modal-cancel-btn" class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
+            <button type="button" id="modal-cancel-btn"
+                class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
         </div>
     </div>
 
     <div id="bitacora-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
-            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="bitacora-modal-title">Bitácora de Gestión</h3>
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="bitacora-modal-title">Bitácora de Gestión
+            </h3>
             <div id="bitacora-list" class="max-h-60 overflow-y-auto space-y-3 mb-4 pr-2"></div>
             <div class="border-t pt-4">
-                <textarea id="bitacora-new-note" rows="3" class="w-full p-2 border rounded-md" placeholder="Añadir nueva nota..."></textarea>
+                <textarea id="bitacora-new-note" rows="3" class="w-full p-2 border rounded-md"
+                    placeholder="Añadir nueva nota..."></textarea>
                 <div id="bitacora-status" class="text-sm mt-2"></div>
                 <div class="mt-2 flex justify-end space-x-3">
-                    <button type="button" id="bitacora-cancel-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md">Cerrar</button>
-                    <button type="button" id="bitacora-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Guardar Nota</button>
+                    <button type="button" id="bitacora-cancel-btn"
+                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md">Cerrar</button>
+                    <button type="button" id="bitacora-save-btn"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded-md">Guardar Nota</button>
                 </div>
             </div>
         </div>
     </div>
 
 
-<script type="module">
-    import { checkSession, logout, fetchAPI } from './api.js';
-    
-    // --- Referencias a elementos del DOM ---
-    const loader = document.getElementById('loader');
-    const appContent = document.getElementById('app-content');
-    const authInfo = document.getElementById('auth-info');
-    const loadingState = document.getElementById('loading-state');
-    const searchInput = document.getElementById('search-input');
-    const hoyContainer = document.getElementById('hoy-container');
-    const hoyList = document.getElementById('hoy-list');
-    const proximasContainer = document.getElementById('proximas-container');
-    const proximasList = document.getElementById('proximas-list');
-    const noPendientes = document.getElementById('no-pendientes');
-    const modal = document.getElementById('gestion-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalContent = document.getElementById('modal-content-container');
-    const modalCancelBtn = document.getElementById('modal-cancel-btn');
-    const bitacoraModal = document.getElementById('bitacora-modal');
-    const bitacoraModalTitle = document.getElementById('bitacora-modal-title');
-    const bitacoraList = document.getElementById('bitacora-list');
-    const bitacoraNewNote = document.getElementById('bitacora-new-note');
-    const bitacoraSaveBtn = document.getElementById('bitacora-save-btn');
-    const bitacoraCancelBtn = document.getElementById('bitacora-cancel-btn');
-    const bitacoraStatus = document.getElementById('bitacora-status');
+    <script type="module">
+        import { checkSession, logout, fetchAPI } from './api.js';
 
-    let allGrupos = [];
-    let currentGrupo = null;
-    let currentAction = null;
-    let allTransacciones = [];
-    let sessionUserEmail = '';
+        // --- Referencias a elementos del DOM ---
+        const loader = document.getElementById('loader');
+        const appContent = document.getElementById('app-content');
+        const authInfo = document.getElementById('auth-info');
+        const loadingState = document.getElementById('loading-state');
+        const searchInput = document.getElementById('search-input');
+        const hoyContainer = document.getElementById('hoy-container');
+        const hoyList = document.getElementById('hoy-list');
+        const proximasContainer = document.getElementById('proximas-container');
+        const proximasList = document.getElementById('proximas-list');
+        const noPendientes = document.getElementById('no-pendientes');
+        const modal = document.getElementById('gestion-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content-container');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const bitacoraModal = document.getElementById('bitacora-modal');
+        const bitacoraModalTitle = document.getElementById('bitacora-modal-title');
+        const bitacoraList = document.getElementById('bitacora-list');
+        const bitacoraNewNote = document.getElementById('bitacora-new-note');
+        const bitacoraSaveBtn = document.getElementById('bitacora-save-btn');
+        const bitacoraCancelBtn = document.getElementById('bitacora-cancel-btn');
+        const bitacoraStatus = document.getElementById('bitacora-status');
 
-    function formatCurrency(value) { return `$${(value || 0).toLocaleString('es-CL')}`; }
-    function formatDate(dateString) { return dateString ? new Date(dateString).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'; }
-    
-    function getStatusInfo(status) {
-        switch (status) {
-            case 'Pendiente Bienvenida': return { level: 1, text: 'PENDIENTE BIENVENIDA', color: 'bg-yellow-500' };
-            case 'Pendiente Cobro': return { level: 2, text: 'PENDIENTE COBRO', color: 'bg-orange-500' };
-            case 'Pendiente Pago': return { level: 3, text: 'PENDIENTE PAGO', color: 'bg-red-600' };
-            case 'Pendiente Boleta': return { level: 4, text: 'PENDIENTE BOLETA', color: 'bg-purple-600' };
-            default: return { level: 99, text: status ? status.toUpperCase() : 'DESCONOCIDO', color: 'bg-gray-400' };
+        let allGrupos = [];
+        let currentGrupo = null;
+        let currentAction = null;
+        let allTransacciones = [];
+        let sessionUserEmail = '';
+
+        function formatCurrency(value) { return `$${(value || 0).toLocaleString('es-CL')}`; }
+        function formatDate(dateString) { return dateString ? new Date(dateString).toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'N/A'; }
+
+        function getStatusInfo(status) {
+            switch (status) {
+                case 'Pendiente Bienvenida': return { level: 1, text: 'PENDIENTE BIENVENIDA', color: 'bg-yellow-500' };
+                case 'Pendiente Cobro': return { level: 2, text: 'PENDIENTE COBRO', color: 'bg-orange-500' };
+                case 'Pendiente Pago': return { level: 3, text: 'PENDIENTE PAGO', color: 'bg-red-600' };
+                case 'Pendiente Boleta': return { level: 4, text: 'PENDIENTE BOLETA', color: 'bg-purple-600' };
+                default: return { level: 99, text: status ? status.toUpperCase() : 'DESCONOCIDO', color: 'bg-gray-400' };
+            }
         }
-    }
-    
-    function createGrupoCard(grupo) {
-        const card = document.createElement('div');
-        card.id = `card-${grupo.reservaIdOriginal}`;
-        card.className = 'p-4 border rounded-lg shadow-sm flex flex-col';
-        const statusInfo = getStatusInfo(grupo.estadoGestion);
-        const saldo = grupo.valorCLP - grupo.abono;
-        const alojamientos = grupo.reservasIndividuales.map(r => r.alojamiento).join(', ');
-        
-        const isGestionPagosActive = statusInfo.level >= 2;
-        const isGestionBoletaActive = statusInfo.level >= 4;
-        
-        let accionParaMarcar = null;
-        if (grupo.estadoGestion === 'Pendiente Bienvenida') accionParaMarcar = 'marcar_bienvenida_enviada';
-        else if (grupo.estadoGestion === 'Pendiente Cobro') accionParaMarcar = 'marcar_cobro_enviado';
-        
-        let statusHtml;
-        if (accionParaMarcar) {
-            const url = `mensajes.html?reservaId=${grupo.reservaIdOriginal}&accion=${accionParaMarcar}`;
-            statusHtml = `<a href="${url}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</a>`;
-        } else {
-             statusHtml = `<span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>`;
-        }
-        
-        const revertButtonHtml = statusInfo.level > 1
-            ? `<button class="revert-btn ml-2 text-xl" title="Revertir estado">↩️</button>`
-            : '';
-        
-        const kpiIcon = grupo.potencialCalculado ? '<span class="ml-1" title="Valor Potencial ya calculado">🧮</span>' : '';
-        const clienteLink = `<a href="clientes.html?openModalFor=${grupo.clienteId}" class="ml-4 text-lg font-bold text-gray-800 hover:text-indigo-600" title="Abrir ficha del cliente">${grupo.clienteNombre}</a>`;
-        
-        const badgeHtml = grupo.notasCount > 0 
-            ? `<span class="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">${grupo.notasCount}</span>`
-            : '';
 
-        card.innerHTML = `
-            <div class="flex items-center mb-2">
-                ${statusHtml}
-                ${revertButtonHtml}
-                ${clienteLink}
+        function createGrupoCard(grupo) {
+            const card = document.createElement('div');
+            card.id = `card-${grupo.reservaIdOriginal}`;
+
+            // Visual Debug: Booking gets blue border
+            const isBooking = grupo.canal === 'Booking';
+            card.className = `p-4 border rounded-lg shadow-sm flex flex-col ${isBooking ? 'border-l-4 border-l-blue-500' : ''}`;
+
+            const statusInfo = getStatusInfo(grupo.estadoGestion);
+            const saldo = grupo.valorCLP - grupo.abono;
+            const alojamientos = grupo.reservasIndividuales.map(r => r.alojamiento).join(', ');
+
+            const isGestionPagosActive = statusInfo.level >= 2;
+            const isGestionBoletaActive = statusInfo.level >= 4;
+
+            let accionParaMarcar = null;
+            if (grupo.estadoGestion === 'Pendiente Bienvenida') accionParaMarcar = 'marcar_bienvenida_enviada';
+            else if (grupo.estadoGestion === 'Pendiente Cobro') accionParaMarcar = 'marcar_cobro_enviado';
+
+            let statusHtml;
+            if (accionParaMarcar) {
+                const url = `mensajes.html?reservaId=${grupo.reservaIdOriginal}&accion=${accionParaMarcar}`;
+                statusHtml = `<a href="${url}" class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color} hover:opacity-80">${statusInfo.text}</a>`;
+            } else {
+                statusHtml = `<span class="text-sm font-bold text-white px-2 py-1 rounded ${statusInfo.color}">${statusInfo.text}</span>`;
+            }
+
+            const revertButtonHtml = statusInfo.level > 1
+                ? `<button class="revert-btn ml-2 text-xl" title="Revertir estado">↩️</button>`
+                : '';
+
+            const kpiIcon = grupo.potencialCalculado ? '<span class="ml-1" title="Valor Potencial ya calculado">🧮</span>' : '';
+            const clienteLink = `<a href="clientes.html?openModalFor=${grupo.clienteId}" class="ml-4 text-lg font-bold text-gray-800 hover:text-indigo-600" title="Abrir ficha del cliente">${grupo.clienteNombre}</a>`;
+
+            const badgeHtml = grupo.notasCount > 0
+                ? `<span class="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">${grupo.notasCount}</span>`
+                : '';
+
+            let exchangeRateHtml = '';
+            let totalDisplay = formatCurrency(grupo.valorCLP);
+            let balanceDisplay = formatCurrency(saldo);
+
+            if (grupo.esBookingUSD || isBooking) {
+                const dolarVal = grupo.valorDolarDia || 0;
+
+                if (grupo.esBookingUSD) {
+                    exchangeRateHtml = `<div class="text-xs text-gray-500 mt-1 md:mt-0 md:ml-4">
+                        Tipo de Cambio: <strong>${dolarVal ? formatCurrency(dolarVal) : 'N/A'}</strong> <span class="text-[10px]">(Fecha Check-in)</span>
+                    </div>`;
+
+                    // Format totals with USD
+                    const totalUSD = grupo.valorTotalUSD || 0;
+                    totalDisplay += ` <div class="text-xs text-blue-600 font-bold mt-1">(USD ${totalUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })})</div>`;
+
+                    // Calculate approximate USD balance
+                    const balanceUSD = dolarVal ? (saldo / dolarVal) : 0;
+                    balanceDisplay += ` <div class="text-xs text-blue-600 font-bold mt-1">(~ USD ${balanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })})</div>`;
+                } else if (isBooking) {
+                    // Debug fallback if canal is Booking but esBookingUSD is false (e.g. was CLP original)
+                    // exchangeRateHtml = `<div class="text-xs text-red-400 mt-1">Booking (CLP)</div>`;
+                }
+            }
+
+            // Controls for State Management (IIFE to isolate scope)
+            const bottomControlsHtml = (() => {
+                const estadoOptions = ['Confirmada', 'Cancelada', 'No Presentado', 'Abandonada'];
+                const estadoSelectHtml = `
+                    <select class="estado-reserva-select text-xs border rounded p-1 bg-white ml-2 ${grupo.estadoReserva === 'Confirmada' ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}" data-id="${grupo.reservaIdOriginal}" onclick="event.stopPropagation()">
+                        ${estadoOptions.map(est => `<option value="${est}" ${grupo.estadoReserva === est ? 'selected' : ''}>${est}</option>`).join('')}
+                    </select>
+                `;
+
+                const procesoCancelHtml = `
+                    <div class="flex items-center ml-4">
+                        <input type="checkbox" id="proc-${grupo.reservaIdOriginal}" class="proceso-cancel-check h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded" data-id="${grupo.reservaIdOriginal}" ${grupo.enProcesoCancelacion ? 'checked' : ''} onclick="event.stopPropagation()">
+                        <label for="proc-${grupo.reservaIdOriginal}" class="ml-1 text-xs text-red-600 font-bold cursor-pointer" onclick="event.stopPropagation()">En Cancelación</label>
+                    </div>
+                `;
+
+                return `
+                    <div class="mt-2 w-full flex justify-center items-center border-t pt-2">
+                         <span class="text-xs text-gray-500">Estado:</span>
+                         ${estadoSelectHtml}
+                         ${procesoCancelHtml}
+                    </div>
+                `;
+            })();
+
+            card.innerHTML = `
+            <div class="flex items-center mb-2 justify-between">
+                <div class="flex items-center">
+                    ${statusHtml}
+                    ${revertButtonHtml}
+                </div>
+                 <div class="text-xs text-gray-400 font-mono">${grupo.canal || 'N/A'}</div>
             </div>
-            <div class="text-sm text-gray-600 mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                <span><strong>Teléfono:</strong> ${grupo.telefono || 'N/A'}</span>
-                <span><strong>ID Reserva:</strong> ${grupo.reservaIdOriginal}</span>
+            <div class="text-lg font-bold text-gray-800 hover:text-indigo-600 mb-1">
+                 ${clienteLink}
+            </div>
+            <div class="text-sm text-gray-600 mt-0 flex flex-wrap gap-x-4 gap-y-1">
+                <span><strong>Tel:</strong> ${grupo.telefono || 'N/A'}</span>
+                <span><strong>ID:</strong> ${grupo.reservaIdOriginal}</span>
                 <span><strong>Estancia:</strong> ${formatDate(grupo.fechaLlegada)} al ${formatDate(grupo.fechaSalida)}</span>
                 <span><strong>Cabañas (${grupo.reservasIndividuales.length}):</strong> ${alojamientos}</span>
             </div>
             <div class="border-t mt-4 pt-3 flex flex-col md:flex-row justify-between items-center text-sm">
-                 <div class="grid grid-cols-3 gap-4 font-semibold text-center w-full md:w-2/3">
-                    <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(grupo.valorCLP)}</div>
-                    <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(grupo.abono)}</div>
-                    <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
+                 <div class="grid grid-cols-3 gap-4 font-semibold text-center w-full md:w-2/3 items-start">
+                    <div><span class="text-gray-500 font-medium">Total:</span><br>${totalDisplay}</div>
+                    <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span><br>${formatCurrency(grupo.abono)}</div>
+                    <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span><br>${balanceDisplay}</div>
                 </div>
-                <div class="mt-3 md:mt-0 flex flex-wrap gap-2 justify-center">
-                    <button data-gestion="gestionar_reserva" class="gestion-btn px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-md hover:bg-blue-200">Gestionar Reserva</button>
-                    <button data-gestion="ajuste_tarifa" class="gestion-btn px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-md hover:bg-yellow-200">Ajustar Tarifa ${kpiIcon}</button>
-                    <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
-                    <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
-                    <div class="relative">
-                        <button data-gestion="bitacora" class="gestion-btn px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-md hover:bg-gray-200">Bitácora 🗂️</button>
-                        ${badgeHtml}
+                ${exchangeRateHtml}
+                <div class="mt-3 md:mt-0 flex flex-col items-center gap-2">
+                    <div class="flex flex-wrap gap-2 justify-center">
+                        <button data-gestion="gestionar_reserva" class="gestion-btn px-3 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-md hover:bg-blue-200">Gestionar Reserva</button>
+                        <button data-gestion="ajuste_tarifa" class="gestion-btn px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-md hover:bg-yellow-200">Ajustar Tarifa ${kpiIcon}</button>
+                        <button data-gestion="pagos" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionPagosActive ? 'bg-green-100 text-green-800 hover:bg-green-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionPagosActive ? 'disabled' : ''}>Gestionar Pagos</button>
+                        <button data-gestion="boleta" class="gestion-btn px-3 py-1 text-xs font-semibold rounded-md ${isGestionBoletaActive ? 'bg-purple-100 text-purple-800 hover:bg-purple-200' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}" ${!isGestionBoletaActive ? 'disabled' : ''}>Gestionar Boleta</button>
                     </div>
+                    <div class="flex items-center gap-2">
+                         <div class="relative">
+                            <button data-gestion="bitacora" class="gestion-btn px-3 py-1 bg-gray-100 text-gray-800 text-xs font-semibold rounded-md hover:bg-gray-200">Bitácora 🗂️</button>
+                            ${badgeHtml}
+                        </div>
+                    </div>
+                    ${bottomControlsHtml}
                 </div>
             </div>`;
-        card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));
-        
-        const revertBtn = card.querySelector('.revert-btn');
-        if (revertBtn) {
-            revertBtn.addEventListener('click', () => openRevertModal(grupo));
+
+            // Listeners for buttons
+            card.querySelectorAll('.gestion-btn').forEach(btn => btn.addEventListener('click', (e) => openManagementModal(e.target.dataset.gestion, grupo)));
+
+            // Listeners for State Change
+            const stateSelect = card.querySelector('.estado-reserva-select');
+            stateSelect.addEventListener('change', (e) => handleStateChange(grupo.reservaIdOriginal, e.target.value));
+
+            // Listeners for Process Toggle
+            const processCheck = card.querySelector('.proceso-cancel-check');
+            processCheck.addEventListener('change', (e) => handleProcessToggle(grupo.reservaIdOriginal, e.target.checked));
+
+            const revertBtn = card.querySelector('.revert-btn');
+            if (revertBtn) {
+                revertBtn.addEventListener('click', () => openRevertModal(grupo));
+            }
+
+            return card;
         }
 
-        return card;
-    }
-
-    function openManagementModal(type, grupo) {
-        currentGrupo = grupo;
-
-        if (type === 'bitacora') {
-            openBitacoraModal(grupo);
-            return;
-        }
-
-        modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')} (Reserva ${grupo.reservaIdOriginal})`;
-        
-        const actionMap = {
-            'ajuste_tarifa': renderAjusteTarifaModal,
-            'pagos': renderPagosModal,
-            'boleta': renderBoletaModal,
-            'gestionar_reserva': renderGestionReservaModal
-        };
-
-        if (actionMap[type]) {
-            actionMap[type]();
-            modal.classList.remove('hidden');
-        }
-    }
-
-    async function openBitacoraModal(grupo) {
-        currentGrupo = grupo;
-        bitacoraModalTitle.textContent = `Bitácora de Gestión (Reserva ${grupo.reservaIdOriginal})`;
-        bitacoraNewNote.value = '';
-        bitacoraStatus.textContent = '';
-        bitacoraList.innerHTML = '<p class="text-gray-500">Cargando notas...</p>';
-        bitacoraModal.classList.remove('hidden');
-        await loadNotes();
-    }
-
-    async function loadNotes() {
-        try {
-            const notas = await fetchAPI(`/api/gestion/notas/${currentGrupo.reservaIdOriginal}`);
-            if (notas.length === 0) {
-                bitacoraList.innerHTML = '<p class="text-gray-500 text-center">No hay notas para esta reserva.</p>';
+        async function handleStateChange(reservaIdOriginal, nuevoEstado) {
+            if (!confirm(`¿Estás seguro de cambiar el estado a "${nuevoEstado}"?\n\nAdvertencia: Si cancelas o marcas como no presentado, el sistema liberará las fechas automáticamente.`)) {
+                // Revert visual state if user cancels confirmation
+                updateFilteredView();
                 return;
             }
-            bitacoraList.innerHTML = notas.map(nota => `
+
+            try {
+                await fetchAPI('/api/gestion/cambiar-estado-reserva', {
+                    method: 'POST',
+                    body: { reservaIdOriginal, nuevoEstado }
+                });
+                // Reload to reflect changes globally
+                loadGestion();
+            } catch (error) {
+                alert(`Error al cambiar estado: ${error.message}`);
+                updateFilteredView(); // Revert visual state
+            }
+        }
+
+        async function handleProcessToggle(reservaIdOriginal, enProceso) {
+            try {
+                await fetchAPI('/api/gestion/toggle-proceso-cancelacion', {
+                    method: 'POST',
+                    body: { reservaIdOriginal, enProceso }
+                });
+
+                // Update local data for immediate feedback
+                const grupo = allGrupos.find(g => g.reservaIdOriginal === reservaIdOriginal);
+                if (grupo) grupo.enProcesoCancelacion = enProceso;
+                updateFilteredView();
+            } catch (error) {
+                alert(`Error al actualizar estado de cancelación: ${error.message}`);
+                updateFilteredView(); // Revert
+            }
+        }
+
+        function openManagementModal(type, grupo) {
+            currentGrupo = grupo;
+
+            if (type === 'bitacora') {
+                openBitacoraModal(grupo);
+                return;
+            }
+
+            modalTitle.textContent = `Gestionar ${type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' ')} (Reserva ${grupo.reservaIdOriginal})`;
+
+            const actionMap = {
+                'ajuste_tarifa': renderAjusteTarifaModal,
+                'pagos': renderPagosModal,
+                'boleta': renderBoletaModal,
+                'gestionar_reserva': renderGestionReservaModal
+            };
+
+            if (actionMap[type]) {
+                actionMap[type]();
+                modal.classList.remove('hidden');
+            }
+        }
+
+        async function openBitacoraModal(grupo) {
+            currentGrupo = grupo;
+            bitacoraModalTitle.textContent = `Bitácora de Gestión (Reserva ${grupo.reservaIdOriginal})`;
+            bitacoraNewNote.value = '';
+            bitacoraStatus.textContent = '';
+            bitacoraList.innerHTML = '<p class="text-gray-500">Cargando notas...</p>';
+            bitacoraModal.classList.remove('hidden');
+            await loadNotes();
+        }
+
+        async function loadNotes() {
+            try {
+                const notas = await fetchAPI(`/api/gestion/notas/${currentGrupo.reservaIdOriginal}`);
+                if (notas.length === 0) {
+                    bitacoraList.innerHTML = '<p class="text-gray-500 text-center">No hay notas para esta reserva.</p>';
+                    return;
+                }
+                bitacoraList.innerHTML = notas.map(nota => `
                 <div class="bg-gray-50 p-3 rounded-md border">
                     <p class="text-gray-800">${nota.texto}</p>
                     <p class="text-xs text-gray-500 mt-1">Por: ${nota.autor} - ${nota.fecha}</p>
                 </div>
             `).join('');
-        } catch (error) {
-            bitacoraList.innerHTML = `<p class="text-red-500">Error al cargar las notas.</p>`;
-        }
-    }
-
-    async function saveNote() {
-        const texto = bitacoraNewNote.value.trim();
-        if (!texto) {
-            bitacoraStatus.textContent = 'La nota no puede estar vacía.';
-            bitacoraStatus.className = 'text-sm text-red-600';
-            return;
+            } catch (error) {
+                bitacoraList.innerHTML = `<p class="text-red-500">Error al cargar las notas.</p>`;
+            }
         }
 
-        bitacoraSaveBtn.disabled = true;
-        bitacoraSaveBtn.textContent = 'Guardando...';
-        bitacoraStatus.textContent = '';
+        async function saveNote() {
+            const texto = bitacoraNewNote.value.trim();
+            if (!texto) {
+                bitacoraStatus.textContent = 'La nota no puede estar vacía.';
+                bitacoraStatus.className = 'text-sm text-red-600';
+                return;
+            }
 
-        try {
-            await fetchAPI('/api/gestion/notas', {
-                method: 'POST',
-                body: {
-                    reservaIdOriginal: currentGrupo.reservaIdOriginal,
-                    texto: texto,
-                    autor: sessionUserEmail
-                }
-            });
-            bitacoraNewNote.value = '';
-            await loadNotes();
-        } catch (error) {
-            bitacoraStatus.textContent = `Error: ${error.message}`;
-            bitacoraStatus.className = 'text-sm text-red-600';
-        } finally {
-            bitacoraSaveBtn.disabled = false;
-            bitacoraSaveBtn.textContent = 'Guardar Nota';
+            bitacoraSaveBtn.disabled = true;
+            bitacoraSaveBtn.textContent = 'Guardando...';
+            bitacoraStatus.textContent = '';
+
+            try {
+                await fetchAPI('/api/gestion/notas', {
+                    method: 'POST',
+                    body: {
+                        reservaIdOriginal: currentGrupo.reservaIdOriginal,
+                        texto: texto,
+                        autor: sessionUserEmail
+                    }
+                });
+                bitacoraNewNote.value = '';
+                await loadNotes();
+            } catch (error) {
+                bitacoraStatus.textContent = `Error: ${error.message}`;
+                bitacoraStatus.className = 'text-sm text-red-600';
+            } finally {
+                bitacoraSaveBtn.disabled = false;
+                bitacoraSaveBtn.textContent = 'Guardar Nota';
+            }
         }
-    }
-    
-    function openRevertModal(grupo) {
-        currentGrupo = grupo;
-        modalTitle.textContent = `Revertir Estado (Reserva ${grupo.reservaIdOriginal})`;
 
-        const estadosPosibles = [
-            { value: 'Pendiente Bienvenida', text: 'Pendiente Bienvenida' },
-            { value: 'Pendiente Cobro', text: 'Pendiente Cobro' },
-            { value: 'Pendiente Pago', text: 'Pendiente Pago' },
-            { value: 'Pendiente Boleta', text: 'Pendiente Boleta' }
-        ];
+        function openRevertModal(grupo) {
+            currentGrupo = grupo;
+            modalTitle.textContent = `Revertir Estado (Reserva ${grupo.reservaIdOriginal})`;
 
-        const estadoActualInfo = getStatusInfo(grupo.estadoGestion);
-        const opcionesHtml = estadosPosibles
-            .filter(estado => getStatusInfo(estado.value).level < estadoActualInfo.level)
-            .map(estado => `<option value="${estado.value}">${estado.text}</option>`)
-            .join('');
+            const estadosPosibles = [
+                { value: 'Pendiente Bienvenida', text: 'Pendiente Bienvenida' },
+                { value: 'Pendiente Cobro', text: 'Pendiente Cobro' },
+                { value: 'Pendiente Pago', text: 'Pendiente Pago' },
+                { value: 'Pendiente Boleta', text: 'Pendiente Boleta' }
+            ];
 
-        modalContent.innerHTML = `
+            const estadoActualInfo = getStatusInfo(grupo.estadoGestion);
+            const opcionesHtml = estadosPosibles
+                .filter(estado => getStatusInfo(estado.value).level < estadoActualInfo.level)
+                .map(estado => `<option value="${estado.value}">${estado.text}</option>`)
+                .join('');
+
+            modalContent.innerHTML = `
             <p>Estado Actual: <strong class="font-semibold">${grupo.estadoGestion}</strong></p>
             <div>
                 <label for="revert-select" class="block text-sm font-medium text-gray-700">Selecciona el estado al que quieres volver:</label>
@@ -297,51 +477,51 @@
             </div>
         `;
 
-        modalContent.querySelector('#revert-confirm-btn').addEventListener('click', handleRevertState);
-        modal.classList.remove('hidden');
-    }
-
-    async function handleRevertState() {
-        const nuevoEstado = document.getElementById('revert-select').value;
-        const statusEl = document.getElementById('revert-status');
-        const confirmBtn = document.getElementById('revert-confirm-btn');
-
-        if (!nuevoEstado) {
-            statusEl.textContent = 'Debes seleccionar un estado.';
-            statusEl.className = 'text-sm text-red-600';
-            return;
+            modalContent.querySelector('#revert-confirm-btn').addEventListener('click', handleRevertState);
+            modal.classList.remove('hidden');
         }
 
-        if (!confirm(`¿Estás seguro de que quieres revertir el estado a "${nuevoEstado}"?`)) {
-            return;
+        async function handleRevertState() {
+            const nuevoEstado = document.getElementById('revert-select').value;
+            const statusEl = document.getElementById('revert-status');
+            const confirmBtn = document.getElementById('revert-confirm-btn');
+
+            if (!nuevoEstado) {
+                statusEl.textContent = 'Debes seleccionar un estado.';
+                statusEl.className = 'text-sm text-red-600';
+                return;
+            }
+
+            if (!confirm(`¿Estás seguro de que quieres revertir el estado a "${nuevoEstado}"?`)) {
+                return;
+            }
+
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'Procesando...';
+            statusEl.textContent = '';
+
+            try {
+                await fetchAPI('/api/gestion/grupo/revertir-estado', {
+                    method: 'POST',
+                    body: {
+                        reservaIdOriginal: currentGrupo.reservaIdOriginal,
+                        nuevoEstado: nuevoEstado,
+                        idsIndividuales: currentGrupo.reservasIndividuales.map(r => r.id)
+                    }
+                });
+                modal.classList.add('hidden');
+                await loadGestion();
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.className = 'text-sm text-red-600';
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'Confirmar Reversión';
+            }
         }
 
-        confirmBtn.disabled = true;
-        confirmBtn.textContent = 'Procesando...';
-        statusEl.textContent = '';
-        
-        try {
-            await fetchAPI('/api/gestion/grupo/revertir-estado', {
-                method: 'POST',
-                body: {
-                    reservaIdOriginal: currentGrupo.reservaIdOriginal,
-                    nuevoEstado: nuevoEstado,
-                    idsIndividuales: currentGrupo.reservasIndividuales.map(r => r.id)
-                }
-            });
-            modal.classList.add('hidden');
-            await loadGestion();
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-            statusEl.className = 'text-sm text-red-600';
-        } finally {
-            confirmBtn.disabled = false;
-            confirmBtn.textContent = 'Confirmar Reversión';
-        }
-    }
-
-    function renderAjusteTarifaModal() {
-        modalContent.innerHTML = `
+        function renderAjusteTarifaModal() {
+            modalContent.innerHTML = `
             <div class="border-b border-gray-200">
                 <nav id="modal-tabs" class="-mb-px flex space-x-6" aria-label="Tabs">
                     <button data-tab="kpi" class="modal-tab whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600">Calcular Potencial (KPI)</button>
@@ -353,35 +533,35 @@
             </div>
         `;
 
-        const tabs = modalContent.querySelectorAll('.modal-tab');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => {
-                    t.classList.remove('border-indigo-500', 'text-indigo-600');
-                    t.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+            const tabs = modalContent.querySelectorAll('.modal-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => {
+                        t.classList.remove('border-indigo-500', 'text-indigo-600');
+                        t.classList.add('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                    });
+                    tab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
+                    tab.classList.add('border-indigo-500', 'text-indigo-600');
+                    renderTabContent(tab.dataset.tab);
                 });
-                tab.classList.remove('border-transparent', 'text-gray-500', 'hover:text-gray-700', 'hover:border-gray-300');
-                tab.classList.add('border-indigo-500', 'text-indigo-600');
-                renderTabContent(tab.dataset.tab);
             });
-        });
 
-        renderTabContent('kpi');
-    }
+            renderTabContent('kpi');
+        }
 
-    function renderTabContent(tabName) {
-        const contentContainer = document.getElementById('modal-tab-content');
-        const valorActualTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + r.valorCLP, 0);
+        function renderTabContent(tabName) {
+            const contentContainer = document.getElementById('modal-tab-content');
+            const valorActualTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + r.valorCLP, 0);
 
-        switch(tabName) {
-            case 'kpi':
-                const potencialGuardadoHtml = currentGrupo.potencialCalculado 
-                    ? `<div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
+            switch (tabName) {
+                case 'kpi':
+                    const potencialGuardadoHtml = currentGrupo.potencialCalculado
+                        ? `<div class="p-3 bg-blue-50 border border-blue-200 rounded-md">
                            <p class="text-sm font-semibold text-blue-800">Valor Potencial Guardado: ${formatCurrency(currentGrupo.valorPotencialTotal)}</p>
-                       </div>` 
-                    : '';
+                       </div>`
+                        : '';
 
-                contentContainer.innerHTML = `
+                    contentContainer.innerHTML = `
                     <p class="text-sm text-gray-600 mb-3">Calcula el precio de lista (potencial) basado en el valor de cobro actual y un descuento. <strong>Esto no altera el valor a cobrar al cliente.</strong></p>
                     ${potencialGuardadoHtml}
                     <div class="space-y-4 mt-4">
@@ -398,23 +578,23 @@
                             <button id="kpi-save-btn" class="px-6 py-2 bg-blue-600 text-white rounded-md">Calcular y Guardar Potencial</button>
                         </div>
                     </div>`;
-                
-                const descuentoInput = contentContainer.querySelector('#descuento-pct');
-                const previewEl = contentContainer.querySelector('#valor-potencial-preview');
-                descuentoInput.addEventListener('input', () => {
-                    const pct = parseFloat(descuentoInput.value);
-                    if (pct > 0 && pct < 100) {
-                        const potencial = Math.round(valorActualTotal / (1 - (pct / 100)));
-                        previewEl.textContent = formatCurrency(potencial);
-                    } else {
-                        previewEl.textContent = '';
-                    }
-                });
-                contentContainer.querySelector('#kpi-save-btn').addEventListener('click', handleSaveKpi);
-                break;
 
-            case 'ajuste':
-                contentContainer.innerHTML = `
+                    const descuentoInput = contentContainer.querySelector('#descuento-pct');
+                    const previewEl = contentContainer.querySelector('#valor-potencial-preview');
+                    descuentoInput.addEventListener('input', () => {
+                        const pct = parseFloat(descuentoInput.value);
+                        if (pct > 0 && pct < 100) {
+                            const potencial = Math.round(valorActualTotal / (1 - (pct / 100)));
+                            previewEl.textContent = formatCurrency(potencial);
+                        } else {
+                            previewEl.textContent = '';
+                        }
+                    });
+                    contentContainer.querySelector('#kpi-save-btn').addEventListener('click', handleSaveKpi);
+                    break;
+
+                case 'ajuste':
+                    contentContainer.innerHTML = `
                     <p class="text-sm text-gray-600 mb-3">Modifica el monto final que se cobrará al cliente. <strong>Esta acción es permanente y actualizará el valor de la reserva.</strong></p>
                     <div class="space-y-4">
                          <div>
@@ -427,91 +607,91 @@
                             <button id="ajuste-save-btn" class="px-6 py-2 bg-red-600 text-white rounded-md">Ajustar Monto Final</button>
                         </div>
                     </div>`;
-                contentContainer.querySelector('#ajuste-save-btn').addEventListener('click', handleSaveAjusteFinal);
-                break;
+                    contentContainer.querySelector('#ajuste-save-btn').addEventListener('click', handleSaveAjusteFinal);
+                    break;
 
-            case 'distribuir':
-                renderAjusteGrupo();
-                break;
-        }
-    }
-
-    async function handleSaveKpi() {
-        const descuento = document.getElementById('descuento-pct').value;
-        const statusEl = document.getElementById('kpi-status');
-        const saveBtn = document.getElementById('kpi-save-btn');
-
-        if (!descuento || parseFloat(descuento) <= 0) {
-            statusEl.textContent = 'Por favor, ingresa un porcentaje de descuento válido.';
-            statusEl.className = 'text-sm text-red-600';
-            return;
+                case 'distribuir':
+                    renderAjusteGrupo();
+                    break;
+            }
         }
 
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Guardando...';
-        statusEl.textContent = '';
-        
-        try {
-            await fetchAPI('/api/gestion/grupo/calcular-potencial', {
-                method: 'POST',
-                body: {
-                    reservaIdOriginal: currentGrupo.reservaIdOriginal,
-                    descuento: descuento
-                }
-            });
-            modal.classList.add('hidden');
-            await loadGestion(); 
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-            statusEl.className = 'text-sm text-red-600';
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Calcular y Guardar Potencial';
-        }
-    }
+        async function handleSaveKpi() {
+            const descuento = document.getElementById('descuento-pct').value;
+            const statusEl = document.getElementById('kpi-status');
+            const saveBtn = document.getElementById('kpi-save-btn');
 
-    async function handleSaveAjusteFinal() {
-        const nuevoTotalCLP = document.getElementById('nuevo-valor-final').value;
-        const statusEl = document.getElementById('ajuste-status');
-        const saveBtn = document.getElementById('ajuste-save-btn');
+            if (!descuento || parseFloat(descuento) <= 0) {
+                statusEl.textContent = 'Por favor, ingresa un porcentaje de descuento válido.';
+                statusEl.className = 'text-sm text-red-600';
+                return;
+            }
 
-        if (!nuevoTotalCLP || parseFloat(nuevoTotalCLP) < 0) {
-            statusEl.textContent = 'Por favor, ingresa un monto final válido.';
-            statusEl.className = 'text-sm text-red-600';
-            return;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Guardando...';
+            statusEl.textContent = '';
+
+            try {
+                await fetchAPI('/api/gestion/grupo/calcular-potencial', {
+                    method: 'POST',
+                    body: {
+                        reservaIdOriginal: currentGrupo.reservaIdOriginal,
+                        descuento: descuento
+                    }
+                });
+                modal.classList.add('hidden');
+                await loadGestion();
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.className = 'text-sm text-red-600';
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Calcular y Guardar Potencial';
+            }
         }
 
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Guardando...';
-        statusEl.textContent = '';
-        
-        try {
-            await fetchAPI('/api/gestion/grupo/ajustar-monto-final', {
-                method: 'POST',
-                body: {
-                    reservaIdOriginal: currentGrupo.reservaIdOriginal,
-                    nuevoTotalCLP: nuevoTotalCLP
-                }
-            });
-            modal.classList.add('hidden');
-            await loadGestion();
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-            statusEl.className = 'text-sm text-red-600';
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Ajustar Monto Final';
+        async function handleSaveAjusteFinal() {
+            const nuevoTotalCLP = document.getElementById('nuevo-valor-final').value;
+            const statusEl = document.getElementById('ajuste-status');
+            const saveBtn = document.getElementById('ajuste-save-btn');
+
+            if (!nuevoTotalCLP || parseFloat(nuevoTotalCLP) < 0) {
+                statusEl.textContent = 'Por favor, ingresa un monto final válido.';
+                statusEl.className = 'text-sm text-red-600';
+                return;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Guardando...';
+            statusEl.textContent = '';
+
+            try {
+                await fetchAPI('/api/gestion/grupo/ajustar-monto-final', {
+                    method: 'POST',
+                    body: {
+                        reservaIdOriginal: currentGrupo.reservaIdOriginal,
+                        nuevoTotalCLP: nuevoTotalCLP
+                    }
+                });
+                modal.classList.add('hidden');
+                await loadGestion();
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.className = 'text-sm text-red-600';
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Ajustar Monto Final';
+            }
         }
-    }
-    
-    function renderAjusteGrupo() {
-        const contentContainer = document.getElementById('modal-tab-content') || modalContent;
-        let cabanasHtml = currentGrupo.reservasIndividuales.map(res => `
+
+        function renderAjusteGrupo() {
+            const contentContainer = document.getElementById('modal-tab-content') || modalContent;
+            let cabanasHtml = currentGrupo.reservasIndividuales.map(res => `
             <div class="grid grid-cols-2 gap-4 items-center">
                 <label for="valor-${res.id}" class="text-sm font-medium">${res.alojamiento}</label>
                 <input type="number" id="valor-${res.id}" data-id="${res.id}" class="valor-input block w-full px-3 py-2 border rounded-md" value="${res.valorCLP}">
             </div>`).join('');
-        contentContainer.innerHTML = `
+            contentContainer.innerHTML = `
             <div class="space-y-4">
                 <p class="text-sm text-gray-600">Corrige la distribución del valor total entre las cabañas del grupo.</p>
                 <div class="space-y-2">${cabanasHtml}</div>
@@ -519,36 +699,36 @@
                 <div id="ajuste-valores-status" class="text-sm"></div>
                 <div class="text-right"><button id="ajuste-valores-save-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-md">Guardar</button></div>
             </div>`;
-        contentContainer.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
-        contentContainer.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
-        updateValoresTotal();
-    }
-    
-    function updateValoresTotal() {
-        let total = 0;
-        const container = document.getElementById('modal-tab-content') || modalContent;
-        container.querySelectorAll('.valor-input').forEach(input => { total += parseFloat(input.value) || 0; });
-        container.querySelector('#ajuste-valores-total').textContent = formatCurrency(total);
-    }
-
-    async function handleSaveAjusteGrupo() {
-        const container = document.getElementById('modal-tab-content') || modalContent;
-        const valoresCabanas = Array.from(container.querySelectorAll('.valor-input')).map(input => ({ id: input.dataset.id, valor: input.value }));
-        const statusEl = container.querySelector('#ajuste-valores-status');
-        statusEl.textContent = 'Guardando...';
-        try {
-            await fetchAPI('/api/gestion/grupo/ajustar-valores', { method: 'POST', body: { reservaIdOriginal: currentGrupo.reservaIdOriginal, valoresCabanas }});
-            statusEl.textContent = '¡Valores guardados!';
-            statusEl.className = 'text-sm text-green-600';
-            await loadGestion();
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-            statusEl.className = 'text-sm text-red-600';
+            contentContainer.querySelectorAll('.valor-input').forEach(input => input.addEventListener('input', updateValoresTotal));
+            contentContainer.querySelector('#ajuste-valores-save-btn').addEventListener('click', handleSaveAjusteGrupo);
+            updateValoresTotal();
         }
-    }
-    
-    function renderPagosModal() {
-        modalContent.innerHTML = `
+
+        function updateValoresTotal() {
+            let total = 0;
+            const container = document.getElementById('modal-tab-content') || modalContent;
+            container.querySelectorAll('.valor-input').forEach(input => { total += parseFloat(input.value) || 0; });
+            container.querySelector('#ajuste-valores-total').textContent = formatCurrency(total);
+        }
+
+        async function handleSaveAjusteGrupo() {
+            const container = document.getElementById('modal-tab-content') || modalContent;
+            const valoresCabanas = Array.from(container.querySelectorAll('.valor-input')).map(input => ({ id: input.dataset.id, valor: input.value }));
+            const statusEl = container.querySelector('#ajuste-valores-status');
+            statusEl.textContent = 'Guardando...';
+            try {
+                await fetchAPI('/api/gestion/grupo/ajustar-valores', { method: 'POST', body: { reservaIdOriginal: currentGrupo.reservaIdOriginal, valoresCabanas } });
+                statusEl.textContent = '¡Valores guardados!';
+                statusEl.className = 'text-sm text-green-600';
+                await loadGestion();
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+                statusEl.className = 'text-sm text-red-600';
+            }
+        }
+
+        function renderPagosModal() {
+            modalContent.innerHTML = `
             <div id="pagos-summary" class="grid grid-cols-3 gap-4 font-semibold text-center w-full mb-4 p-2 bg-gray-50 rounded-md">
             </div>
             <div id="lista-pagos" class="space-y-2 max-h-48 overflow-y-auto pr-2 border-t border-b py-3">Cargando pagos...</div>
@@ -558,37 +738,37 @@
                  <button id="btn-registrar-nuevo-pago" class="w-full bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700">Registrar Nuevo Pago</button>
             </div>
             `;
-        
-        modalContent.querySelector('#btn-registrar-nuevo-pago').addEventListener('click', () => {
-             showActionForm('registrar_pago');
-        });
-        
-        renderPagosList();
-    }
-    
-    async function renderPagosList() {
-        const listaPagosEl = modalContent.querySelector('#lista-pagos');
-        const summaryEl = modalContent.querySelector('#pagos-summary');
 
-        const ids = currentGrupo.reservasIndividuales.map(r => r.id);
-        allTransacciones = await fetchAPI('/api/gestion/transacciones-grupo', { method: 'POST', body: { idsIndividuales: ids } });
-        
-        const totalAbonado = allTransacciones.reduce((sum, t) => sum + t.monto, 0);
-        const valorTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
-        const saldo = valorTotal - totalAbonado;
+            modalContent.querySelector('#btn-registrar-nuevo-pago').addEventListener('click', () => {
+                showActionForm('registrar_pago');
+            });
 
-        summaryEl.innerHTML = `
+            renderPagosList();
+        }
+
+        async function renderPagosList() {
+            const listaPagosEl = modalContent.querySelector('#lista-pagos');
+            const summaryEl = modalContent.querySelector('#pagos-summary');
+
+            const ids = currentGrupo.reservasIndividuales.map(r => r.id);
+            allTransacciones = await fetchAPI('/api/gestion/transacciones-grupo', { method: 'POST', body: { idsIndividuales: ids } });
+
+            const totalAbonado = allTransacciones.reduce((sum, t) => sum + t.monto, 0);
+            const valorTotal = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
+            const saldo = valorTotal - totalAbonado;
+
+            summaryEl.innerHTML = `
             <div><span class="text-gray-500 font-medium">Total:</span> ${formatCurrency(valorTotal)}</div>
             <div class="text-green-600"><span class="text-gray-500 font-medium">Abonado:</span> ${formatCurrency(totalAbonado)}</div>
             <div class="text-red-600"><span class="text-gray-500 font-medium">Saldo:</span> ${formatCurrency(saldo)}</div>
         `;
-        
-        if (allTransacciones.length === 0) {
-            listaPagosEl.innerHTML = '<p class="text-sm text-center text-gray-500 p-4">No hay pagos registrados.</p>';
-            return;
-        }
-        
-        listaPagosEl.innerHTML = allTransacciones.map(p => `
+
+            if (allTransacciones.length === 0) {
+                listaPagosEl.innerHTML = '<p class="text-sm text-center text-gray-500 p-4">No hay pagos registrados.</p>';
+                return;
+            }
+
+            listaPagosEl.innerHTML = allTransacciones.map(p => `
             <div class="p-2 border rounded-md flex justify-between items-center">
                 <div>
                     <p class="font-semibold">${formatCurrency(p.monto)} - <span class="font-normal text-gray-600">${p.tipo} (${p.medioDePago})</span></p>
@@ -599,40 +779,40 @@
                     <button data-id="${p.id}" data-reserva-id="${p.reservaId}" class="delete-pago-btn text-xs text-red-600 hover:text-red-900">Eliminar</button>
                 </div>
             </div>`).join('');
-            
-        listaPagosEl.querySelectorAll('.edit-pago-btn').forEach(btn => btn.addEventListener('click', (e) => {
-            const transaccion = allTransacciones.find(t => t.id === e.target.dataset.id);
-            showActionForm('editar_pago', transaccion);
-        }));
-        listaPagosEl.querySelectorAll('.delete-pago-btn').forEach(btn => btn.addEventListener('click', (e) => handleDeleteTransaction(e.target.dataset.id, e.target.dataset.reservaId)));
-    }
 
-    function renderBoletaModal() {
-        showActionForm('marcar_boleta_enviada');
-    }
-
-    function renderGestionReservaModal() {
-        showActionForm('gestionar_reserva');
-    }
-
-    function showActionForm(action, transaccion = null) {
-        currentAction = action;
-        let formTitle;
-        switch(action) {
-            case 'registrar_pago': formTitle = 'Registrar Nuevo Pago'; break;
-            case 'editar_pago': formTitle = 'Editar Pago'; break;
-            case 'marcar_boleta_enviada': formTitle = 'Subir Boleta/Factura'; break;
-            case 'gestionar_reserva': formTitle = 'Subir Imagen de Reserva'; break;
-            default: formTitle = 'Gestionar';
+            listaPagosEl.querySelectorAll('.edit-pago-btn').forEach(btn => btn.addEventListener('click', (e) => {
+                const transaccion = allTransacciones.find(t => t.id === e.target.dataset.id);
+                showActionForm('editar_pago', transaccion);
+            }));
+            listaPagosEl.querySelectorAll('.delete-pago-btn').forEach(btn => btn.addEventListener('click', (e) => handleDeleteTransaction(e.target.dataset.id, e.target.dataset.reservaId)));
         }
 
-        const container = document.getElementById('pagos-form-container') || modalContent;
-        
-        const montoTotalGrupo = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
-        const abonoTotalGrupo = allTransacciones.reduce((sum, t) => sum + t.monto, 0);
-        const saldoPendiente = montoTotalGrupo - abonoTotalGrupo;
+        function renderBoletaModal() {
+            showActionForm('marcar_boleta_enviada');
+        }
 
-        container.innerHTML = `
+        function renderGestionReservaModal() {
+            showActionForm('gestionar_reserva');
+        }
+
+        function showActionForm(action, transaccion = null) {
+            currentAction = action;
+            let formTitle;
+            switch (action) {
+                case 'registrar_pago': formTitle = 'Registrar Nuevo Pago'; break;
+                case 'editar_pago': formTitle = 'Editar Pago'; break;
+                case 'marcar_boleta_enviada': formTitle = 'Subir Boleta/Factura'; break;
+                case 'gestionar_reserva': formTitle = 'Subir Imagen de Reserva'; break;
+                default: formTitle = 'Gestionar';
+            }
+
+            const container = document.getElementById('pagos-form-container') || modalContent;
+
+            const montoTotalGrupo = currentGrupo.reservasIndividuales.reduce((sum, r) => sum + (r.valorCLP || 0), 0);
+            const abonoTotalGrupo = allTransacciones.reduce((sum, t) => sum + t.monto, 0);
+            const saldoPendiente = montoTotalGrupo - abonoTotalGrupo;
+
+            container.innerHTML = `
             <form id="modal-form-accion">
                 <h4 class="font-semibold text-lg mb-4">${formTitle}</h4>
                 <div class="${action.includes('pago') ? '' : 'hidden'} space-y-4">
@@ -653,212 +833,245 @@
                     <button type="submit" id="modal-save-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-md">Guardar</button>
                 </div>
             </form>`;
-        
-        if (action.includes('pago')) {
-            const mediosDePago = ['Transferencia', 'Efectivo', 'Tarjeta'];
-            const select = container.querySelector('#medio-pago-select');
-            mediosDePago.forEach(medio => {
-                const option = document.createElement('option');
-                option.value = medio;
-                option.textContent = medio;
-                if (transaccion?.medioDePago === medio) option.selected = true;
-                select.appendChild(option);
-            });
-        }
-        
-        const form = container.querySelector('#modal-form-accion');
-        form.addEventListener('submit', (e) => handleGroupFormSubmit(e, transaccion));
 
-        form.querySelector('#form-cancel-btn').addEventListener('click', () => {
             if (action.includes('pago')) {
-                 container.innerHTML = '';
-                 document.getElementById('btn-registrar-nuevo-pago').classList.remove('hidden');
-            } else {
-                modal.classList.add('hidden');
+                const mediosDePago = ['Transferencia', 'Efectivo', 'Tarjeta'];
+                const select = container.querySelector('#medio-pago-select');
+                mediosDePago.forEach(medio => {
+                    const option = document.createElement('option');
+                    option.value = medio;
+                    option.textContent = medio;
+                    if (transaccion?.medioDePago === medio) option.selected = true;
+                    select.appendChild(option);
+                });
             }
-        });
 
-        const docInput = form.querySelector('#documento-input');
-        const pasteZone = form.querySelector('#paste-zone');
-        const previewContainer = form.querySelector('#preview-container');
-        const thumbnail = form.querySelector('#thumbnail');
-        const sinDocCheckbox = form.querySelector('#sin-documento-checkbox');
-        
-        if (transaccion?.enlaceComprobante && transaccion.enlaceComprobante !== 'SIN_DOCUMENTO') {
-            thumbnail.src = transaccion.enlaceComprobante;
-            previewContainer.classList.remove('hidden');
-        } else if (action === 'gestionar_reserva' && currentGrupo.documentos.enlaceReserva) {
-             thumbnail.src = currentGrupo.documentos.enlaceReserva;
-             previewContainer.classList.remove('hidden');
-        }
+            const form = container.querySelector('#modal-form-accion');
+            form.addEventListener('submit', (e) => handleGroupFormSubmit(e, transaccion));
 
-        pasteZone.addEventListener('click', () => docInput.click());
-        docInput.addEventListener('change', () => { if(docInput.files.length) showPreview(docInput.files[0], thumbnail, previewContainer); });
-        document.addEventListener('paste', e => handlePaste(e, docInput, thumbnail, previewContainer));
-        sinDocCheckbox.addEventListener('change', () => { pasteZone.style.display = sinDocCheckbox.checked ? 'none' : 'block'; });
-
-        const btnReg = document.getElementById('btn-registrar-nuevo-pago');
-        if (btnReg) {
-            btnReg.classList.add('hidden');
-        }
-    }
-    
-    async function handleGroupFormSubmit(event, transaccion = null) {
-        event.preventDefault();
-        const form = event.target;
-        const saveBtn = form.querySelector('#modal-save-btn');
-        const statusEl = form.querySelector('#modal-status');
-        saveBtn.disabled = true;
-        saveBtn.textContent = 'Guardando...';
-        statusEl.textContent = '';
-        
-        const formData = new FormData();
-        const detalles = {};
-        const idsIndividuales = currentGrupo.reservasIndividuales.map(r => r.id);
-
-        let endpoint;
-        
-        if(currentAction.includes('pago')) {
-            detalles.monto = parseFloat(form.querySelector('#monto-input').value);
-            detalles.medioDePago = form.querySelector('#medio-pago-select').value;
-            detalles.tipo = form.querySelector('#pago-final-checkbox').checked ? 'Pago Final' : 'Abono';
-            detalles.esPagoFinal = form.querySelector('#pago-final-checkbox').checked;
-        }
-
-        detalles.sinDocumento = form.querySelector('#sin-documento-checkbox').checked;
-        const docInput = form.querySelector('#documento-input');
-        if (docInput && docInput.files.length > 0 && !detalles.sinDocumento) {
-            formData.append('documento', docInput.files[0]);
-        }
-        
-        if (transaccion) {
-            endpoint = '/api/gestion/transaccion/editar';
-            formData.append('reservaId', transaccion.reservaId);
-            formData.append('transaccionId', transaccion.id);
-        } else {
-            endpoint = '/api/gestion/actualizar-estado';
-            formData.append('accion', currentAction);
-        }
-        
-        formData.append('detalles', JSON.stringify(detalles));
-        formData.append('idsIndividuales', JSON.stringify(idsIndividuales));
-        formData.append('reservaIdOriginal', currentGrupo.reservaIdOriginal);
-
-        try {
-            await fetchAPI(endpoint, { method: 'POST', body: formData });
-            
-            if (currentAction.includes('pago')) {
-                form.parentElement.innerHTML = '';
-                document.getElementById('btn-registrar-nuevo-pago').classList.remove('hidden');
-                await renderPagosList();
-            } else {
-                 modal.classList.add('hidden');
-            }
-            await loadGestion();
-        } catch (error) {
-            statusEl.textContent = `Error: ${error.message}`;
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = 'Guardar';
-        }
-    }
-
-    async function handleDeleteTransaction(transaccionId, reservaId) {
-        if (!confirm('¿Estás seguro de que quieres eliminar este pago?')) return;
-        try {
-            await fetchAPI('/api/gestion/transaccion/eliminar', {
-                method: 'POST',
-                body: {
-                    reservaId,
-                    transaccionId,
-                    idsIndividuales: currentGrupo.reservasIndividuales.map(r => r.id)
+            form.querySelector('#form-cancel-btn').addEventListener('click', () => {
+                if (action.includes('pago')) {
+                    container.innerHTML = '';
+                    document.getElementById('btn-registrar-nuevo-pago').classList.remove('hidden');
+                } else {
+                    modal.classList.add('hidden');
                 }
             });
-            await renderPagosList();
-            await loadGestion();
-        } catch (error) {
-            alert(`Error al eliminar el pago: ${error.message}`);
-        }
-    }
-    
-    function showPreview(file, thumb, container) {
-        if (file.type.startsWith('image/')) {
-            thumb.src = URL.createObjectURL(file);
-            container.classList.remove('hidden');
-        }
-    }
 
-    function handlePaste(e, docInput, thumb, container) {
-        if (!modal.contains(e.target)) return;
-        const items = (e.clipboardData || window.clipboardData).items;
-        for (const item of items) {
-            if (item.type.indexOf('image') !== -1) {
-                e.preventDefault();
-                const blob = item.getAsFile();
-                const file = new File([blob], "captura.png", { type: blob.type });
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(file);
-                docInput.files = dataTransfer.files;
-                showPreview(file, thumb, container);
-                break;
+            const docInput = form.querySelector('#documento-input');
+            const pasteZone = form.querySelector('#paste-zone');
+            const previewContainer = form.querySelector('#preview-container');
+            const thumbnail = form.querySelector('#thumbnail');
+            const sinDocCheckbox = form.querySelector('#sin-documento-checkbox');
+
+            if (transaccion?.enlaceComprobante && transaccion.enlaceComprobante !== 'SIN_DOCUMENTO') {
+                thumbnail.src = transaccion.enlaceComprobante;
+                previewContainer.classList.remove('hidden');
+            } else if (action === 'gestionar_reserva' && currentGrupo.documentos.enlaceReserva) {
+                thumbnail.src = currentGrupo.documentos.enlaceReserva;
+                previewContainer.classList.remove('hidden');
+            }
+
+            pasteZone.addEventListener('click', () => docInput.click());
+            docInput.addEventListener('change', () => { if (docInput.files.length) showPreview(docInput.files[0], thumbnail, previewContainer); });
+            document.addEventListener('paste', e => handlePaste(e, docInput, thumbnail, previewContainer));
+            sinDocCheckbox.addEventListener('change', () => { pasteZone.style.display = sinDocCheckbox.checked ? 'none' : 'block'; });
+
+            const btnReg = document.getElementById('btn-registrar-nuevo-pago');
+            if (btnReg) {
+                btnReg.classList.add('hidden');
             }
         }
-    }
-    
-    function updateFilteredView() {
-        const searchTerm = searchInput.value.toLowerCase();
-        const filteredGrupos = allGrupos.filter(g => (g.clienteNombre && g.clienteNombre.toLowerCase().includes(searchTerm)) || (g.reservaIdOriginal && g.reservaIdOriginal.toLowerCase().includes(searchTerm)));
-        hoyList.innerHTML = ''; proximasList.innerHTML = '';
-        if (filteredGrupos.length === 0) {
-            noPendientes.classList.remove('hidden');
-            [hoyContainer, proximasContainer].forEach(el => el.classList.add('hidden'));
-            return;
-        }
-        noPendientes.classList.add('hidden');
-        const today = new Date(new Date().setUTCHours(0,0,0,0));
-        const llegadasHoy = [], proximasLlegadas = [];
-        filteredGrupos.forEach(grupo => { (new Date(grupo.fechaLlegada).getTime() <= today.getTime() ? llegadasHoy : proximasLlegadas).push(grupo); });
-        
-        if (llegadasHoy.length > 0) {
-            llegadasHoy.forEach(g => hoyList.appendChild(createGrupoCard(g)));
-            hoyContainer.classList.remove('hidden');
-        } else { hoyContainer.classList.add('hidden'); }
-        
-        if (proximasLlegadas.length > 0) {
-            proximasLlegadas.forEach(g => proximasList.appendChild(createGrupoCard(g)));
-            proximasContainer.classList.remove('hidden');
-        } else { proximasContainer.classList.add('hidden'); }
-    }
-    
-    async function loadGestion() {
-        loadingState.classList.remove('hidden');
-        [hoyContainer, proximasContainer, noPendientes].forEach(el => el.classList.add('hidden'));
-        try {
-            allGrupos = await fetchAPI('/api/gestion/pendientes');
-            loadingState.classList.add('hidden');
-            updateFilteredView();
-        } catch (error) {
-            loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar tareas: ${error.message}</p>`;
-        }
-    }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const session = checkSession();
-        if (session) {
-            sessionUserEmail = session.userEmail;
-            loader.style.display = 'none';
-            appContent.classList.remove('hidden');
-            authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${sessionUserEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
-            document.getElementById('logout-btn').addEventListener('click', logout);
-            
-            searchInput.addEventListener('input', updateFilteredView);
-            modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            bitacoraCancelBtn.addEventListener('click', () => bitacoraModal.classList.add('hidden'));
-            bitacoraSaveBtn.addEventListener('click', saveNote);
-            
-            loadGestion();
+        async function handleGroupFormSubmit(event, transaccion = null) {
+            event.preventDefault();
+            const form = event.target;
+            const saveBtn = form.querySelector('#modal-save-btn');
+            const statusEl = form.querySelector('#modal-status');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Guardando...';
+            statusEl.textContent = '';
+
+            const formData = new FormData();
+            const detalles = {};
+            const idsIndividuales = currentGrupo.reservasIndividuales.map(r => r.id);
+
+            let endpoint;
+
+            if (currentAction.includes('pago')) {
+                detalles.monto = parseFloat(form.querySelector('#monto-input').value);
+                detalles.medioDePago = form.querySelector('#medio-pago-select').value;
+                detalles.tipo = form.querySelector('#pago-final-checkbox').checked ? 'Pago Final' : 'Abono';
+                detalles.esPagoFinal = form.querySelector('#pago-final-checkbox').checked;
+            }
+
+            detalles.sinDocumento = form.querySelector('#sin-documento-checkbox').checked;
+            const docInput = form.querySelector('#documento-input');
+            if (docInput && docInput.files.length > 0 && !detalles.sinDocumento) {
+                formData.append('documento', docInput.files[0]);
+            }
+
+            if (transaccion) {
+                endpoint = '/api/gestion/transaccion/editar';
+                formData.append('reservaId', transaccion.reservaId);
+                formData.append('transaccionId', transaccion.id);
+            } else {
+                endpoint = '/api/gestion/actualizar-estado';
+                formData.append('accion', currentAction);
+            }
+
+            formData.append('detalles', JSON.stringify(detalles));
+            formData.append('idsIndividuales', JSON.stringify(idsIndividuales));
+            formData.append('reservaIdOriginal', currentGrupo.reservaIdOriginal);
+
+            try {
+                await fetchAPI(endpoint, { method: 'POST', body: formData });
+
+                if (currentAction.includes('pago')) {
+                    form.parentElement.innerHTML = '';
+                    document.getElementById('btn-registrar-nuevo-pago').classList.remove('hidden');
+                    await renderPagosList();
+                } else {
+                    modal.classList.add('hidden');
+                }
+                await loadGestion();
+            } catch (error) {
+                statusEl.textContent = `Error: ${error.message}`;
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Guardar';
+            }
         }
-    });
-</script>
+
+        async function handleDeleteTransaction(transaccionId, reservaId) {
+            if (!confirm('¿Estás seguro de que quieres eliminar este pago?')) return;
+            try {
+                await fetchAPI('/api/gestion/transaccion/eliminar', {
+                    method: 'POST',
+                    body: {
+                        reservaId,
+                        transaccionId,
+                        idsIndividuales: currentGrupo.reservasIndividuales.map(r => r.id)
+                    }
+                });
+                await renderPagosList();
+                await loadGestion();
+            } catch (error) {
+                alert(`Error al eliminar el pago: ${error.message}`);
+            }
+        }
+
+        function showPreview(file, thumb, container) {
+            if (file.type.startsWith('image/')) {
+                thumb.src = URL.createObjectURL(file);
+                container.classList.remove('hidden');
+            }
+        }
+
+        function handlePaste(e, docInput, thumb, container) {
+            if (!modal.contains(e.target)) return;
+            const items = (e.clipboardData || window.clipboardData).items;
+            for (const item of items) {
+                if (item.type.indexOf('image') !== -1) {
+                    e.preventDefault();
+                    const blob = item.getAsFile();
+                    const file = new File([blob], "captura.png", { type: blob.type });
+                    const dataTransfer = new DataTransfer();
+                    dataTransfer.items.add(file);
+                    docInput.files = dataTransfer.files;
+                    showPreview(file, thumb, container);
+                    break;
+                }
+            }
+        }
+
+        function updateFilteredView() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const canalFilter = document.getElementById('filter-canal').value;
+            const estadoGestionFilter = document.getElementById('filter-estado-gestion').value;
+            const procesoFilter = document.getElementById('filter-proceso-cancelacion').checked;
+
+            const filteredGrupos = allGrupos.filter(g => {
+                // 1. Search Term
+                const matchesSearch = (g.clienteNombre && g.clienteNombre.toLowerCase().includes(searchTerm)) ||
+                    (g.reservaIdOriginal && g.reservaIdOriginal.toLowerCase().includes(searchTerm)) ||
+                    (g.telefono && g.telefono.includes(searchTerm));
+
+                // 2. Canal Filter
+                const matchesCanal = canalFilter === 'all' || g.canal === canalFilter;
+
+                // 3. Estado Gestion Filter
+                // Note: g.estadoGestion might be undefined or string.
+                const matchesEstadoGestion = estadoGestionFilter === 'all' || g.estadoGestion === estadoGestionFilter;
+
+                // 4. Proceso Cancelacion Filter
+                const matchesProceso = !procesoFilter || g.enProcesoCancelacion === true;
+
+                return matchesSearch && matchesCanal && matchesEstadoGestion && matchesProceso;
+            });
+
+            hoyList.innerHTML = ''; proximasList.innerHTML = '';
+
+            if (filteredGrupos.length === 0) {
+                noPendientes.classList.remove('hidden');
+                noPendientes.querySelector('p').textContent = 'No se encontraron reservas con los filtros aplicados.';
+                [hoyContainer, proximasContainer].forEach(el => el.classList.add('hidden'));
+                return;
+            }
+
+            noPendientes.classList.add('hidden');
+            const today = new Date(new Date().setUTCHours(0, 0, 0, 0));
+
+            const llegadasHoy = [], proximasLlegadas = [];
+            filteredGrupos.forEach(grupo => { (new Date(grupo.fechaLlegada).getTime() <= today.getTime() ? llegadasHoy : proximasLlegadas).push(grupo); });
+
+            if (llegadasHoy.length > 0) {
+                llegadasHoy.forEach(g => hoyList.appendChild(createGrupoCard(g)));
+                hoyContainer.classList.remove('hidden');
+            } else { hoyContainer.classList.add('hidden'); }
+
+            if (proximasLlegadas.length > 0) {
+                proximasLlegadas.forEach(g => proximasList.appendChild(createGrupoCard(g)));
+                proximasContainer.classList.remove('hidden');
+            } else { proximasContainer.classList.add('hidden'); }
+        }
+
+        // Attach listeners to new filters
+        document.getElementById('filter-canal').addEventListener('change', updateFilteredView);
+        document.getElementById('filter-estado-gestion').addEventListener('change', updateFilteredView);
+        document.getElementById('filter-proceso-cancelacion').addEventListener('change', updateFilteredView);
+        searchInput.addEventListener('input', updateFilteredView);
+
+        async function loadGestion() {
+            loadingState.classList.remove('hidden');
+            [hoyContainer, proximasContainer, noPendientes].forEach(el => el.classList.add('hidden'));
+            try {
+                allGrupos = await fetchAPI('/api/gestion/pendientes');
+                loadingState.classList.add('hidden');
+                updateFilteredView();
+            } catch (error) {
+                loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar tareas: ${error.message}</p>`;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const session = checkSession();
+            if (session) {
+                sessionUserEmail = session.userEmail;
+                loader.style.display = 'none';
+                appContent.classList.remove('hidden');
+                authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${sessionUserEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
+                document.getElementById('logout-btn').addEventListener('click', logout);
+
+                searchInput.addEventListener('input', updateFilteredView);
+                modalCancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+                bitacoraCancelBtn.addEventListener('click', () => bitacoraModal.classList.add('hidden'));
+                bitacoraSaveBtn.addEventListener('click', saveNote);
+
+                loadGestion();
+            }
+        });
+    </script>
 </body>
+
 </html>

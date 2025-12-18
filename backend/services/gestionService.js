@@ -1,11 +1,19 @@
 const admin = require('firebase-admin');
+const { getValorDolar } = require('./dolarService');
 
 function getTodayUTC() {
     const today = new Date();
     return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
 }
 
+function toUTCDate(dateValue) {
+    return new Date(Date.UTC(dateValue.getUTCFullYear(), dateValue.getUTCMonth(), dateValue.getUTCDate()));
+}
+
 async function getReservasPendientes(db) {
+    const todayUTC = getTodayUTC();
+    const valorDolarHoy = await getValorDolar(db, todayUTC);
+
     const [clientsSnapshot, reservasSnapshot, notasSnapshot] = await Promise.all([
         db.collection('clientes').get(),
         db.collection('reservas').where('estado', '==', 'Confirmada').where('estadoGestion', '!=', 'Facturado').get(),
@@ -30,9 +38,51 @@ async function getReservasPendientes(db) {
 
     const reservasAgrupadas = new Map();
 
-    reservasSnapshot.docs.forEach(doc => {
+    const batch = db.batch();
+    let recalculated = 0;
+
+    for (const doc of reservasSnapshot.docs) {
         const data = doc.data();
         const reservaId = data.reservaIdOriginal;
+
+        const llegadaDate = data.fechaLlegada && typeof data.fechaLlegada.toDate === 'function' ? data.fechaLlegada.toDate() : null;
+        const salidaDate = data.fechaSalida && typeof data.fechaSalida.toDate === 'function' ? data.fechaSalida.toDate() : null;
+
+        const llegadaUTC = llegadaDate ? toUTCDate(llegadaDate) : null;
+        const esBookingUSD = data.canal === 'Booking' && data.monedaOriginal === 'USD';
+
+        if (esBookingUSD && llegadaUTC) {
+            let targetDolar = valorDolarHoy;
+            // Si el check-in está en el pasado (ayer o antes), usar el dólar de esa fecha.
+            // Si es hoy o futuro, usar el dólar de hoy.
+            if (llegadaUTC.getTime() < todayUTC.getTime()) {
+                try {
+                    targetDolar = await getValorDolar(db, llegadaUTC);
+                } catch (e) {
+                    console.warn(`Error obteniendo dolar para fecha ${llegadaUTC}:`, e);
+                    // Fallback to existing or today's if fetch fails, but preferably keep existing if valid
+                    targetDolar = data.valorDolarDia || valorDolarHoy;
+                }
+            }
+
+            const baseUSD = data.valorFinalUSD || data.valorOriginal || data.valorPotencialUSD || 0;
+            // Solo actualizar si el valor del dólar difiere
+            if (baseUSD > 0 && data.valorDolarDia !== targetDolar) {
+                const nuevoValorCLP = Math.round(baseUSD * targetDolar * 1.19);
+                const nuevoValorPotencialCLP = data.valorPotencialUSD ? Math.round(data.valorPotencialUSD * targetDolar * 1.19) : (data.valorPotencialCLP || nuevoValorCLP);
+
+                batch.update(db.collection('reservas').doc(doc.id), {
+                    valorDolarDia: targetDolar,
+                    valorCLP: nuevoValorCLP,
+                    valorPotencialCLP: nuevoValorPotencialCLP,
+                    valorConIva: nuevoValorCLP
+                });
+                recalculated++;
+                data.valorCLP = nuevoValorCLP;
+                data.valorPotencialCLP = nuevoValorPotencialCLP;
+                data.valorDolarDia = targetDolar;
+            }
+        }
 
         if (!reservasAgrupadas.has(reservaId)) {
             const clienteActual = clientsMap.get(data.clienteId);
@@ -43,8 +93,8 @@ async function getReservasPendientes(db) {
                 clienteId: data.clienteId,
                 clienteNombre: data.clienteNombre,
                 telefono: telefonoActualizado || 'N/A',
-                fechaLlegada: data.fechaLlegada ? data.fechaLlegada.toDate() : null,
-                fechaSalida: data.fechaSalida ? data.fechaSalida.toDate() : null,
+                fechaLlegada: llegadaDate,
+                fechaSalida: salidaDate,
                 estadoGestion: data.estadoGestion,
                 documentos: data.documentos || {},
                 reservasIndividuales: [],
@@ -52,27 +102,48 @@ async function getReservasPendientes(db) {
                 abono: 0,
                 valorPotencialTotal: 0,
                 potencialCalculado: false,
-                notasCount: notesCountMap.get(reservaId) || 0
+                notasCount: notesCountMap.get(reservaId) || 0,
+                // Initialize USD fields
+                esBookingUSD: false,
+                valorDolarDia: null,
+                valorTotalUSD: 0,
+                canal: data.canal,
+                // New Fields for Management
+                estadoReserva: data.estado || 'Confirmada',
+                enProcesoCancelacion: data.enProcesoCancelacion || false
             });
         }
 
         const grupo = reservasAgrupadas.get(reservaId);
-        
+
         grupo.reservasIndividuales.push({
             id: doc.id,
             alojamiento: data.alojamiento,
             valorCLP: data.valorCLP || 0,
             abono: data.abono || 0,
+            valorOriginal: data.valorOriginal, // Passed for individual display
+            monedaOriginal: data.monedaOriginal
         });
 
         grupo.valorCLP += data.valorCLP || 0;
         grupo.abono += data.abono || 0;
-        
+
         if (data.valorPotencialCLP && data.valorPotencialCLP > 0) {
             grupo.valorPotencialTotal += data.valorPotencialCLP;
             grupo.potencialCalculado = true;
         }
-    });
+
+        // Add USD info to group if available
+        if (data.canal === 'Booking' && data.monedaOriginal === 'USD') {
+            grupo.esBookingUSD = true;
+            grupo.valorDolarDia = data.valorDolarDia;
+            grupo.valorTotalUSD += (data.valorOriginal || 0);
+        }
+    }
+
+    if (recalculated > 0) {
+        await batch.commit();
+    }
 
     const reservas = Array.from(reservasAgrupadas.values());
     const today = getTodayUTC();
@@ -83,7 +154,7 @@ async function getReservasPendientes(db) {
         'Pendiente Cobro': 3,
         'Pendiente Bienvenida': 4
     };
-    
+
     reservas.sort((a, b) => {
         const aLlegaHoy = a.fechaLlegada && a.fechaLlegada.getTime() === today.getTime();
         const bLlegaHoy = b.fechaLlegada && b.fechaLlegada.getTime() === today.getTime();
@@ -98,7 +169,7 @@ async function getReservasPendientes(db) {
                 return priorityA - priorityB;
             }
         }
-        
+
         if (a.fechaLlegada && b.fechaLlegada) {
             return a.fechaLlegada - b.fechaLlegada;
         }

@@ -62,7 +62,7 @@ console.log(process.env.RENDER ? "Firebase Admin SDK inicializado desde Secret F
 
 const db = admin.firestore();
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 4001;
 
 //--- Middlewares Globales ---
 app.use(cors(corsOptions));

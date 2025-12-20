@@ -114,13 +114,7 @@
     <script type="module" src="js/modules/incidentModal.js"></script>
     <script type="module" src="js/modules/portalLogic.js"></script>
 
-    <script>
-        // Check session inline to prevent flicker
-        const token = localStorage.getItem('firebaseIdToken');
-        if (!token) {
-            window.location.href = 'index.html'; // Or simplifed login
-        }
-    </script>
+    <!-- Script check removed to support Magic Link -->
 </body>
 
 </html>

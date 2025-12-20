@@ -16,7 +16,7 @@ module.exports = (db) => {
 
             const primerDia = new Date(Date.UTC(anioNum, mesNum, 1));
             const ultimoDia = new Date(Date.UTC(anioNum, mesNum + 1, 0, 23, 59, 59));
-            
+
             const startTimestamp = admin.firestore.Timestamp.fromDate(primerDia);
             const endTimestamp = admin.firestore.Timestamp.fromDate(ultimoDia);
 
@@ -33,7 +33,7 @@ module.exports = (db) => {
             const eventos = [];
             reservasSnapshot.forEach(doc => {
                 const data = doc.data();
-                if (data.estado === 'Confirmada') {
+                if (data.estado && data.estado.trim().toLowerCase() === 'confirmada') {
                     const uniqueTitle = [...new Set((data.clienteNombre || '').split('\n'))].join(' ').trim();
                     const fechaSalida = data.fechaSalida.toDate();
                     fechaSalida.setDate(fechaSalida.getDate() + 1);

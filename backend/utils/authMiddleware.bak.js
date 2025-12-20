@@ -18,13 +18,7 @@ const checkFirebaseToken = async (req, res, next) => {
 
   try {
     // 2. Verificar que el token sea válido
-    let decodedToken;
-    if (idToken === 'mock-token') {
-      console.log('[AuthMiddleware] Mocking token for testing');
-      decodedToken = { email: 'mock@test.com', uid: 'mock-uid' };
-    } else {
-      decodedToken = await admin.auth().verifyIdToken(idToken);
-    }
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
 
     // 3. Guardar los datos del usuario en la solicitud para uso futuro
     req.user = decodedToken;

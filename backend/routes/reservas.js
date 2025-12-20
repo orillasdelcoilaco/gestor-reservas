@@ -28,14 +28,17 @@ module.exports = (db) => {
                     clienteId: data.clienteId,
                     nombre: data.clienteNombre || 'Sin Nombre',
                     telefono: cliente.phone || 'Sin Teléfono',
-                    llegada: data.fechaLlegada && typeof data.fechaLlegada.toDate === 'function' ? data.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'Fecha Inválida',
-                    salida: data.fechaSalida && typeof data.fechaSalida.toDate === 'function' ? data.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }) : 'Fecha Inválida',
+                    llegada: data.fechaLlegada && typeof data.fechaLlegada.toDate === 'function' ? data.fechaLlegada.toDate().toISOString().split('T')[0] : 'Fecha Inválida',
+                    salida: data.fechaSalida && typeof data.fechaSalida.toDate === 'function' ? data.fechaSalida.toDate().toISOString().split('T')[0] : 'Fecha Inválida',
                     estado: data.estado || 'N/A',
                     alojamiento: data.alojamiento || 'N/A',
                     canal: data.canal || 'N/A',
                     valorCLP: data.valorCLP || 0,
                     totalNoches: data.totalNoches || 0,
-                    estadoGestion: data.estadoGestion || 'N/A'
+                    estadoGestion: data.estadoGestion || 'N/A',
+                    comision: data.comision || 0,
+                    valorDolarDia: data.valorDolarDia || 1,
+                    monedaOriginal: data.monedaOriginal || 'CLP'
                 };
             });
             res.status(200).json(todasLasReservas);
@@ -51,7 +54,7 @@ module.exports = (db) => {
             const { id } = req.params;
             const doc = await db.collection('reservas').doc(id).get();
             if (!doc.exists) return res.status(404).json({ error: 'La reserva no existe.' });
-            
+
             const data = doc.data();
             const reservaConFechasISO = {
                 ...data,
@@ -65,7 +68,7 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    
+
     // --- OBTENER DETALLES COMPLETOS DE UN GRUPO DE RESERVA (GET) ---
     router.get('/reservas/grupo-detalles/:reservaIdOriginal', async (req, res) => {
         try {
@@ -104,7 +107,7 @@ module.exports = (db) => {
                     });
                 });
             }
-            
+
             const notasSnapshot = await db.collection('gestion_notas')
                 .where('reservaIdOriginal', '==', reservaIdOriginal)
                 .orderBy('fecha', 'desc')
@@ -119,7 +122,7 @@ module.exports = (db) => {
                     };
                 });
             }
-            
+
             grupo.transacciones.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
             res.status(200).json(grupo);
@@ -177,16 +180,16 @@ module.exports = (db) => {
             const clienteId = snapshot.docs[0].data().clienteId;
 
             if (clienteNombre || telefono) {
-                 const clienteRef = db.collection('clientes').doc(clienteId);
-                 const clienteDoc = await clienteRef.get();
-                 const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
-                 const nameParts = clienteNombre ? clienteNombre.split(' ') : [];
-                 const telefonoParaActualizar = telefono || clienteData.phone;
-                 await updateClientMaster(db, clienteId, {
-                     firstname: nameParts.length > 0 ? nameParts[0] : clienteData.firstname,
-                     lastname: nameParts.length > 1 ? nameParts.slice(1).join(' ') : clienteData.lastname,
-                     phone: telefonoParaActualizar
-                 });
+                const clienteRef = db.collection('clientes').doc(clienteId);
+                const clienteDoc = await clienteRef.get();
+                const clienteData = clienteDoc.exists ? clienteDoc.data() : {};
+                const nameParts = clienteNombre ? clienteNombre.split(' ') : [];
+                const telefonoParaActualizar = telefono || clienteData.phone;
+                await updateClientMaster(db, clienteId, {
+                    firstname: nameParts.length > 0 ? nameParts[0] : clienteData.firstname,
+                    lastname: nameParts.length > 1 ? nameParts.slice(1).join(' ') : clienteData.lastname,
+                    phone: telefonoParaActualizar
+                });
             }
 
             if (nuevoTotalCLP !== undefined) {
@@ -211,7 +214,7 @@ module.exports = (db) => {
 
     // --- OBTENER RESERVAS DE UN CLIENTE (GET) ---
     router.get('/reservas/cliente/:clienteId', async (req, res) => {
-       try {
+        try {
             const { clienteId } = req.params;
             const q = db.collection('reservas').where('clienteId', '==', clienteId).orderBy('fechaLlegada', 'desc');
             const snapshot = await q.get();
@@ -237,7 +240,7 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    
+
     // --- ENDPOINT PARA EL CALENDARIO (OPTIMIZADO) ---
     router.get('/reservas/calendario', async (req, res) => {
         const { anio, mes } = req.query;
@@ -251,10 +254,10 @@ module.exports = (db) => {
 
             const primerDia = new Date(Date.UTC(anioNum, mesNum, 1));
             const ultimoDia = new Date(Date.UTC(anioNum, mesNum + 1, 0, 23, 59, 59));
-            
+
             const startTimestamp = admin.firestore.Timestamp.fromDate(primerDia);
             const endTimestamp = admin.firestore.Timestamp.fromDate(ultimoDia);
-            
+
             const querySnapshot = await db.collection('reservas')
                 .where('fechaSalida', '>=', startTimestamp)
                 .where('fechaLlegada', '<=', endTimestamp)
@@ -263,7 +266,7 @@ module.exports = (db) => {
             const reservasDelMes = [];
             querySnapshot.forEach(doc => {
                 const data = doc.data();
-                if (data.estado === 'Confirmada') {
+                if (data.estado && data.estado.trim().toLowerCase() === 'confirmada') {
                     const uniqueTitle = [...new Set((data.clienteNombre || '').split('\n'))].join(' ').trim();
                     const fechaSalida = data.fechaSalida.toDate();
                     fechaSalida.setDate(fechaSalida.getDate() + 1);
@@ -281,7 +284,7 @@ module.exports = (db) => {
                     });
                 }
             });
-            
+
             res.status(200).json(reservasDelMes);
 
         } catch (error) {
@@ -307,7 +310,7 @@ module.exports = (db) => {
                 .where('fechaLlegada', '>=', startTimestamp)
                 .orderBy('fechaLlegada', 'asc')
                 .get();
-            
+
             const proximaReservaPorCabana = new Map();
 
             reservasFuturasSnapshot.forEach(doc => {
@@ -381,7 +384,7 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    
+
     // --- OBTENER DETALLES DE UNA PROPUESTA PARA REGENERAR TEXTO ---
     router.get('/reservas/propuestas/detalles/:reservaIdOriginal', async (req, res) => {
         const { reservaIdOriginal } = req.params;
@@ -439,7 +442,7 @@ module.exports = (db) => {
             res.status(500).json({ error: 'Error interno del servidor.' });
         }
     });
-    
+
     // --- ACTUALIZAR ESTADO DE PROPUESTA (CONFIRMAR/CANCELAR) ---
     router.post('/reservas/propuestas/:reservaIdOriginal/estado', jsonParser, async (req, res) => {
         const { reservaIdOriginal } = req.params;
@@ -506,7 +509,7 @@ module.exports = (db) => {
             };
 
             snapshot.docs.forEach(doc => {
-                batch.update(doc.ref, { 
+                batch.update(doc.ref, {
                     estado: 'Rechazada',
                     rechazoInfo: rechazoInfo
                 });
@@ -536,24 +539,24 @@ module.exports = (db) => {
                 if (!viejoDoc.exists) {
                     throw new Error('La reserva original no existe.');
                 }
-                
+
                 const datosViejos = viejoDoc.data();
                 const datosMezclados = { ...datosViejos, ...nuevosDatos };
                 const nuevoIdCompleto = `${nuevosDatos.canal.toUpperCase()}_${nuevosDatos.reservaIdOriginal}_${datosMezclados.alojamiento.replace(/\s+/g, '')}`;
-                
+
                 if (viejoIdCompleto === nuevoIdCompleto) {
                     throw new Error('El nuevo ID es idéntico al antiguo. No se requiere ninguna acción.');
                 }
-                
+
                 const nuevoReservaRef = db.collection('reservas').doc(nuevoIdCompleto);
                 const nuevoDocCheck = await transaction.get(nuevoReservaRef);
-                if(nuevoDocCheck.exists) {
+                if (nuevoDocCheck.exists) {
                     throw new Error(`Ya existe una reserva con el nuevo ID (${nuevoIdCompleto}). No se puede combinar.`);
                 }
 
                 const viejaTransaccionesRef = viejoReservaRef.collection('transacciones');
                 const transaccionesSnapshot = await transaction.get(viejaTransaccionesRef);
-                
+
                 let notasSnapshot = null;
                 if (datosViejos.reservaIdOriginal !== nuevosDatos.reservaIdOriginal) {
                     const notasQuery = db.collection('gestion_notas').where('reservaIdOriginal', '==', datosViejos.reservaIdOriginal);
@@ -584,14 +587,14 @@ module.exports = (db) => {
                         notasActualizadas++;
                     });
                 }
-                
+
                 const obsoletoRef = db.collection('reservas_obsoletas').doc(viejoIdCompleto);
                 transaction.set(obsoletoRef, {
                     nuevaReservaId: nuevoIdCompleto,
                     motivo: 'Corrección manual de identidad desde la interfaz.',
                     fechaCorreccion: admin.firestore.FieldValue.serverTimestamp()
                 });
-                
+
                 transaction.set(nuevoReservaRef, datosMezclados);
                 transaction.delete(viejoReservaRef);
 
@@ -603,7 +606,7 @@ module.exports = (db) => {
                 };
             });
 
-            res.status(200).json({ 
+            res.status(200).json({
                 message: 'La reserva ha sido movida y actualizada exitosamente.',
                 summary: `Se movió la reserva de ${resultado.viejoId} a ${resultado.nuevoId}. Se migraron ${resultado.transaccionesMovidas} transacciones y se actualizaron ${resultado.notasActualizadas} notas de gestión.`
             });

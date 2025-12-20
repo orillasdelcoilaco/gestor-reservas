@@ -1,0 +1,61 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "incidencias",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "cabanaId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fechaReporte",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "incidencias",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "espacio",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fechaReporte",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "planAseo",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "cabanaId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fecha",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "planAseo",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "estado",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "fecha",
+                    "order": "DESCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}

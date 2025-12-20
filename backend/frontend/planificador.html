@@ -1,0 +1,1430 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planificación Operativa - Gestor de Reservas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- FullCalendar -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/es.global.min.js'></script>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>
+    <style>
+        .fc-day-today {
+            background-color: rgba(253, 224, 71, 0.3) !important;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .loading-overlay {
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Sticky Calendar Styles */
+        #calendar-sticky-wrapper {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background-color: white;
+            padding-bottom: 0;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            height: 350px;
+            /* Altura inicial */
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #mini-calendar-container {
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        #calendar-resize-handle {
+            height: 12px;
+            background: #f3f4f6;
+            cursor: ns-resize;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-top: 1px solid #e5e7eb;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+
+        #calendar-resize-handle:hover {
+            background: #d1d5db;
+        }
+
+        .handle-grip {
+            width: 40px;
+            height: 4px;
+            background: #9ca3af;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+    <!-- Navbar -->
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="dashboard.html" class="flex-shrink-0 flex items-center">
+                        <span class="text-xl font-bold text-gray-800">Planificador Operativo</span>
+                    </a>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="dashboard.html"
+                        class="text-gray-500 hover:text-gray-700 px-3 py-2 rounded-md text-sm font-medium">Volver al
+                        Dashboard</a>
+                    <div id="auth-info"></div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
+
+        <!-- Sticky Visual Calendar -->
+        <div id="calendar-sticky-wrapper" class="rounded-lg">
+            <div id="mini-calendar-container" class="bg-white p-2 text-xs h-full">
+                <!-- Calendar injected by JS -->
+                <p class="text-center text-gray-400 p-2">Cargando referencia de ocupación...</p>
+            </div>
+            <div id="calendar-resize-handle" title="Arrastra para ajustar tamaño">
+                <div class="handle-grip"></div>
+            </div>
+        </div>
+
+        <!-- Header Controls -->
+        <div
+            class="flex flex-col md:flex-row justify-between items-center bg-white p-4 rounded-lg shadow space-y-4 md:space-y-0">
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2">
+                    <button id="btn-prev-week" class="p-2 rounded hover:bg-gray-100 text-gray-500"
+                        title="Semana Anterior">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                    </button>
+                    <div>
+                        <label for="fecha-inicio" class="block text-xs font-medium text-gray-700">Desde</label>
+                        <input type="date" id="fecha-inicio"
+                            class="mt-1 block rounded-md border-gray-300 shadow-sm border p-2 text-sm">
+                    </div>
+                    <div>
+                        <label for="fecha-fin" class="block text-xs font-medium text-gray-700">Hasta</label>
+                        <input type="date" id="fecha-fin"
+                            class="mt-1 block rounded-md border-gray-300 shadow-sm border p-2 text-sm">
+                    </div>
+                    <button id="btn-next-week" class="p-2 rounded hover:bg-gray-100 text-gray-500"
+                        title="Semana Siguiente">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                </div>
+                <button id="btn-cargar"
+                    class="bg-indigo-600 text-white px-4 py-2 mt-4 rounded-md hover:bg-indigo-700 text-sm font-medium self-end">Generar
+                    Plan</button>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="openTaskConfigModal()"
+                    class="bg-purple-600 text-white px-3 py-2 rounded-md hover:bg-purple-700 text-sm font-medium"
+                    title="Configurar tipos de tareas">
+                    ⚙️ Tareas
+                </button>
+                <button onclick="openWorkerConfigModal()"
+                    class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 text-sm font-medium"
+                    title="Configurar trabajador">
+                    👷 Trabajador
+                </button>
+                <button id="btn-reset"
+                    class="bg-gray-500 text-white px-3 py-2 rounded-md hover:bg-gray-600 text-sm font-medium"
+                    title="Sincronizar: Marcar todas como LISTA">
+                    Reset
+                </button>
+                <button id="btn-guardar"
+                    class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 text-sm font-medium flex items-center">
+                    <svg class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Guardar Todo
+                </button>
+            </div>
+        </div>
+
+        <!-- Checkbox Toolbar -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-md px-4 py-2 mb-6 flex justify-end">
+            <label class="inline-flex items-center text-sm text-gray-800">
+                <input type="checkbox" id="force-full-reset"
+                    class="mr-2 h-4 w-4 text-red-600 rounded focus:ring-red-500">
+                <span class="font-medium">⚠️ Opción Avanzada: Al hacer Reset, borrar TODO (incluyendo modificaciones
+                    manuales)</span>
+            </label>
+        </div>
+
+        <!-- Dashboard Summary -->
+        <div id="dashboard-summary" class="hidden grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Tareas (Periodo)</dt>
+                    <dd id="stat-total-tareas" class="mt-1 text-3xl font-semibold text-gray-900">0</dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg border-l-4 border-yellow-400">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Cambios</dt>
+                    <dd id="stat-cambios" class="mt-1 text-3xl font-semibold text-gray-900">0</dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg border-l-4 border-red-400">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Salidas</dt>
+                    <dd id="stat-salidas" class="mt-1 text-3xl font-semibold text-gray-900">0</dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg" id="alert-box">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Días Críticos</dt>
+                    <dd id="stat-alertas" class="mt-1 text-sm text-gray-900 font-medium">0</dd>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Schedule Grid Container (Full Width) -->
+        <div id="days-container" class="space-y-6">
+            <div class="bg-white shadow sm:rounded-lg p-8 text-center text-gray-500">
+                Selecciona un rango de fechas para comenzar.
+            </div>
+        </div>
+
+    </main>
+
+    <!-- === MODALES DE CONFIGURACIÓN === -->
+
+    <!-- Modal: Configuración de Tareas -->
+    <div id="modal-config-tareas"
+        class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-lg font-bold">⚙️ Configuración de Tareas</h3>
+                <button onclick="closeModal('modal-config-tareas')"
+                    class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+
+            <div class="mt-4 max-h-96 overflow-y-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Tipo</th>
+                            <th class="px-4 py-2 text-left w-1/2">Instrucciones</th>
+                            <th class="px-4 py-2 text-center">Peso</th>
+                            <th class="px-4 py-2 text-center">Duración (min)</th>
+                            <th class="px-4 py-2 text-center">Color</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasks-config-body">
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4 pt-3 border-t">
+                <button onclick="closeModal('modal-config-tareas')"
+                    class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
+                <button onclick="saveTasksConfig()"
+                    class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Configuración de Trabajador -->
+    <div id="modal-config-worker"
+        class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div
+            class="relative top-10 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center pb-3 border-b sticky top-0 bg-white z-10">
+                <h3 class="text-lg font-bold">👷 Gestión de Trabajadores</h3>
+                <button onclick="closeModal('modal-config-worker')"
+                    class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+
+            <!-- Lista de Trabajadores Existentes -->
+            <div class="mt-4">
+                <h4 class="font-medium text-gray-900 mb-2">Trabajadores Activos</h4>
+                <ul id="modal-workers-list"
+                    class="divide-y divide-gray-200 border rounded max-h-40 overflow-y-auto mb-4">
+                    <li class="py-2 px-3 text-sm text-gray-500 text-center">Cargando...</li>
+                </ul>
+            </div>
+
+            <!-- Configuración del Trabajador Seleccionado -->
+            <div id="worker-config-section" class="hidden border-t pt-4 space-y-4">
+                <h4 class="font-medium text-gray-900">Configuración: <span id="selected-worker-name"
+                        class="text-indigo-600"></span></h4>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Día Libre:</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <label class="flex items-center"><input type="checkbox" value="0" class="dia-libre-check mr-1">
+                            Dom</label>
+                        <label class="flex items-center"><input type="checkbox" value="1" class="dia-libre-check mr-1"
+                                checked> Lun</label>
+                        <label class="flex items-center"><input type="checkbox" value="2" class="dia-libre-check mr-1">
+                            Mar</label>
+                        <label class="flex items-center"><input type="checkbox" value="3" class="dia-libre-check mr-1">
+                            Mié</label>
+                        <label class="flex items-center"><input type="checkbox" value="4" class="dia-libre-check mr-1">
+                            Jue</label>
+                        <label class="flex items-center"><input type="checkbox" value="5" class="dia-libre-check mr-1">
+                            Vie</label>
+                        <label class="flex items-center"><input type="checkbox" value="6" class="dia-libre-check mr-1">
+                            Sáb</label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Capacidad Diaria (unidades):</label>
+                    <input type="number" id="worker-capacidad" step="0.1" value="3.0"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Horario Inicio:</label>
+                        <input type="time" id="worker-horario" value="12:00"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Duración (min):</label>
+                        <input type="number" id="worker-duracion" value="240"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t">
+                    <button onclick="saveWorkerConfig()"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Guardar
+                        Configuración</button>
+                </div>
+            </div>
+
+            <!-- Formulario Agregar/Editar Trabajador -->
+            <div class="border-t pt-4 mt-4">
+                <h4 class="font-medium text-gray-900 mb-3" id="worker-form-title">➕ Agregar Nuevo Trabajador</h4>
+                <form id="modal-worker-form" class="space-y-3">
+                    <input type="hidden" id="modal-w-id">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="text" id="modal-w-nombre" placeholder="Nombre" required
+                            class="block w-full text-sm border-gray-300 rounded-md shadow-sm border p-2">
+                        <input type="text" id="modal-w-apellido" placeholder="Apellido" required
+                            class="block w-full text-sm border-gray-300 rounded-md shadow-sm border p-2">
+                    </div>
+                    <input type="tel" id="modal-w-telefono" placeholder="+569..." required
+                        class="block w-full text-sm border-gray-300 rounded-md shadow-sm border p-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <input type="email" id="modal-w-email" placeholder="Email (Opcional)"
+                            class="block w-full text-sm border-gray-300 rounded-md shadow-sm border p-2">
+                        <input type="text" id="modal-w-telegram" placeholder="Telegram ID (Opcional)"
+                            class="block w-full text-sm border-gray-300 rounded-md shadow-sm border p-2">
+                    </div>
+
+                    <div class="flex items-center">
+                        <input id="modal-w-principal" type="checkbox"
+                            class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                        <label for="modal-w-principal" class="ml-2 block text-sm text-gray-900">
+                            Trabajador Principal (Asignación Automática)
+                        </label>
+                    </div>
+
+                    <button type="submit" id="btn-save-worker"
+                        class="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700">
+                        Guardar Trabajador
+                    </button>
+                    <button type="button" id="btn-cancel-edit-worker" onclick="resetWorkerForm()"
+                        class="hidden w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        Cancelar Edición
+                    </button>
+                </form>
+            </div>
+
+            <div class="flex justify-end gap-2 mt-4 pt-3 border-t">
+                <button onclick="closeModal('modal-config-worker')"
+                    class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Editar Tarea -->
+    <div id="modal-edit-task" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+        <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/3 shadow-lg rounded-md bg-white">
+            <div class="flex justify-between items-center pb-3 border-b">
+                <h3 class="text-lg font-bold">✏️ Editar Tarea</h3>
+                <button onclick="closeModal('modal-edit-task')"
+                    class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+
+            <div class="mt-4 space-y-3">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Fecha:</label>
+                    <input type="text" id="edit-fecha" readonly
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 bg-gray-100">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Cabaña:</label>
+                    <select id="edit-cabana" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                        <!-- Se llena dinámicamente -->
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Tipo de Tarea:</label>
+                    <select id="edit-tipo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                        <!-- Se llena dinámicamente -->
+                    </select>
+                </div>
+
+                <div class="bg-gray-50 p-3 rounded text-sm">
+                    <div class="flex justify-between">
+                        <span>Peso:</span>
+                        <span id="edit-peso-display" class="font-bold">1.0</span>
+                    </div>
+                    <div class="flex justify-between mt-1">
+                        <span>Duración:</span>
+                        <span id="edit-duracion-display">60 min</span>
+                    </div>
+                </div>
+
+                <div id="edit-warning"
+                    class="hidden bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-2 rounded text-sm">
+                </div>
+            </div>
+
+            <div class="flex justify-between gap-2 mt-4 pt-3 border-t">
+                <button onclick="deleteTask()"
+                    class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Eliminar</button>
+                <div class="flex gap-2">
+                    <button onclick="closeModal('modal-edit-task')"
+                        class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
+                    <button onclick="saveTask()"
+                        class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast"
+        class="hidden fixed bottom-5 right-5 bg-gray-800 text-white px-4 py-2 rounded shadow-lg text-sm z-50"></div>
+
+    <script type="module">
+        import { checkSession, logout, fetchAPI } from './api.js';
+        import { initCalendar } from './js/calendarHelper.js';
+
+        // State
+        let currentData = [];
+        let activeWorkers = [];
+
+        // Elements
+        const fechaInicioInput = document.getElementById('fecha-inicio');
+        const fechaFinInput = document.getElementById('fecha-fin');
+        const daysContainer = document.getElementById('days-container');
+        const workersList = document.getElementById('workers-list');
+        const dashboardSummary = document.getElementById('dashboard-summary');
+        const statTotal = document.getElementById('stat-total-tareas');
+        const statCambios = document.getElementById('stat-cambios');
+        const statSalidas = document.getElementById('stat-salidas');
+        const statAlertas = document.getElementById('stat-alertas');
+        const alertBox = document.getElementById('alert-box');
+
+
+
+        // Init
+        let calendarInstance = null;
+
+        (async () => {
+            const session = checkSession();
+            if (!session) return;
+
+            document.getElementById('auth-info').innerHTML = `
+                <span class="text-sm text-gray-600 mr-2">${session.userEmail}</span>
+                <button id="logout-btn" class="text-red-600 hover:text-red-800 text-xs font-semibold">Salir</button>
+            `;
+            const today = new Date();
+            const nextWeek = new Date();
+            nextWeek.setDate(today.getDate() + 6);
+
+            fechaInicioInput.value = today.toISOString().split('T')[0];
+            fechaFinInput.value = nextWeek.toISOString().split('T')[0];
+
+            await loadWorkers();
+
+            // Initialize Sticky Calendar
+            calendarInstance = await initCalendar('mini-calendar-container');
+
+            await loadRangePlan();
+            setupResizeLogic();
+        })();
+
+        function setupResizeLogic() {
+            const wrapper = document.getElementById('calendar-sticky-wrapper');
+            const handle = document.getElementById('calendar-resize-handle');
+            let isResizing = false;
+
+            handle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                document.body.style.cursor = 'ns-resize';
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+
+                const rect = wrapper.getBoundingClientRect();
+                const newHeight = e.clientY - rect.top;
+
+                if (newHeight > 150 && newHeight < window.innerHeight * 0.8) {
+                    wrapper.style.height = `${newHeight}px`;
+                    if (calendarInstance) calendarInstance.updateSize();
+                }
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.cursor = 'default';
+                    if (calendarInstance) calendarInstance.updateSize();
+                }
+            });
+        }
+
+
+        document.getElementById('btn-cargar').addEventListener('click', loadRangePlan);
+        document.getElementById('btn-guardar').addEventListener('click', saveAllPlans);
+        // Worker form moved to modal - event listener handled separately
+        document.getElementById('btn-prev-week').addEventListener('click', () => shiftWeek(-7));
+        document.getElementById('btn-next-week').addEventListener('click', () => shiftWeek(7));
+
+        document.getElementById('btn-reset').addEventListener('click', async () => {
+            const forceReset = document.getElementById('force-full-reset').checked;
+
+            const confirmMsg = forceReset
+                ? "⚠️ ADVERTENCIA: Esto BORRARÁ TODA la planificación existente, incluyendo tus modificaciones manuales.\n\n¿Estás completamente seguro?"
+                : "Esto reseteará los estados de las cabañas pero CONSERVARÁ tus modificaciones manuales.\n\nEl sistema regenerará tareas automáticas respetando tus cambios.\n\n¿Continuar?";
+
+            if (confirm(confirmMsg)) {
+                try {
+                    await fetchAPI('/api/planificador/reset-estados', {
+                        method: 'POST',
+                        body: { forceFullReset: forceReset }
+                    });
+
+                    showToast(forceReset
+                        ? '🔄 Reset total completado. Recargando...'
+                        : '✅ Estados reseteados. Modificaciones preservadas. Recargando...'
+                    );
+
+                    setTimeout(() => loadRangePlan(), 500);
+                } catch (err) {
+                    showToast('Error: ' + err.message, true);
+                }
+            }
+        });
+
+        function shiftWeek(days) {
+            const start = new Date(fechaInicioInput.value);
+            const end = new Date(fechaFinInput.value);
+
+            start.setDate(start.getDate() + days);
+            end.setDate(end.getDate() + days);
+
+            fechaInicioInput.value = start.toISOString().split('T')[0];
+            fechaFinInput.value = end.toISOString().split('T')[0];
+
+            loadRangePlan();
+        }
+
+        // --- LOGICA DE ACTUALIZACION DE TIEMPOS ---
+        function addMinutes(timeStr, minutes) {
+            const [hours, mins] = timeStr.split(':').map(Number);
+            const date = new Date();
+            date.setHours(hours, mins, 0, 0);
+            date.setMinutes(date.getMinutes() + minutes);
+            return date.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false }).slice(0, 5);
+        }
+
+        function getDurationMinutes(start, end) {
+            const [h1, m1] = start.split(':').map(Number);
+            const [h2, m2] = end.split(':').map(Number);
+            return (h2 * 60 + m2) - (h1 * 60 + m1);
+        }
+
+        function recalculateDayTimes(dayIndex, changedTaskIndex, newEndTime) {
+            const dayPlan = currentData[dayIndex].activePlan;
+
+            // 1. Update edited task end time
+            dayPlan[changedTaskIndex].horarioFin = newEndTime;
+
+            // 2. Shift all subsequent tasks
+            let previousEndTime = newEndTime;
+            for (let i = parseInt(changedTaskIndex) + 1; i < dayPlan.length; i++) {
+                const task = dayPlan[i];
+                const originalDuration = getDurationMinutes(task.horarioInicio, task.horarioFin);
+
+                // Ensure positive duration or default to 60 if confused
+                const safeDuration = originalDuration > 0 ? originalDuration : 60;
+
+                task.horarioInicio = previousEndTime;
+                // new End is newStart + originalDuration
+                task.horarioFin = addMinutes(previousEndTime, safeDuration);
+
+                previousEndTime = task.horarioFin;
+            }
+
+            // 3. Re-render UI to reflect changes
+            renderDays();
+        }
+
+        async function sendWorkerSummary(id) {
+            if (!confirm('¿Enviar resumen de tareas por Telegram?')) return;
+
+            try {
+                const response = await fetchAPI('/api/planificador/send-summary', {
+                    method: 'POST',
+                    body: { workerId: id }
+                });
+                showToast(response.message || 'Resumen enviado');
+            } catch (error) {
+                console.error(error);
+                showToast(error.message || 'Error enviando resumen', true);
+            }
+        }
+
+        // --- WORKER LOGIC ---
+        async function loadWorkers() {
+            try {
+                activeWorkers = await fetchAPI('/api/planificador/trabajadores');
+                renderWorkersList();
+            } catch (error) { showToast('Error cargando trabajadores', true); }
+        }
+
+        function renderWorkersList() {
+            // Element removed from DOM, skip rendering
+            const workersList = document.getElementById('modal-workers-list');
+            if (!workersList) return;
+
+            workersList.innerHTML = '';
+            activeWorkers.forEach(w => {
+                const li = document.createElement('li');
+                li.className = "py-3 flex justify-between items-center";
+                li.innerHTML = `
+            <div class="flex items-center">
+                <div class="flex-shrink-0 h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs relative">
+                    ${w.nombre.charAt(0)}${w.apellido.charAt(0)}
+                    ${w.esPrincipal ? '<span class="absolute -top-1 -right-1 bg-yellow-400 h-3 w-3 rounded-full border border-white" title="Principal"></span>' : ''}
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-900">${w.nombre} ${w.apellido} ${w.esPrincipal ? '<span class="text-xs text-yellow-600 bg-yellow-100 px-1 rounded">Principal</span>' : ''}</p>
+                    <p class="text-xs text-gray-500">${w.telefono}</p>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                 <button type="button" class="edit-worker text-blue-500 hover:text-blue-600" data-id="${w.id}" title="Editar Datos">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                </button>
+                <button type="button" class="send-summary-worker text-blue-500 hover:text-blue-600" onclick="console.log('Sending summary to ${w.id}'); window.sendWorkerSummaryHandler(event, '${w.id}')" title="Enviar Resumen por Telegram">
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                </button>
+                <button type="button" class="delete-worker text-red-400 hover:text-red-600" onclick="console.log('Deleting ${w.id}'); window.deleteWorkerHandler(event, '${w.id}')" title="Eliminar Trabajador">X</button>
+            </div>
+            `;
+                workersList.appendChild(li);
+            });
+
+            document.querySelectorAll('.edit-worker').forEach(btn =>
+                btn.addEventListener('click', (e) => loadWorkerForEdit(e.currentTarget.dataset.id))
+            );
+            // Dynamic listeners loop removed
+
+        }
+
+        async function deleteWorkerHandler(e, id) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (!confirm('¿Eliminar?')) return;
+            try {
+                await fetchAPI(`/api/planificador/trabajadores/${id}`, { method: 'DELETE' });
+                await loadWorkers();
+            } catch (error) {
+                showToast('Error al eliminar trabajador: ' + error.message, true);
+            }
+        }
+
+        async function addWorker(e) {
+            e.preventDefault();
+            const id = document.getElementById('modal-w-id').value;
+            const data = {
+                id: id || null,
+                nombre: document.getElementById('modal-w-nombre').value,
+                apellido: document.getElementById('modal-w-apellido').value,
+                telefono: document.getElementById('modal-w-telefono').value,
+                email: document.getElementById('modal-w-email').value,
+                esPrincipal: document.getElementById('modal-w-principal').checked,
+                activo: true
+            };
+            try {
+                await fetchAPI('/api/planificador/trabajadores', { method: 'POST', body: data });
+                resetWorkerForm();
+                await loadWorkers();
+                showToast(id ? 'Trabajador actualizado' : 'Trabajador agregado');
+            } catch (error) { showToast(error.message, true); }
+        }
+
+
+
+        async function loadRangePlan() {
+            const start = fechaInicioInput.value;
+            const end = fechaFinInput.value;
+            if (!start || !end) return;
+
+            daysContainer.innerHTML = '<div class="text-center p-8">Cargando planificación...</div>';
+
+            try {
+                // El backend retorna {dias, totales}
+                const response = await fetchAPI(`/api/planificador/propuesta?fechaInicio=${start}&fechaFin=${end}`);
+
+                // Check if response has new structure
+                if (response.dias && response.totales) {
+                    currentData = response.dias;
+                    // Store totals for dashboard
+                    window.plannerTotals = response.totales;
+                } else {
+                    // Fallback for old structure
+                    currentData = response;
+                }
+
+                // Procesar datos para visualización
+                currentData.forEach(dia => {
+                    if (dia.savedPlan && dia.savedPlan.length > 0) {
+                        dia.activePlan = dia.savedPlan;
+                        dia.status = 'Guardado';
+                    } else {
+                        dia.activePlan = dia.propuesta;
+                        dia.status = 'Propuesta';
+                    }
+                });
+
+                updateGlobalStats();
+                renderDays();
+
+            } catch (error) {
+                daysContainer.innerHTML = `<div class="text-red-500 text-center p-8">Error: ${error.message}</div>`;
+            }
+        }
+
+        function updateGlobalStats() {
+            dashboardSummary.classList.remove('hidden');
+
+            // Use backend totals if available
+            if (window.plannerTotals) {
+                statTotal.textContent = window.plannerTotals.totalTareas || 0;
+                statCambios.textContent = window.plannerTotals.totalCambios || 0;
+                if (statSalidas) statSalidas.textContent = window.plannerTotals.totalSalidas || 0;
+                statAlertas.textContent = window.plannerTotals.diasCriticos || 0;
+
+                if (window.plannerTotals.diasCriticos > 0) {
+                    alertBox.classList.add('border-l-4', 'border-red-500');
+                } else {
+                    alertBox.classList.remove('border-l-4', 'border-red-500');
+                }
+            } else {
+                // Fallback: calculate from dias
+                let totalTareas = 0;
+                let totalCambios = 0;
+                let totalSalidas = 0;
+                let diasCriticos = 0;
+
+                currentData.forEach(dia => {
+                    if (dia.alertas) {
+                        totalTareas += (dia.alertas.totalTareas || 0);
+                        totalCambios += (dia.alertas.totalCambios || 0);
+                        totalSalidas += (dia.alertas.totalSalidas || 0);
+                        if (dia.alertas.requiereRefuerzo) diasCriticos++;
+                    }
+                });
+
+                statTotal.textContent = totalTareas;
+                statCambios.textContent = totalCambios;
+                if (statSalidas) statSalidas.textContent = totalSalidas;
+                statAlertas.textContent = diasCriticos;
+
+                if (diasCriticos > 0) {
+                    alertBox.classList.add('border-l-4', 'border-red-500');
+                } else {
+                    alertBox.classList.remove('border-l-4', 'border-red-500');
+                }
+            }
+        }
+
+        // Helper to bind events to a specific card
+        function bindDayCardListeners(card, diaIndex) {
+            // Worker Selects
+            card.querySelectorAll('.task-worker-select').forEach(sel => {
+                sel.addEventListener('change', (e) => {
+                    const taskIdx = e.target.dataset.task;
+                    currentData[diaIndex].activePlan[taskIdx].trabajadorId = e.target.value;
+                });
+            });
+
+            // Times
+            card.querySelectorAll('.time-end').forEach(input => {
+                input.addEventListener('change', (e) => {
+                    const taskIdx = e.target.dataset.task;
+                    const newTime = e.target.value;
+                    if (newTime) recalculateDayTimes(diaIndex, taskIdx, newTime);
+                });
+            });
+        }
+
+        // Optimized Day Update
+        function updateDayInDOM(newDayData) {
+            // Find index
+            const index = currentData.findIndex(d => d.fecha === newDayData.fecha);
+            if (index === -1) return;
+
+            // Update State
+            currentData[index] = newDayData;
+
+            // Re-process status (propuesta vs saved)
+            if (newDayData.savedPlan && newDayData.savedPlan.length > 0) {
+                newDayData.activePlan = newDayData.savedPlan;
+            } else {
+                newDayData.activePlan = newDayData.propuesta;
+            }
+            if (!newDayData.activePlan) newDayData.activePlan = newDayData.propuesta;
+            newDayData.status = (newDayData.activePlan && newDayData.activePlan === newDayData.savedPlan) ? 'Guardado' : 'Propuesta';
+
+
+            // Re-render CARD only
+            const container = daysContainer;
+            const existingCard = container.children[index];
+
+            const newHtml = generateDayCardValues(newDayData, index);
+
+            if (existingCard) {
+                existingCard.innerHTML = newHtml;
+                bindDayCardListeners(existingCard, index);
+                showToast('Día actualizado');
+            }
+        }
+
+        function generateDayCardValues(dia, diaIndex) {
+            // Header Color based on status/alerts
+            let headerClass = "bg-gray-50 border-b border-gray-200 px-4 py-3 sm:px-6 flex justify-between items-center";
+            if (dia.alertas.requiereRefuerzo) headerClass = "bg-red-50 border-b border-red-200 px-4 py-3 sm:px-6 flex justify-between items-center";
+            else if (dia.alertas.esLunes) headerClass = "bg-orange-50 border-b border-orange-200 px-4 py-3 sm:px-6 flex justify-between items-center";
+
+            // Formato Fecha
+            const dateObj = new Date(dia.fecha + 'T00:00:00Z'); // UTC
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' };
+            const fechaTexto = dateObj.toLocaleDateString('es-CL', options);
+            const diaSemana = dateObj.getUTCDay(); // 1 = Lunes
+
+            // Map pesos
+            dia.activePlan.forEach(tarea => {
+                const taskWeight = (taskConfig[tarea.tipoAseo]?.peso) || 0;
+                tarea.peso = taskWeight;
+            });
+
+            // Calculate effort
+            const totalEffort = dia.activePlan.reduce((sum, t) => sum + (t.peso || 0), 0);
+            const capacidad = 3.0;
+            let effortBadgeClass = 'bg-green-100 text-green-800';
+            if (totalEffort >= capacidad) effortBadgeClass = 'bg-yellow-100 text-yellow-800';
+            if (totalEffort > capacidad) effortBadgeClass = 'bg-red-100 text-red-800';
+
+            // Badges
+            const alertsBadges = [];
+            alertsBadges.push(`<span class="${effortBadgeClass} text-xs px-2 py-0.5 rounded-full font-bold">💪 Esfuerzo: ${totalEffort.toFixed(1)} / ${capacidad}</span>`);
+            if (dia.alertas.requiereRefuerzo) alertsBadges.push('<span class="bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full font-bold">Refuerzo Requerido</span>');
+            if (dia.alertas.conflictoLunes) alertsBadges.push('<span class="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full font-bold animate-pulse">CONFLICTO LUNES!</span>');
+            if (diaSemana === 1) alertsBadges.push('<span class="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full">Lunes</span>');
+            if (dia.status === 'Guardado') alertsBadges.push('<span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">Guardado</span>');
+
+            const workerOptions = activeWorkers.map(w => `<option value="${w.id}">${w.nombre} ${w.apellido} ${w.esPrincipal ? '★' : ''}</option>`).join('');
+
+            // Rows
+            let rowsHtml = '';
+            if (dia.activePlan.length === 0) {
+                rowsHtml = '<tr><td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">Sin tareas de aseo.</td></tr>';
+            } else {
+                dia.activePlan.forEach((tarea, taskIndex) => {
+                    const wOptions = activeWorkers.map(w =>
+                        `<option value="${w.id}" ${tarea.trabajadorId === w.id ? 'selected' : ''}>${w.nombre} ${w.apellido}</option>`
+                    ).join('<option value="">Asignar...</option>');
+
+                    const colorMap = {
+                        'Cambio': 'bg-purple-100 text-purple-800',
+                        'Salida': 'bg-red-100 text-red-800',
+                        'Repaso': 'bg-blue-100 text-blue-800',
+                        'Mantención': 'bg-yellow-100 text-yellow-800',
+                        'Limpieza': 'bg-orange-100 text-orange-800',
+                        'Inventario': 'bg-green-100 text-green-800'
+                    };
+                    const taskColor = colorMap[tarea.tipoAseo] || 'bg-gray-100 text-gray-800';
+
+                    // CONTEXT INFO GENERATION
+                    const ctx = tarea.context || {};
+                    let contextHtml = '';
+
+                    if (ctx.reserva) {
+                        const d1 = new Date(ctx.reserva.desde + 'T00:00:00');
+                        const d2 = new Date(ctx.reserva.hasta + 'T00:00:00');
+                        const dateStr = `${d1.getDate()}/${d1.getMonth() + 1} - ${d2.getDate()}/${d2.getMonth() + 1}`;
+                        const idReserva = ctx.reserva.id || 'N/A';
+                        contextHtml += `<div class="text-xs text-blue-600 mt-1 leading-tight" title="Reserva Completa: ${idReserva}">
+                                <span class="font-bold">Reserva ${idReserva}</span> <span class="block text-xxs text-gray-400">(${dateStr})</span>
+                             </div>`;
+                    } else {
+                        contextHtml += `<div class="text-xs text-gray-400 mt-1 italic">Libre</div>`;
+                    }
+
+                    if (ctx.ultimaTarea) {
+                        const dLast = new Date(ctx.ultimaTarea.fecha + 'T00:00:00');
+                        contextHtml += `<div class="text-xs text-gray-500 mt-0.5" title="Última acción antes de hoy">
+                                ⏪ ${ctx.ultimaTarea.tipo} <span class="text-xxs">(${dLast.getDate()}/${dLast.getMonth() + 1})</span>
+                             </div>`;
+                    }
+
+                    if (ctx.stats) {
+                        const iconMap = {
+                            'Mantención': '🛠️', 'Repaso': '🧹', 'Cambio': '🔄', 'Salida': '📤',
+                            'Limpieza': '🧼', 'Limpieza Profunda': '🧼', 'Inventario': '📋'
+                        };
+
+                        let statsHtml = '';
+                        Object.entries(ctx.stats).forEach(([type, count]) => {
+                            if (count > 0) {
+                                const icon = iconMap[type] || '🔹';
+                                statsHtml += `<span class="mr-1 cursor-help" title="${type}">${icon}${count}</span>`;
+                            }
+                        });
+
+                        if (statsHtml) {
+                            contextHtml += `<div class="text-xs text-gray-600 font-mono mt-0.5 border-t border-gray-100 pt-0.5">
+                                    ${statsHtml}
+                                 </div>`;
+                        }
+                    }
+
+                    rowsHtml += `
+                        <tr>
+                            <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-gray-900 group">
+                                <div class="flex flex-col">
+                                    <span>${tarea.cabanaId}</span>
+                                    ${contextHtml}
+                                </div>
+                            </td>
+                            <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${taskColor}">
+                                    ${tarea.tipoAseo}
+                                </span>
+                                <span class="ml-2 text-xs text-gray-600 font-mono">⚖️ ${(tarea.peso || 0).toFixed(1)}</span>
+                                ${tarea.requiereRefuerzo ?
+                            '<span class="ml-2 px-2 inline-flex text-xs leading-5 font-bold rounded-full bg-red-600 text-white animate-pulse" title="Refuerzo Requerido">HELP!</span>'
+                            : ''}
+                            </td>
+                            <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500 flex items-center space-x-1">
+                                <input type="time" class="border border-gray-300 rounded px-1 text-sm w-20 time-start bg-gray-50" 
+                                    value="${tarea.horarioInicio}" data-day="${diaIndex}" data-task="${taskIndex}" readonly>
+                                <span>-</span>
+                                <input type="time" class="border border-gray-300 rounded px-1 text-sm w-20 time-end focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" 
+                                    value="${tarea.horarioFin}" data-day="${diaIndex}" data-task="${taskIndex}">
+                            </td>
+                            <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-500">
+                                <select class="block w-full text-sm border-gray-300 rounded-md shadow-sm border task-worker-select" 
+                                    data-day="${diaIndex}" data-task="${taskIndex}">
+                                    ${wOptions}
+                                </select>
+                            </td>
+                            <td class="px-6 py-3 whitespace-nowrap text-sm text-right space-x-2">
+                                <button class="text-indigo-600 hover:text-indigo-900" onclick="openEditTaskModal('${dia.fecha}', '${tarea.cabanaId}', '${tarea.tipoAseo}')" title="Editar">
+                                    ✏️
+                                </button>
+                                <button class="text-red-600 hover:text-red-900" onclick="deleteTaskFromDayCard(${diaIndex}, ${taskIndex})" title="Eliminar">
+                                    🗑️
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            return `
+            <div class="${headerClass}">
+                <div>
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 capitalize">${fechaTexto}</h3>
+                    <div class="mt-1 flex space-x-2">
+                        ${alertsBadges.join('')}
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-200">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabaña</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipo & Peso</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Horario</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Asignado</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${rowsHtml}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="px-4 py-3 bg-gray-50 text-right">
+                    <button onclick="openEditTaskModal('${dia.fecha}')" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                        + Agregar Tarea
+                    </button>
+                </div>
+            </div>
+            `;
+        }
+
+        function renderDays() {
+            daysContainer.innerHTML = '';
+
+            if (currentData.length === 0) {
+                daysContainer.innerHTML = '<div class="p-4 bg-white rounded shadow text-center">No hay datos para el rango seleccionado.</div>';
+                return;
+            }
+
+            currentData.forEach((dia, diaIndex) => {
+                const dayCard = document.createElement('div');
+                dayCard.className = "bg-white shadow sm:rounded-lg mb-6 overflow-hidden";
+                dayCard.innerHTML = generateDayCardValues(dia, diaIndex);
+                daysContainer.appendChild(dayCard);
+                bindDayCardListeners(dayCard, diaIndex);
+            });
+        }
+
+        async function saveAllPlans() {
+            if (!currentData || currentData.length === 0) return;
+
+            try {
+                // Guardar día por día
+                // Optimización: Promise.all
+                const promises = currentData.map(dia => {
+                    // Solo guardar si hay plan activo
+                    if (dia.activePlan && dia.activePlan.length > 0) {
+                        return fetchAPI('/api/planificador/guardar', {
+                            method: 'POST',
+                            body: { fecha: dia.fecha, tareas: dia.activePlan }
+                        });
+                    }
+                    return Promise.resolve();
+                });
+
+                await Promise.all(promises);
+                showToast('Planificación guardada exitosamente');
+                await loadRangePlan(); // Reload to update status badges
+            } catch (error) {
+                showToast('Error al guardar: ' + error.message, true);
+            }
+        }
+
+
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = `fixed bottom-5 right-5 px-4 py-2 rounded shadow-lg text-sm z-50 transition-opacity duration-300 ${isError ? 'bg-red-600 text-white' : 'bg-gray-800 text-white'}`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // === MODAL FUNCTIONS ===
+        let taskConfig = {};
+        let workerConfig = {};
+        let currentWorkerId = null;
+        let editingTask = null;
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        async function loadTaskConfig() {
+            try {
+                taskConfig = await fetchAPI('/api/planificador/configuracion/tareas');
+                return taskConfig;
+            } catch (error) {
+                console.error('Error loading task config:', error);
+                showToast('Error cargando configuración', true);
+            }
+        }
+
+        async function openTaskConfigModal() {
+            await loadTaskConfig();
+            const tbody = document.getElementById('tasks-config-body');
+            tbody.innerHTML = '';
+
+            Object.keys(taskConfig).forEach(taskType => {
+                const config = taskConfig[taskType];
+                tbody.innerHTML += `
+            <tr class="border-b">
+                <td class="px-4 py-2 font-medium">${taskType}</td>
+                <td class="px-4 py-2">
+                    <textarea 
+                        data-task="${taskType}" data-field="descripcion"
+                        class="w-full text-xs border rounded p-1 task-config-input h-16 resize-none"
+                        placeholder="Instrucciones para la tarea...">${config.descripcion || ''}</textarea>
+                </td>
+                <td class="px-4 py-2">
+                    <input type="number" step="0.1" value="${config.peso}"
+                        data-task="${taskType}" data-field="peso"
+                        class="w-20 text-center border rounded p-1 task-config-input">
+                </td>
+                <td class="px-4 py-2">
+                    <input type="number" value="${config.duracion}"
+                        data-task="${taskType}" data-field="duracion"
+                        class="w-20 text-center border rounded p-1 task-config-input">
+                </td>
+                <td class="px-4 py-2 text-center">
+                    <input type="color" value="${config.color}"
+                        data-task="${taskType}" data-field="color"
+                        class="w-12 h-8 border rounded task-config-input">
+                </td>
+            </tr>
+            `;
+            });
+            openModal('modal-config-tareas');
+        }
+
+        async function saveTasksConfig() {
+            try {
+                const inputs = document.querySelectorAll('.task-config-input');
+
+                // Create a copy to avoid mutating the original
+                const updatedConfig = JSON.parse(JSON.stringify(taskConfig));
+
+                inputs.forEach(input => {
+                    const taskType = input.dataset.task;
+                    const field = input.dataset.field;
+
+                    if (!updatedConfig[taskType]) {
+                        console.error('Task type not found:', taskType);
+                        return;
+                    }
+
+                    if (field === 'peso') {
+                        updatedConfig[taskType][field] = parseFloat(input.value);
+                    } else if (field === 'duracion') {
+                        updatedConfig[taskType][field] = parseInt(input.value);
+                    } else {
+                        updatedConfig[taskType][field] = input.value;
+                    }
+                });
+
+                for (const [taskType, config] of Object.entries(updatedConfig)) {
+                    console.log('Saving task config:', taskType, config);
+                    await fetchAPI('/api/planificador/configuracion/tareas', {
+                        method: 'PUT',
+                        body: { taskType, config }
+                    });
+                }
+
+                // Update local config
+                taskConfig = updatedConfig;
+
+                showToast('Configuración guardada');
+                closeModal('modal-config-tareas');
+            } catch (error) {
+                console.error('Error saving config:', error);
+                showToast('Error guardando configuración', true);
+            }
+        }
+
+        async function openWorkerConfigModal() {
+            // Populate worker list using the shared function
+            renderWorkersList();
+
+            // Hide config section initially
+            document.getElementById('worker-config-section').classList.add('hidden');
+
+            // Setup form submission
+            const form = document.getElementById('modal-worker-form');
+            form.onsubmit = async (e) => {
+                e.preventDefault();
+                await handleModalWorkerSubmit();
+            };
+
+            openModal('modal-config-worker');
+        }
+
+        async function selectWorkerForConfig(worker) {
+            try {
+                workerConfig = await fetchAPI(`/api/trabajadores/${worker.id}/configuracion`);
+                currentWorkerId = worker.id;
+
+                document.getElementById('selected-worker-name').textContent = `${worker.nombre} ${worker.apellido}`;
+                document.querySelectorAll('.dia-libre-check').forEach(cb => {
+                    cb.checked = workerConfig.diasLibres.includes(parseInt(cb.value));
+                });
+                document.getElementById('worker-capacidad').value = workerConfig.capacidadDiaria;
+                document.getElementById('worker-horario').value = workerConfig.horarioInicio;
+                document.getElementById('worker-duracion').value = workerConfig.horarioDuracion;
+
+                document.getElementById('worker-config-section').classList.remove('hidden');
+            } catch (error) {
+                showToast('Error cargando configuración', true);
+            }
+        }
+
+        async function handleModalWorkerSubmit() {
+            const id = document.getElementById('modal-w-id').value;
+            const nombre = document.getElementById('modal-w-nombre').value;
+            const apellido = document.getElementById('modal-w-apellido').value;
+            const telefono = document.getElementById('modal-w-telefono').value;
+            const email = document.getElementById('modal-w-email').value;
+            const telegramChatId = document.getElementById('modal-w-telegram').value;
+            const esPrincipal = document.getElementById('modal-w-principal').checked;
+
+            console.log('[Frontend] Saving worker:', { nombre, telegramChatId });
+
+            try {
+                const result = await fetchAPI('/api/planificador/trabajadores', {
+                    method: 'POST',
+                    body: { id: id || null, nombre, apellido, telefono, email, telegramChatId, esPrincipal, activo: true }
+                });
+
+                showToast(id ? 'Trabajador actualizado' : 'Trabajador agregado');
+                resetWorkerForm();
+
+                // Reload workers
+                await loadWorkers();
+                await openWorkerConfigModal();
+            } catch (error) {
+                showToast('Error: ' + error.message, true);
+            }
+        }
+
+        function loadWorkerForEdit(id) {
+            const worker = activeWorkers.find(w => w.id === id);
+            if (!worker) return;
+
+            document.getElementById('modal-w-id').value = worker.id;
+            document.getElementById('modal-w-nombre').value = worker.nombre;
+            document.getElementById('modal-w-apellido').value = worker.apellido;
+            document.getElementById('modal-w-telefono').value = worker.telefono;
+            document.getElementById('modal-w-email').value = worker.email || '';
+            document.getElementById('modal-w-telegram').value = worker.telegramChatId || '';
+            document.getElementById('modal-w-principal').checked = !!worker.esPrincipal;
+
+            document.getElementById('worker-form-title').textContent = '✏️ Editar Trabajador';
+            document.getElementById('btn-save-worker').textContent = 'Actualizar Datos';
+            document.getElementById('btn-cancel-edit-worker').classList.remove('hidden');
+        }
+
+        window.resetWorkerForm = () => {
+            document.getElementById('modal-worker-form').reset();
+            document.getElementById('modal-w-id').value = '';
+            document.getElementById('modal-w-telegram').value = '';
+            document.getElementById('worker-form-title').textContent = '➕ Agregar Nuevo Trabajador';
+            document.getElementById('btn-save-worker').textContent = 'Guardar Trabajador';
+            document.getElementById('btn-cancel-edit-worker').classList.add('hidden');
+        };
+
+        async function saveWorkerConfig() {
+            try {
+                const diasLibres = Array.from(document.querySelectorAll('.dia-libre-check:checked'))
+                    .map(cb => parseInt(cb.value));
+
+                const config = {
+                    diasLibres,
+                    capacidadDiaria: parseFloat(document.getElementById('worker-capacidad').value),
+                    horarioInicio: document.getElementById('worker-horario').value,
+                    horarioDuracion: parseInt(document.getElementById('worker-duracion').value)
+                };
+
+                await fetchAPI(`/api/trabajadores/${currentWorkerId}/configuracion`, {
+                    method: 'PUT',
+                    body: config
+                });
+
+                showToast('Configuración guardada');
+                closeModal('modal-config-worker');
+            } catch (error) {
+                showToast('Error guardando configuración', true);
+            }
+        }
+
+        function openEditTaskModal(fecha, cabanaId = null, tipoAseo = null) {
+            editingTask = { fecha, cabanaId, tipoAseo, isNew: !cabanaId };
+            document.getElementById('edit-fecha').value = fecha;
+
+            const cabanaSelect = document.getElementById('edit-cabana');
+            cabanaSelect.innerHTML = '<option value="">Seleccionar...</option>';
+            ['Cabaña 1', 'Cabaña 2', 'Cabaña 3', 'Cabaña 7', 'Cabaña 8', 'Cabaña 9', 'Cabaña 10'].forEach(cab => {
+                cabanaSelect.innerHTML += `<option value="${cab}" ${cab === cabanaId ? 'selected' : ''}>${cab}</option>`;
+            });
+
+            const tipoSelect = document.getElementById('edit-tipo');
+            tipoSelect.innerHTML = '';
+            Object.keys(taskConfig).forEach(type => {
+                tipoSelect.innerHTML += `<option value="${type}" ${type === tipoAseo ? 'selected' : ''}>${type}</option>`;
+            });
+
+            tipoSelect.onchange = () => {
+                const tipo = tipoSelect.value;
+                if (taskConfig[tipo]) {
+                    document.getElementById('edit-peso-display').textContent = taskConfig[tipo].peso;
+                    document.getElementById('edit-duracion-display').textContent = taskConfig[tipo].duracion + ' min';
+                }
+            };
+            tipoSelect.onchange();
+
+            openModal('modal-edit-task');
+        }
+
+        async function saveTask() {
+            try {
+                const fecha = editingTask.fecha;
+                const cabanaId = document.getElementById('edit-cabana').value;
+                const tipoAseo = document.getElementById('edit-tipo').value;
+
+                if (!cabanaId || !tipoAseo) {
+                    showToast('Completa todos los campos', true);
+                    return;
+                }
+
+                const payload = {
+                    fecha,
+                    cabanaId,
+                    tipoAseo,
+                    accion: editingTask.isNew ? 'add' : 'edit'
+                };
+
+                console.log('[Frontend] Sending edit task:', payload);
+
+                const result = await fetchAPI('/api/planificador/editar-tarea', {
+                    method: 'POST',
+                    body: payload  // fetchAPI will stringify this automatically
+                });
+
+                if (result.warning) {
+                    showToast(`⚠️ ${result.warning}`, false);
+                }
+
+                showToast(result.message);
+                closeModal('modal-edit-task');
+
+                if (result.updatedDay) {
+                    updateDayInDOM(result.updatedDay);
+                } else {
+                    // Fallback
+                    await loadRangePlan();
+                }
+            } catch (error) {
+                console.error('Save task error:', error);
+                showToast(error.message || 'Error guardando tarea', true);
+            }
+        }
+
+        async function deleteTask() {
+            if (!confirm('¿Eliminar esta tarea?')) return;
+
+            try {
+                const result = await fetchAPI('/api/planificador/editar-tarea', {
+                    method: 'POST',
+                    body: {
+                        fecha: editingTask.fecha,
+                        cabanaId: editingTask.cabanaId,
+                        accion: 'delete'
+                    }
+                });
+
+                showToast(result.message);
+                closeModal('modal-edit-task');
+
+                if (result.updatedDay) {
+                    updateDayInDOM(result.updatedDay);
+                } else {
+                    loadRangePlan();
+                }
+            } catch (error) {
+                showToast(error.message || 'Error eliminando tarea', true);
+            }
+        }
+
+        async function deleteTaskFromDayCard(dayIndex, taskIndex) {
+            if (!confirm('¿Eliminar esta tarea?')) return;
+
+            const dia = currentData[dayIndex];
+            const tarea = dia.activePlan[taskIndex];
+
+            try {
+                const result = await fetchAPI('/api/planificador/editar-tarea', {
+                    method: 'POST',
+                    body: {
+                        fecha: dia.fecha,
+                        cabanaId: tarea.cabanaId,
+                        accion: 'delete'
+                    }
+                });
+
+                showToast(result.message || 'Tarea eliminada');
+
+                if (result.updatedDay) {
+                    updateDayInDOM(result.updatedDay);
+                } else {
+                    await loadRangePlan();
+                }
+            } catch (error) {
+                showToast(error.message || 'Error eliminando tarea', true);
+            }
+        }
+
+        // Load task config on init
+        loadTaskConfig();
+
+        // === EXPOSE FUNCTIONS TO GLOBAL SCOPE FOR ONCLICK ===
+        window.openTaskConfigModal = openTaskConfigModal;
+        window.openWorkerConfigModal = openWorkerConfigModal;
+        window.openEditTaskModal = openEditTaskModal;
+        window.closeModal = closeModal;
+        window.saveTasksConfig = saveTasksConfig;
+        window.saveWorkerConfig = saveWorkerConfig;
+        window.saveTask = saveTask;
+        window.deleteTask = deleteTask;
+        window.deleteTaskFromDayCard = deleteTaskFromDayCard;
+        window.deleteTaskFromDayCard = deleteTaskFromDayCard;
+        window.deleteWorkerHandler = deleteWorkerHandler;
+        window.sendWorkerSummaryHandler = async function (e, id) {
+            e.preventDefault();
+            e.stopPropagation();
+            await sendWorkerSummary(id);
+        };
+    </script>
+</body>
+
+</html>

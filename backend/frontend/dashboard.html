@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,12 +9,25 @@
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <style> 
-        body { font-family: 'Inter', sans-serif; } 
-        #detail-modal { background-color: rgba(0, 0, 0, 0.5); }
-        tbody tr:hover { background-color: #f9fafb; cursor: pointer; }
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
     </style>
+    <link href="css/dashboard.css" rel="stylesheet">
 </head>
+
+#detail-modal {
+background-color: rgba(0, 0, 0, 0.5);
+}
+
+tbody tr:hover {
+background-color: #f9fafb;
+cursor: pointer;
+}
+</style>
+</head>
+
 <body class="bg-gray-100">
     <div id="loader" class="text-center p-8">
         <p class="text-gray-500">Verificando sesión...</p>
@@ -29,32 +43,40 @@
             </div>
         </nav>
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            
+
             <div class="bg-white p-8 rounded-lg shadow mb-8">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Análisis de Rendimiento (KPIs)</h2>
                 <div class="flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4 mb-6 pb-6 border-b">
                     <div>
-                        <label for="kpi-fecha-inicio" class="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
-                        <input type="date" id="kpi-fecha-inicio" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <label for="kpi-fecha-inicio" class="block text-sm font-medium text-gray-700">Fecha de
+                            Inicio</label>
+                        <input type="date" id="kpi-fecha-inicio"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
                     <div>
                         <label for="kpi-fecha-fin" class="block text-sm font-medium text-gray-700">Fecha de Fin</label>
-                        <input type="date" id="kpi-fecha-fin" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <input type="date" id="kpi-fecha-fin"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
                     <div class="w-full md:w-auto">
-                        <label for="kpi-proyeccion-slider" class="block text-sm font-medium text-gray-700">Proyección Ocupación (<span id="proyeccion-valor">70</span>%)</label>
+                        <label for="kpi-proyeccion-slider" class="block text-sm font-medium text-gray-700">Proyección
+                            Ocupación (<span id="proyeccion-valor">70</span>%)</label>
                         <input type="range" id="kpi-proyeccion-slider" min="0" max="100" value="70" class="mt-1 w-full">
                     </div>
                     <div class="pt-0 md:pt-6">
-                        <button id="kpi-calculate-btn" class="w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">
+                        <button id="kpi-calculate-btn"
+                            class="w-full md:w-auto bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">
                             Calcular
                         </button>
                     </div>
                 </div>
 
-                <div id="kpi-loading" class="text-center text-gray-500 hidden"><p>Calculando KPIs, esto puede tardar unos segundos...</p></div>
-                
-                <div id="kpi-warning-container" class="hidden my-4 p-3 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700"></div>
+                <div id="kpi-loading" class="text-center text-gray-500 hidden">
+                    <p>Calculando KPIs, esto puede tardar unos segundos...</p>
+                </div>
+
+                <div id="kpi-warning-container"
+                    class="hidden my-4 p-3 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700"></div>
 
                 <div id="kpi-results-container" class="hidden space-y-8">
                     <div id="kpi-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 text-center"></div>
@@ -64,16 +86,21 @@
                             <div id="canal-details-table" class="overflow-x-auto"></div>
                         </div>
                         <div class="lg:col-span-2">
-                             <h3 class="text-lg font-semibold text-gray-800 mb-2">Ranking de Ocupación por Cabaña</h3>
+                            <h3 class="text-lg font-semibold text-gray-800 mb-2">Ranking de Ocupación por Cabaña</h3>
                             <div class="overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50">
                                         <tr>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cabaña</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"># Noches Ocupadas</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Noches Faltantes (Proy.)</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ingreso Real</th>
-                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descuento Real</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Cabaña</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                # Noches Ocupadas</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Noches Faltantes (Proy.)</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Ingreso Real</th>
+                                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
+                                                Descuento Real</th>
                                         </tr>
                                     </thead>
                                     <tbody id="ranking-table-body" class="bg-white divide-y divide-gray-200"></tbody>
@@ -83,109 +110,379 @@
                     </div>
                 </div>
             </div>
-            
-            <div class="bg-white p-8 rounded-lg shadow">
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <a href="gestion.html" class="relative bg-red-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-700 transition shadow">
-                        <span id="gestion-badge" class="absolute -top-2 -right-2 bg-red-800 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center hidden"></span>
-                        <span class="text-3xl">!</span>
-                        <p class="mt-2">Gestión Diaria</p>
-                    </a>
-                    <a href="calendario.html" class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow flex items-center justify-center"><p>Calendario de Ocupación</p></a>
-                    <a href="agregar-reserva.html" class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow flex items-center justify-center"><p>Agregar Propuesta</p></a>
-                    <a href="propuestas.html" class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow flex items-center justify-center"><p>Gestionar Propuestas</p></a>
-                </div>
-                </div>
-            <div class="bg-white p-8 rounded-lg shadow mt-8">
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas y Configuración</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <a href="clientes.html" class="bg-blue-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-blue-700 transition shadow">Gestionar Clientes</a>
-                    <a href="reservas.html" class="bg-white border border-gray-300 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">Ver y Editar Reservas</a>
-                    <a href="tarifas.html" class="bg-purple-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-purple-700 transition shadow">Gestionar Tarifas</a>
-                    <a href="sincronizar.html" class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow">Sincronizar Datos</a>
-                    <a href="sincronizacion-ical.html" class="bg-orange-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-orange-600 transition shadow">Sincronizar Calendarios (iCal)</a>
-                    <a href="reportes.html" class="bg-pink-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-pink-600 transition shadow">Generar Reportes Rápidos</a>
-                    <a href="procesar.html" class="bg-teal-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-teal-700 transition shadow">Procesar y Consolidar</a>
-                    <a href="mensajes.html" class="bg-gray-700 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-800 transition shadow">Generar Mensajes</a>
-                    <a href="presupuestos.html" class="bg-pink-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-pink-700 transition shadow">Generar Presupuestos</a>
-                    <a href="gestion-cabanas.html" class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow">Gestionar Cabañas</a>
-                    <a href="autorizar.html" class="bg-red-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-600 transition shadow">Autorizar Google Contacts</a>
-                </div>
-            </div>
-            <div class="bg-white p-8 rounded-lg shadow mt-8">
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas de Mantenimiento</h2>
-                <div class="space-y-4">
-                    <div>
-                        <p class="text-gray-600 mb-2">Si las reservas antiguas no aparecen en "Gestión Diaria", usa este botón una vez para reparar los datos.</p>
-                        <button id="repair-btn" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-800">
-                            Reparar Estados de Reservas
-                        </button>
-                        <div id="repair-status" class="mt-4 p-4 rounded-md hidden"></div>
-                    </div>
-                    <div class="border-t pt-4 mt-4">
-                        <p class="text-gray-600 mb-2">Si las reservas de Booking aparecen sin teléfono en "Gestión Diaria", usa este botón una vez para repararlas.</p>
-                        <button id="repair-phones-btn" class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-800">
-                            Reparar Teléfonos Faltantes
-                        </button>
-                        <div id="repair-phones-status" class="mt-4 p-4 rounded-md hidden"></div>
-                    </div>
+
+            <!-- Workflow (Flujo Diario) -->
+            <div class="bg-white p-8 rounded-lg shadow mb-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo Diario</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <button id="btn-workflow-incidencias"
+                        class="workflow-btn bg-white border-2 border-red-100 p-8 rounded-xl flex items-center justify-between hover:border-red-300 group">
+                        <div class="flex items-center">
+                            <div class="bg-red-100 p-4 rounded-full mr-6 group-hover:bg-red-200 transition">
+                                <span class="text-3xl">⚠️</span>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="text-xl font-bold text-gray-900">Incidencias</h3>
+                                <p class="text-gray-500">Reportes de imprevistos</p>
+                            </div>
+                        </div>
+                        <div id="badge-incidencias" class="badge hidden">0</div>
+                    </button>
+
+                    <button id="btn-workflow-actividades"
+                        class="workflow-btn bg-white border-2 border-blue-100 p-8 rounded-xl flex items-center justify-between hover:border-blue-300 group">
+                        <div class="flex items-center">
+                            <div class="bg-blue-100 p-4 rounded-full mr-6 group-hover:bg-blue-200 transition">
+                                <span class="text-3xl">📋</span>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="text-xl font-bold text-gray-900">Control de Actividades</h3>
+                                <p class="text-gray-500">Avance del plan diario</p>
+                            </div>
+                        </div>
+                        <div id="badge-actividades" class="badge hidden">0</div>
+                    </button>
                 </div>
             </div>
-        </main>
+
+    </div>
+    </div>
+
+    <!-- Historial Removed from Main Flow (Moved to Modal) -->
+
+    <div class="bg-white p-8 rounded-lg shadow">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas de Gestión</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <a href="gestion.html"
+                class="relative bg-red-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-700 transition shadow">
+                <span id="gestion-badge"
+                    class="absolute -top-2 -right-2 bg-red-800 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center hidden"></span>
+                <span class="text-3xl">!</span>
+                <p class="mt-2">Gestión Diaria</p>
+            </a>
+            <a href="calendario.html"
+                class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow flex items-center justify-center">
+                <p>Calendario de Ocupación</p>
+            </a>
+            <a href="agregar-reserva.html"
+                class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow flex items-center justify-center">
+                <p>Agregar Propuesta</p>
+            </a>
+            <a href="propuestas.html"
+                class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow flex items-center justify-center">
+                <p>Gestionar Propuestas</p>
+            </a>
+            <a href="reportes.html"
+                class="bg-pink-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-pink-600 transition shadow flex items-center justify-center">
+                <p>Generar Reportes Rápidos</p>
+            </a>
+            <a href="planificador.html"
+                class="bg-indigo-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-600 transition shadow flex items-center justify-center">
+                <p>Planificación Operativa</p>
+            </a>
+            <!-- NEW: Historial Operativo Button -->
+            <button id="abrir-historial-btn"
+                class="bg-gray-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-700 transition shadow flex items-center justify-center">
+                <p>Historial Operativo</p>
+            </button>
+        </div>
+    </div>
+    <div class="bg-white p-8 rounded-lg shadow mt-8">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas y Configuración</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <a href="clientes.html"
+                class="bg-blue-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-blue-700 transition shadow">Gestionar
+                Clientes</a>
+            <a href="reservas.html"
+                class="bg-white border border-gray-300 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">Ver
+                y Editar Reservas</a>
+            <a href="tarifas.html"
+                class="bg-purple-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-purple-700 transition shadow">Gestionar
+                Tarifas</a>
+            <a href="sincronizar.html"
+                class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow">Sincronizar
+                Datos</a>
+            <a href="procesar.html"
+                class="bg-teal-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-teal-700 transition shadow">Procesar
+                y Consolidar</a>
+            <a href="sincronizacion-ical.html"
+                class="bg-orange-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-orange-600 transition shadow">Sincronizar
+                Calendarios (iCal)</a>
+            <a href="mensajes.html"
+                class="bg-gray-700 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-800 transition shadow">Generar
+                Mensajes</a>
+            <a href="presupuestos.html"
+                class="bg-pink-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-pink-700 transition shadow">Generar
+                Presupuestos</a>
+            <a href="gestion-cabanas.html"
+                class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow">Gestionar
+                Cabañas</a>
+            <a href="autorizar.html"
+                class="bg-red-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-600 transition shadow">Autorizar
+                Google Contacts</a>
+
+            <!-- NEW: Configuración Maestra Button -->
+            <button id="abrir-settings-btn"
+                class="bg-slate-800 text-white p-6 rounded-lg text-center font-semibold hover:bg-slate-900 transition shadow flex items-center justify-center">
+                <p>Configuración Maestra</p>
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings Removed from Main Flow (Moved to Modal) -->
+    <div class="bg-white p-8 rounded-lg shadow mt-8">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas de Mantenimiento</h2>
+        <div class="space-y-4">
+            <div>
+                <p class="text-gray-600 mb-2">Si las reservas antiguas no aparecen en "Gestión Diaria", usa este
+                    botón una vez para reparar los datos.</p>
+                <button id="repair-btn"
+                    class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-800">
+                    Reparar Estados de Reservas
+                </button>
+                <div id="repair-status" class="mt-4 p-4 rounded-md hidden"></div>
+            </div>
+            <div class="border-t pt-4 mt-4">
+                <p class="text-gray-600 mb-2">Si las reservas de Booking aparecen sin teléfono en "Gestión
+                    Diaria", usa este botón una vez para repararlas.</p>
+                <button id="repair-phones-btn"
+                    class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-800">
+                    Reparar Teléfonos Faltantes
+                </button>
+                <div id="repair-phones-status" class="mt-4 p-4 rounded-md hidden"></div>
+            </div>
+        </div>
+    </div>
+    </main>
     </div>
 
     <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
             <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="detail-modal-title">Detalle por Canal</h3>
             <div id="detail-modal-content"></div>
-            <button type="button" id="detail-modal-close-btn" class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
+            <button type="button" id="detail-modal-close-btn"
+                class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
         </div>
     </div>
 
+    <!-- Modal Historial Operativo -->
+    <div id="modal-historial"
+        class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl p-0 w-full max-w-6xl max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <h3 class="text-xl font-bold text-gray-900">Historial Operativo y Auditoría</h3>
+                <button id="cerrar-historial-btn" class="text-gray-400 hover:text-gray-600 transition">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto">
+                <!-- Filters -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Desde</label>
+                        <input type="date" id="hist_start"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Hasta</label>
+                        <input type="date" id="hist_end"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Cabaña</label>
+                        <select id="hist_cabana"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 bg-gray-50">
+                            <option value="">Todas</option>
+                            <option value="Cabaña 1">Cabaña 1</option>
+                            <option value="Cabaña 2">Cabaña 2</option>
+                            <option value="Cabaña 10">Cabaña 10</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Espacio</label>
+                        <select id="hist_space"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 bg-gray-50">
+                            <option value="">Todos</option>
+                            <!-- JS will populate -->
+                        </select>
+                    </div>
+                    <div class="md:col-span-4 flex justify-end gap-3">
+                        <button id="btn-load-history"
+                            class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 font-medium">
+                            Consultar Historial
+                        </button>
+                        <button id="btn-download-report"
+                            class="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900 font-medium flex items-center">
+                            <span class="mr-2">📥</span> Descargar PDF
+                        </button>
+                    </div>
+                </div>
+                <!-- Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Fecha
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Tipo
+                                </th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Cabaña / Espacio</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Detalle</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Usuario</th>
+                                <th
+                                    class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-table-body" class="bg-white divide-y divide-gray-200">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Configuracion Maestra -->
+    <div id="modal-settings"
+        class="fixed inset-0 z-50 flex items-center justify-center hidden bg-black bg-opacity-50 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-2xl p-0 w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <h3 class="text-xl font-bold text-gray-900">Configuración Maestra</h3>
+                <button id="cerrar-settings-btn" class="text-gray-400 hover:text-gray-600 transition">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="settings-form" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label for="nombreEmpresa" class="block text-sm font-medium text-gray-700">Nombre
+                                Empresa</label>
+                            <input type="text" id="nombreEmpresa" name="nombreEmpresa"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+                        <div>
+                            <label for="adminNombre" class="block text-sm font-medium text-gray-700">Nombre
+                                Administrador</label>
+                            <input type="text" id="adminNombre" name="adminNombre"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+                        <div>
+                            <label for="adminEmail" class="block text-sm font-medium text-gray-700">Email
+                                Administrador</label>
+                            <input type="email" id="adminEmail" name="adminEmail"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+                        <div>
+                            <label for="telefonoContacto" class="block text-sm font-medium text-gray-700">Teléfono
+                                Contacto</label>
+                            <input type="text" id="telefonoContacto" name="telefonoContacto"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                        </div>
+                        <div>
+                            <label for="telegramChatId" class="block text-sm font-medium text-gray-700">Telegram Chat
+                                ID (Admin)</label>
+                            <input type="text" id="telegramChatId" name="telegramChatId"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <p class="text-xs text-gray-500 mt-1">ID para alertas administrativas.</p>
+                        </div>
+                        <div>
+                            <label for="workerChatId" class="block text-sm font-medium text-gray-700">Telegram Chat
+                                ID (Trabajador)</label>
+                            <input type="text" id="workerChatId" name="workerChatId"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <p class="text-xs text-gray-500 mt-1">ID para envío de plan diario.</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="botToken" class="block text-sm font-medium text-gray-700">Telegram Bot
+                                Token</label>
+                            <input type="password" id="botToken" name="botToken"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
+                                placeholder="123456789:ABC...">
+                            <p class="text-xs text-gray-500 mt-1">Token del bot creado con @BotFather.</p>
+                        </div>
+                    </div>
+                    <div>
+                        <button type="submit" id="save-settings-btn"
+                            class="bg-gray-800 text-white px-4 py-2 rounded-md hover:bg-gray-900">
+                            Guardar Configuración
+                        </button>
+                        <span id="settings-status" class="ml-3 text-sm font-medium hidden"></span>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/firebase-init.js"></script>
+    <script type="module" src="api.js"></script>
+    <script type="module" src="js/modules/badgeMonitor.js"></script>
+    <script type="module" src="js/modules/incidentsAdmin.js"></script>
+    <script type="module" src="js/modules/historyViewer.js"></script>
+
     <script type="module">
-      import { checkSession, logout, fetchAPI } from './api.js';
+        import { checkSession, logout, fetchAPI } from './api.js';
+        import { initBadgeMonitor } from './js/modules/badgeMonitor.js';
+        import { initIncidentsAdmin } from './js/modules/incidentsAdmin.js';
+        import { initHistoryViewer } from './js/modules/historyViewer.js';
 
-      let fullKpiResults = null;
-      let ingresoPotencialBase = 0;
+        let fullKpiResults = null;
+        let ingresoPotencialBase = 0;
 
-      function formatCurrency(value) {
-          return `$${(Math.round(value) || 0).toLocaleString('es-CL')}`;
-      }
-      
-      function updateProjectedValues(proyeccion) {
-          if (!fullKpiResults) return;
-          
-          const nuevoIngresoProyectado = ingresoPotencialBase * (proyeccion / 100);
-          const ingresoProyectadoEl = document.getElementById('ingreso-proyectado-valor');
-          if (ingresoProyectadoEl) {
-              ingresoProyectadoEl.textContent = formatCurrency(nuevoIngresoProyectado);
-          }
+        function formatCurrency(value) {
+            return `$${(Math.round(value) || 0).toLocaleString('es-CL')}`;
+        }
 
-          fullKpiResults.rankingCabañas.forEach((cabaña, index) => {
-              const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccion / 100);
-              const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
-              
-              const row = document.getElementById(`ranking-row-${index}`);
-              if (row) {
-                  const cell = row.querySelector('.noches-faltantes-cell');
-                  if (cell) {
-                      cell.textContent = Math.round(nochesFaltantesProyectadas);
-                  }
-              }
-          });
-      }
+        function updateProjectedValues(proyeccion) {
+            if (!fullKpiResults) return;
 
-      function displayKPIs(results) {
-          fullKpiResults = results;
-          const { kpisGenerales } = results;
-          ingresoPotencialBase = kpisGenerales.ingresoPotencialTotalBase || 0;
-          
-          const proyeccionActual = parseInt(document.getElementById('kpi-proyeccion-slider').value);
-          const ingresoProyectadoActual = ingresoPotencialBase * (proyeccionActual / 100);
+            const nuevoIngresoProyectado = ingresoPotencialBase * (proyeccion / 100);
+            const ingresoProyectadoEl = document.getElementById('ingreso-proyectado-valor');
+            if (ingresoProyectadoEl) {
+                ingresoProyectadoEl.textContent = formatCurrency(nuevoIngresoProyectado);
+            }
 
-          const kpiCardsContainer = document.getElementById('kpi-cards');
-          kpiCardsContainer.innerHTML = `
+            fullKpiResults.rankingCabañas.forEach((cabaña, index) => {
+                const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccion / 100);
+                const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
+
+                const row = document.getElementById(`ranking-row-${index}`);
+                if (row) {
+                    const cell = row.querySelector('.noches-faltantes-cell');
+                    if (cell) {
+                        cell.textContent = Math.round(nochesFaltantesProyectadas);
+                    }
+                }
+            });
+        }
+
+        function displayKPIs(results) {
+            fullKpiResults = results;
+            const { kpisGenerales } = results;
+            ingresoPotencialBase = kpisGenerales.ingresoPotencialTotalBase || 0;
+
+            const proyeccionActual = parseInt(document.getElementById('kpi-proyeccion-slider').value);
+            const ingresoProyectadoActual = ingresoPotencialBase * (proyeccionActual / 100);
+
+            const kpiCardsContainer = document.getElementById('kpi-cards');
+            kpiCardsContainer.innerHTML = `
             <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">Ocupación</div><div class="text-2xl font-bold text-gray-900">${kpisGenerales.tasaOcupacion}%</div></div>
             <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">ADR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.adr)}</div></div>
             <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">RevPAR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.revPar)}</div></div>
@@ -193,10 +490,10 @@
             <div class="p-4 bg-blue-100 rounded-lg"><div class="text-sm font-medium text-blue-700">Ingreso Proyectado</div><div id="ingreso-proyectado-valor" class="text-2xl font-bold text-blue-900">${formatCurrency(ingresoProyectadoActual)}</div></div>
             <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuento Real</div><div class="text-2xl font-bold text-red-900">${formatCurrency(kpisGenerales.descuentosTotalesReales)}</div></div>
           `;
-          
-          const canalDetailsTable = document.getElementById('canal-details-table');
-          const canalData = kpisGenerales.reservasPorCanal;
-          let canalTableHtml = `
+
+            const canalDetailsTable = document.getElementById('canal-details-table');
+            const canalData = kpisGenerales.reservasPorCanal;
+            let canalTableHtml = `
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -216,42 +513,42 @@
                 </tbody>
             </table>
           `;
-          canalDetailsTable.innerHTML = canalTableHtml;
-          
-          const rankingTableBody = document.getElementById('ranking-table-body');
-          rankingTableBody.innerHTML = '';
-          results.rankingCabañas.forEach((cabaña, index) => {
-              const row = document.createElement('tr');
-              row.id = `ranking-row-${index}`;
-              row.setAttribute('data-cabaña-nombre', cabaña.nombre);
-              
-              const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccionActual / 100);
-              const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
+            canalDetailsTable.innerHTML = canalTableHtml;
 
-              row.innerHTML = `
+            const rankingTableBody = document.getElementById('ranking-table-body');
+            rankingTableBody.innerHTML = '';
+            results.rankingCabañas.forEach((cabaña, index) => {
+                const row = document.createElement('tr');
+                row.id = `ranking-row-${index}`;
+                row.setAttribute('data-cabaña-nombre', cabaña.nombre);
+
+                const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccionActual / 100);
+                const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
+
+                row.innerHTML = `
                 <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${cabaña.nombre}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${cabaña.nochesOcupadas}</td>
                 <td class="noches-faltantes-cell px-4 py-3 whitespace-nowrap text-sm text-gray-700">${Math.round(nochesFaltantesProyectadas)}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(cabaña.ingresoRealTotal)}</td>
                 <td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">${formatCurrency(cabaña.descuentoTotal)}</td>
               `;
-              rankingTableBody.appendChild(row);
-          });
-      }
+                rankingTableBody.appendChild(row);
+            });
+        }
 
-      function showDetailModal(cabañaNombre) {
-          const cabañaData = fullKpiResults.rankingCabañas.find(c => c.nombre === cabañaNombre);
-          if (!cabañaData) return;
+        function showDetailModal(cabañaNombre) {
+            const cabañaData = fullKpiResults.rankingCabañas.find(c => c.nombre === cabañaNombre);
+            if (!cabañaData) return;
 
-          const modal = document.getElementById('detail-modal');
-          const title = document.getElementById('detail-modal-title');
-          const content = document.getElementById('detail-modal-content');
+            const modal = document.getElementById('detail-modal');
+            const title = document.getElementById('detail-modal-title');
+            const content = document.getElementById('detail-modal-content');
 
-          title.textContent = `Detalle por Canal - ${cabañaNombre}`;
-          
-          let tableHtml = `<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>`;
-          if (cabañaData.canales && Object.keys(cabañaData.canales).length > 0) {
-              tableHtml = `
+            title.textContent = `Detalle por Canal - ${cabañaNombre}`;
+
+            let tableHtml = `<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>`;
+            if (cabañaData.canales && Object.keys(cabañaData.canales).length > 0) {
+                tableHtml = `
               <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
@@ -270,137 +567,228 @@
                     `).join('')}
                 </tbody>
               </table>`;
-          }
-          
-          content.innerHTML = tableHtml;
-          modal.classList.remove('hidden');
-      }
+            }
 
-      document.addEventListener('DOMContentLoaded', () => {
-        const loader = document.getElementById('loader');
-        const appContent = document.getElementById('app-content');
-        const authInfo = document.getElementById('auth-info');
-        const session = checkSession();
-
-        if (session) {
-          loader.style.display = 'none';
-          appContent.classList.remove('hidden');
-          authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
-          document.getElementById('logout-btn').addEventListener('click', logout);
-
-          const calculateBtn = document.getElementById('kpi-calculate-btn');
-          const fechaInicioInput = document.getElementById('kpi-fecha-inicio');
-          const fechaFinInput = document.getElementById('kpi-fecha-fin');
-          const proyeccionSlider = document.getElementById('kpi-proyeccion-slider');
-          const proyeccionValor = document.getElementById('proyeccion-valor');
-          const resultsContainer = document.getElementById('kpi-results-container');
-          const loadingIndicator = document.getElementById('kpi-loading');
-          const warningContainer = document.getElementById('kpi-warning-container');
-          
-          const repairBtn = document.getElementById('repair-btn');
-          const repairStatus = document.getElementById('repair-status');
-          
-          const repairPhonesBtn = document.getElementById('repair-phones-btn');
-          const repairPhonesStatus = document.getElementById('repair-phones-status');
-
-          const detailModal = document.getElementById('detail-modal');
-          const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
-          const rankingTableBody = document.getElementById('ranking-table-body');
-
-          async function loadPendingTasksCount() {
-              try {
-                  const pendingTasks = await fetchAPI('/api/gestion/pendientes');
-                  const badge = document.getElementById('gestion-badge');
-                  if (badge && pendingTasks.length > 0) {
-                      badge.textContent = pendingTasks.length;
-                      badge.classList.remove('hidden');
-                  }
-              } catch (error) {
-                  console.error("Error al cargar el contador de tareas pendientes:", error);
-              }
-          }
-
-          loadPendingTasksCount();
-
-          calculateBtn.addEventListener('click', async () => {
-              const fechaInicio = fechaInicioInput.value;
-              const fechaFin = fechaFinInput.value;
-              if (!fechaInicio || !fechaFin) {
-                  alert('Por favor, selecciona una fecha de inicio y una de fin.'); return;
-              }
-              loadingIndicator.classList.remove('hidden');
-              resultsContainer.classList.add('hidden');
-              warningContainer.classList.add('hidden');
-              calculateBtn.disabled = true;
-              try {
-                  const apiUrl = `/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-                  const kpiResults = await fetchAPI(apiUrl);
-                  
-                  if (kpiResults.warning) {
-                      warningContainer.textContent = kpiResults.warning;
-                      warningContainer.classList.remove('hidden');
-                  }
-                  
-                  displayKPIs(kpiResults);
-              } catch (error) {
-                  alert(`Error al calcular KPIs: ${error.message}`);
-                  resultsContainer.innerHTML = `<p class="text-red-500 font-semibold">Error al calcular KPIs: ${error.message}</p>`;
-              } finally {
-                  loadingIndicator.classList.add('hidden');
-                  resultsContainer.classList.remove('hidden');
-                  calculateBtn.disabled = false;
-              }
-          });
-
-          repairBtn.addEventListener('click', async () => {
-              if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un estado de gestión. ¿Deseas continuar?')) { return; }
-              repairBtn.disabled = true;
-              repairBtn.textContent = 'Reparando...';
-              repairStatus.classList.remove('hidden');
-              repairStatus.textContent = 'Iniciando proceso...';
-              try {
-                  const result = await fetchAPI('/api/gestion/fix-missing-states', { method: 'POST' });
-                  repairStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
-              } catch (error) {
-                  repairStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
-              } finally {
-                  repairBtn.disabled = false;
-                  repairBtn.textContent = 'Reparar Estados de Reservas Antiguas';
-              }
-          });
-
-          repairPhonesBtn.addEventListener('click', async () => {
-              if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas continuar?')) { return; }
-              repairPhonesBtn.disabled = true;
-              repairPhonesBtn.textContent = 'Reparando...';
-              repairPhonesStatus.classList.remove('hidden');
-              repairPhonesStatus.textContent = 'Iniciando reparación...';
-              try {
-                  const result = await fetchAPI('/api/gestion/fix-missing-phones', { method: 'POST' });
-                  repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
-              } catch (error) {
-                  repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
-              } finally {
-                  repairPhonesBtn.disabled = false;
-                  repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
-              }
-          });
-
-          proyeccionSlider.addEventListener('input', () => {
-              const nuevoPorcentaje = proyeccionSlider.value;
-              proyeccionValor.textContent = nuevoPorcentaje;
-              updateProjectedValues(parseInt(nuevoPorcentaje));
-          });
-
-          rankingTableBody.addEventListener('click', (e) => {
-              const row = e.target.closest('tr');
-              if (row && row.dataset.cabañaNombre) {
-                  showDetailModal(row.dataset.cabañaNombre);
-              }
-          });
-          detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+            content.innerHTML = tableHtml;
+            modal.classList.remove('hidden');
         }
-      });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const loader = document.getElementById('loader');
+            const appContent = document.getElementById('app-content');
+            const authInfo = document.getElementById('auth-info');
+            const session = checkSession();
+
+            // --- Cargar Configuración Paramétrica en Header ---
+            async function loadParams() {
+                try {
+                    const settings = await fetchAPI('/api/settings/empresa');
+                    if (settings.nombreEmpresa) {
+                        document.querySelector('h1.text-xl').textContent = settings.nombreEmpresa;
+                    }
+                    if (settings.adminNombre) {
+                        const authInfoDiv = document.getElementById('auth-info');
+                        // Keep existing structure but prepend name
+                        // Actually authInfo has the email span.
+                    }
+                } catch (e) { console.error('Error loading settings for header', e); }
+            }
+
+            if (session) {
+                loadParams();
+                // Init Modules
+                initBadgeMonitor();
+                initIncidentsAdmin();
+                initHistoryViewer();
+
+                loader.style.display = 'none';
+                appContent.classList.remove('hidden');
+                authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
+                document.getElementById('logout-btn').addEventListener('click', logout);
+
+                const calculateBtn = document.getElementById('kpi-calculate-btn');
+                const fechaInicioInput = document.getElementById('kpi-fecha-inicio');
+                const fechaFinInput = document.getElementById('kpi-fecha-fin');
+                const proyeccionSlider = document.getElementById('kpi-proyeccion-slider');
+                const proyeccionValor = document.getElementById('proyeccion-valor');
+                const resultsContainer = document.getElementById('kpi-results-container');
+                const loadingIndicator = document.getElementById('kpi-loading');
+                const warningContainer = document.getElementById('kpi-warning-container');
+
+                const repairBtn = document.getElementById('repair-btn');
+                const repairStatus = document.getElementById('repair-status');
+
+                const repairPhonesBtn = document.getElementById('repair-phones-btn');
+                const repairPhonesStatus = document.getElementById('repair-phones-status');
+
+                const detailModal = document.getElementById('detail-modal');
+                const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
+                const rankingTableBody = document.getElementById('ranking-table-body');
+
+                async function loadPendingTasksCount() {
+                    try {
+                        const pendingTasks = await fetchAPI('/api/gestion/pendientes');
+                        const badge = document.getElementById('gestion-badge');
+                        if (badge && pendingTasks.length > 0) {
+                            badge.textContent = pendingTasks.length;
+                            badge.classList.remove('hidden');
+                        }
+                    } catch (error) {
+                        console.error("Error al cargar el contador de tareas pendientes:", error);
+                    }
+                }
+
+                loadPendingTasksCount();
+
+                calculateBtn.addEventListener('click', async () => {
+                    const fechaInicio = fechaInicioInput.value;
+                    const fechaFin = fechaFinInput.value;
+                    if (!fechaInicio || !fechaFin) {
+                        alert('Por favor, selecciona una fecha de inicio y una de fin.'); return;
+                    }
+                    loadingIndicator.classList.remove('hidden');
+                    resultsContainer.classList.add('hidden');
+                    warningContainer.classList.add('hidden');
+                    calculateBtn.disabled = true;
+                    try {
+                        const apiUrl = `/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+                        const kpiResults = await fetchAPI(apiUrl);
+
+                        if (kpiResults.warning) {
+                            warningContainer.textContent = kpiResults.warning;
+                            warningContainer.classList.remove('hidden');
+                        }
+
+                        displayKPIs(kpiResults);
+                    } catch (error) {
+                        alert(`Error al calcular KPIs: ${error.message}`);
+                        resultsContainer.innerHTML = `<p class="text-red-500 font-semibold">Error al calcular KPIs: ${error.message}</p>`;
+                    } finally {
+                        loadingIndicator.classList.add('hidden');
+                        resultsContainer.classList.remove('hidden');
+                        calculateBtn.disabled = false;
+                    }
+                });
+
+                repairBtn.addEventListener('click', async () => {
+                    if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un estado de gestión. ¿Deseas continuar?')) { return; }
+                    repairBtn.disabled = true;
+                    repairBtn.textContent = 'Reparando...';
+                    repairStatus.classList.remove('hidden');
+                    repairStatus.textContent = 'Iniciando proceso...';
+                    try {
+                        const result = await fetchAPI('/api/gestion/fix-missing-states', { method: 'POST' });
+                        repairStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+                    } catch (error) {
+                        repairStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                    } finally {
+                        repairBtn.disabled = false;
+                        repairBtn.textContent = 'Reparar Estados de Reservas Antiguas';
+                    }
+                });
+
+                repairPhonesBtn.addEventListener('click', async () => {
+                    if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas continuar?')) { return; }
+                    repairPhonesBtn.disabled = true;
+                    repairPhonesBtn.textContent = 'Reparando...';
+                    repairPhonesStatus.classList.remove('hidden');
+                    repairPhonesStatus.textContent = 'Iniciando reparación...';
+                    try {
+                        const result = await fetchAPI('/api/gestion/fix-missing-phones', { method: 'POST' });
+                        repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+                    } catch (error) {
+                        repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                    } finally {
+                        repairPhonesBtn.disabled = false;
+                        repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
+                    }
+                });
+
+                proyeccionSlider.addEventListener('input', () => {
+                    const nuevoPorcentaje = proyeccionSlider.value;
+                    proyeccionValor.textContent = nuevoPorcentaje;
+                    updateProjectedValues(parseInt(nuevoPorcentaje));
+                });
+
+                rankingTableBody.addEventListener('click', (e) => {
+                    const row = e.target.closest('tr');
+                    if (row && row.dataset.cabañaNombre) {
+                        showDetailModal(row.dataset.cabañaNombre);
+                    }
+                });
+                detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+                detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+
+                // --- SETTINGS LOGIC ---
+                const settingsForm = document.getElementById('settings-form');
+                const settingsStatus = document.getElementById('settings-status');
+
+                async function loadSettings() {
+                    try {
+                        const settings = await fetchAPI('/api/settings/empresa');
+                        document.getElementById('nombreEmpresa').value = settings.nombreEmpresa || '';
+                        document.getElementById('adminNombre').value = settings.adminNombre || '';
+                        document.getElementById('adminEmail').value = settings.adminEmail || '';
+                        document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
+                        document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
+                        document.getElementById('telegramChatId').value = settings.telegramChatId || '';
+                        document.getElementById('workerChatId').value = settings.workerChatId || '';
+                        document.getElementById('botToken').value = settings.botToken || '';
+                    } catch (error) {
+                        console.error('Error cargando configuración:', error);
+                    }
+                }
+
+                settingsForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    settingsStatus.textContent = 'Guardando...';
+                    settingsStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
+
+                    const data = {
+                        nombreEmpresa: document.getElementById('nombreEmpresa').value,
+                        adminNombre: document.getElementById('adminNombre').value,
+                        adminEmail: document.getElementById('adminEmail').value,
+                        telefonoContacto: document.getElementById('telefonoContacto').value,
+                        telefonoContacto: document.getElementById('telefonoContacto').value,
+                        telegramChatId: document.getElementById('telegramChatId').value,
+                        workerChatId: document.getElementById('workerChatId').value,
+                        botToken: document.getElementById('botToken').value,
+                    };
+
+                    try {
+                        const result = await fetchAPI('/api/settings/empresa', {
+                            method: 'PUT',
+                            body: data, // FIXED: Removed JSON.stringify because api.js handles it
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        settingsStatus.textContent = 'Guardado correctamente.';
+                        settingsStatus.classList.add('text-green-600');
+                        setTimeout(() => settingsStatus.classList.add('hidden'), 3000);
+                    } catch (error) {
+                        settingsStatus.textContent = 'Error al guardar.';
+                        settingsStatus.classList.add('text-red-600');
+                    }
+                });
+
+                // --- MODALS TOGGLES ---
+                const btnHist = document.getElementById('abrir-historial-btn');
+                const modalHist = document.getElementById('modal-historial');
+                const closeHist = document.getElementById('cerrar-historial-btn');
+
+                if (btnHist) btnHist.addEventListener('click', () => modalHist.classList.remove('hidden'));
+                if (closeHist) closeHist.addEventListener('click', () => modalHist.classList.add('hidden'));
+
+                const btnSet = document.getElementById('abrir-settings-btn');
+                const modalSet = document.getElementById('modal-settings');
+                const closeSet = document.getElementById('cerrar-settings-btn');
+
+                if (btnSet) btnSet.addEventListener('click', () => modalSet.classList.remove('hidden'));
+                if (closeSet) closeSet.addEventListener('click', () => modalSet.classList.add('hidden'));
+
+                loadSettings();
+            }
+        });
     </script>
 </body>
+
 </html>

@@ -1,0 +1,60 @@
+/* backend/frontend/css/dashboard.css */
+.workflow-btn {
+    position: relative;
+    transition: all 0.2s;
+}
+
+.workflow-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.badge {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background-color: #ef4444;
+    /* Tailwind red-500 */
+    color: white;
+    font-size: 0.75rem;
+    /* 12px */
+    font-weight: 700;
+    height: 1.5rem;
+    /* 24px */
+    min-width: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    border: 2px solid white;
+    padding: 0 0.25rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+.badge.hidden {
+    display: none;
+}
+
+/* Incident Modal */
+.incident-item {
+    border-left: 4px solid #e5e7eb;
+    transition: background-color 0.2s;
+}
+
+.incident-item:hover {
+    background-color: #f9fafb;
+}
+
+.incident-item.URGENTE {
+    border-left-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.incident-item.NORMAL {
+    border-left-color: #3b82f6;
+}
+
+.incident-item.BAJA {
+    border-left-color: #10b981;
+}

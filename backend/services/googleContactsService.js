@@ -12,6 +12,16 @@ const CREDENTIALS_PATH = isProduction
     : path.join(process.cwd(), 'oauth_credentials.json');
 
 async function getAuthenticatedClient(db) {
+    if (!fs.existsSync(CREDENTIALS_PATH)) {
+        console.warn('Advertencia: Archivo de credenciales OAuth no encontrado (oauth_credentials.json). Google Contacts Sync desactivado.');
+        // Return null or dummy object?
+        // If we return null, callers must handle it.
+        // Or we throw a distinguishable error that saveTrabajador catches?
+        // But saveTrabajador only catches inside the if(!googleContactId) block.
+        // Wait, findContactByName calls getAuthenticatedClient.
+        throw new Error('Google Auth disabled (missing credentials).');
+    }
+
     const credentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH));
     const { client_secret, client_id, redirect_uris } = credentials.web;
     const oauth2Client = new OAuth2Client(client_id, client_secret, redirect_uris[0]);
@@ -35,7 +45,7 @@ async function getContactPhoneByName(db, name) {
     try {
         const auth = await getAuthenticatedClient(db);
         const people = google.people({ version: 'v1', auth });
-        
+
         const res = await people.people.searchContacts({
             query: name,
             readMask: 'names,phoneNumbers',

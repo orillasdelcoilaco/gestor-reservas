@@ -1,0 +1,419 @@
+<!-- === MODALES DE CONFIGURACIÓN === -->
+
+<!-- Modal: Configuración de Tareas -->
+<div id="modal-config-tareas" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center pb-3 border-b">
+            <h3 class="text-lg font-bold">⚙️ Configuración de Tareas</h3>
+            <button onclick="closeModal('modal-config-tareas')"
+                class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+
+        <div class="mt-4 max-h-96 overflow-y-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Tipo</th>
+                        <th class="px-4 py-2 text-center">Peso</th>
+                        <th class="px-4 py-2 text-center">Duración (min)</th>
+                        <th class="px-4 py-2 text-center">Color</th>
+                    </tr>
+                </thead>
+                <tbody id="tasks-config-body">
+                    <!-- Se llena dinámicamente -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-4 pt-3 border-t">
+            <button onclick="closeModal('modal-config-tareas')"
+                class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
+            <button onclick="saveTasksConfig()"
+                class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Configuración de Trabajador -->
+<div id="modal-config-worker" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/3 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center pb-3 border-b">
+            <h3 class="text-lg font-bold">👷 Configuración del Trabajador</h3>
+            <button onclick="closeModal('modal-config-worker')"
+                class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+
+        <div class="mt-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Día Libre:</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" value="0" class="dia-libre-check mr-1"> Dom
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" value="1" class="dia-libre-check mr-1" checked> Lun
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" value="2" class="dia-libre-check mr-1"> Mar
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" value="3" class="dia-libre-check mr-1"> Mié
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" value="4" class="dia-libre-check mr-1"> Jue
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" value="5" class="dia-libre-check mr-1"> Vie
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" value="6" class="dia-libre-check mr-1"> Sáb
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Capacidad Diaria (unidades):</label>
+                <input type="number" id="worker-capacidad" step="0.1" value="3.0"
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Horario Inicio:</label>
+                    <input type="time" id="worker-horario" value="12:00"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Duración (min):</label>
+                    <input type="number" id="worker-duracion" value="240"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 mt-4 pt-3 border-t">
+            <button onclick="closeModal('modal-config-worker')"
+                class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
+            <button onclick="saveWorkerConfig()"
+                class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Tarea -->
+<div id="modal-edit-task" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/3 shadow-lg rounded-md bg-white">
+        <div class="flex justify-between items-center pb-3 border-b">
+            <h3 class="text-lg font-bold">✏️ Editar Tarea</h3>
+            <button onclick="closeModal('modal-edit-task')" class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+
+        <div class="mt-4 space-y-3">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Fecha:</label>
+                <input type="text" id="edit-fecha" readonly
+                    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2 bg-gray-100">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Cabaña:</label>
+                <select id="edit-cabana" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                    <!-- Se llena dinámicamente -->
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Tipo de Tarea:</label>
+                <select id="edit-tipo" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                    <!-- Se llena dinámicamente -->
+                </select>
+            </div>
+
+            <div class="bg-gray-50 p-3 rounded text-sm">
+                <div class="flex justify-between">
+                    <span>Peso:</span>
+                    <span id="edit-peso-display" class="font-bold">1.0</span>
+                </div>
+                <div class="flex justify-between mt-1">
+                    <span>Duración:</span>
+                    <span id="edit-duracion-display">60 min</span>
+                </div>
+            </div>
+
+            <div id="edit-warning"
+                class="hidden bg-yellow-50 border border-yellow-200 text-yellow-800 px-3 py-2 rounded text-sm">
+            </div>
+        </div>
+
+        <div class="flex justify-between gap-2 mt-4 pt-3 border-t">
+            <button onclick="deleteTask()"
+                class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Eliminar</button>
+            <div class="flex gap-2">
+                <button onclick="closeModal('modal-edit-task')"
+                    class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancelar</button>
+                <button onclick="saveTask()"
+                    class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // === GLOBAL STATE ===
+    let taskConfig = {};
+    let workerConfig = {};
+    let currentWorkerId = null;
+    let editingTask = null;
+
+    // === MODAL FUNCTIONS ===
+    function openModal(modalId) {
+        document.getElementById(modalId).classList.remove('hidden');
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).classList.add('hidden');
+    }
+
+    // === LOAD CONFIGURATION ===
+    async function loadTaskConfig() {
+        try {
+            taskConfig = await fetchAPI('/api/planificador/configuracion/tareas');
+            return taskConfig;
+        } catch (error) {
+            console.error('Error loading task config:', error);
+            showToast('Error cargando configuración de tareas', 'error');
+        }
+    }
+
+    async function loadWorkerConfig(workerId) {
+        try {
+            workerConfig = await fetchAPI(`/api/trabajadores/${workerId}/configuracion`);
+            currentWorkerId = workerId;
+            return workerConfig;
+        } catch (error) {
+            console.error('Error loading worker config:', error);
+            showToast('Error cargando configuración de trabajador', 'error');
+        }
+    }
+
+    // === OPEN MODALS ===
+    async function openTaskConfigModal() {
+        await loadTaskConfig();
+
+        const tbody = document.getElementById('tasks-config-body');
+        tbody.innerHTML = '';
+
+        Object.keys(taskConfig).forEach(taskType => {
+            const config = taskConfig[taskType];
+            const row = `
+            <tr class="border-b">
+                <td class="px-4 py-2">${taskType}</td>
+                <td class="px-4 py-2">
+                    <input type="number" step="0.1" value="${config.peso}" 
+                           data-task="${taskType}" data-field="peso"
+                           class="w-20 text-center border rounded p-1 task-config-input">
+                </td>
+                <td class="px-4 py-2">
+                    <input type="number" value="${config.duracion}" 
+                           data-task="${taskType}" data-field="duracion"
+                           class="w-20 text-center border rounded p-1 task-config-input">
+                </td>
+                <td class="px-4 py-2 text-center">
+                    <input type="color" value="${config.color}" 
+                           data-task="${taskType}" data-field="color"
+                           class="w-12 h-8 border rounded task-config-input">
+                </td>
+            </tr>
+        `;
+            tbody.innerHTML += row;
+        });
+
+        openModal('modal-config-tareas');
+    }
+
+    async function openWorkerConfigModal() {
+        // Get first worker
+        if (activeWorkers.length === 0) {
+            showToast('No hay trabajadores', 'error');
+            return;
+        }
+
+        const worker = activeWorkers.find(w => w.esPrincipal) || activeWorkers[0];
+        await loadWorkerConfig(worker.id);
+
+        // Set values
+        document.querySelectorAll('.dia-libre-check').forEach(cb => {
+            cb.checked = workerConfig.diasLibres.includes(parseInt(cb.value));
+        });
+        document.getElementById('worker-capacidad').value = workerConfig.capacidadDiaria;
+        document.getElementById('worker-horario').value = workerConfig.horarioInicio;
+        document.getElementById('worker-duracion').value = workerConfig.horarioDuracion;
+
+        openModal('modal-config-worker');
+    }
+
+    function openEditTaskModal(fecha, cabanaId = null, tipoAseo = null) {
+        editingTask = { fecha, cabanaId, tipoAseo, isNew: !cabanaId };
+
+        document.getElementById('edit-fecha').value = fecha;
+
+        // Populate cabins dropdown
+        const cabanaSelect = document.getElementById('edit-cabana');
+        cabanaSelect.innerHTML = '<option value="">Seleccionar...</option>';
+        // Assume we have cabanas list
+        ['Cabaña 1', 'Cabaña 2', 'Cabaña 3', 'Cabaña 7', 'Cabaña 8', 'Cabaña 9', 'Cabaña 10'].forEach(cab => {
+            cabanaSelect.innerHTML += `<option value="${cab}" ${cab === cabanaId ? 'selected' : ''}>${cab}</option>`;
+        });
+
+        // Populate task types
+        const tipoSelect = document.getElementById('edit-tipo');
+        tipoSelect.innerHTML = '';
+        Object.keys(taskConfig).forEach(type => {
+            tipoSelect.innerHTML += `<option value="${type}" ${type === tipoAseo ? 'selected' : ''}>${type}</option>`;
+        });
+
+        // Update displays
+        updateTaskDisplays();
+
+        // Add event listener for type change
+        tipoSelect.onchange = updateTaskDisplays;
+
+        openModal('modal-edit-task');
+    }
+
+    function updateTaskDisplays() {
+        const tipo = document.getElementById('edit-tipo').value;
+        if (taskConfig[tipo]) {
+            document.getElementById('edit-peso-display').textContent = taskConfig[tipo].peso;
+            document.getElementById('edit-duracion-display').textContent = taskConfig[tipo].duracion + ' min';
+        }
+    }
+
+    // === SAVE FUNCTIONS ===
+    async function saveTasksConfig() {
+        try {
+            const inputs = document.querySelectorAll('.task-config-input');
+            const updates = [];
+
+            inputs.forEach(input => {
+                const taskType = input.dataset.task;
+                const field = input.dataset.field;
+
+                if (!taskConfig[taskType]) taskConfig[taskType] = {};
+
+                if (field === 'peso') {
+                    taskConfig[taskType][field] = parseFloat(input.value);
+                } else if (field === 'duracion') {
+                    taskConfig[taskType][field] = parseInt(input.value);
+                } else {
+                    taskConfig[taskType][field] = input.value;
+                }
+            });
+
+            // Save each task type
+            for (const [taskType, config] of Object.entries(taskConfig)) {
+                await fetchAPI('/api/planificador/configuracion/tareas', {
+                    method: 'PUT',
+                    body: JSON.stringify({ taskType, config })
+                });
+            }
+
+            showToast('Configuración guardada');
+            closeModal('modal-config-tareas');
+        } catch (error) {
+            console.error('Error saving task config:', error);
+            showToast('Error guardando configuración', 'error');
+        }
+    }
+
+    async function saveWorkerConfig() {
+        try {
+            const diasLibres = Array.from(document.querySelectorAll('.dia-libre-check:checked'))
+                .map(cb => parseInt(cb.value));
+
+            const config = {
+                diasLibres,
+                capacidadDiaria: parseFloat(document.getElementById('worker-capacidad').value),
+                horarioInicio: document.getElementById('worker-horario').value,
+                horarioDuracion: parseInt(document.getElementById('worker-duracion').value)
+            };
+
+            await fetchAPI(`/api/trabajadores/${currentWorkerId}/configuracion`, {
+                method: 'PUT',
+                body: JSON.stringify(config)
+            });
+
+            showToast('Configuración de trabajador guardada');
+            closeModal('modal-config-worker');
+        } catch (error) {
+            console.error('Error saving worker config:', error);
+            showToast('Error guardando configuración', 'error');
+        }
+    }
+
+    async function saveTask() {
+        try {
+            const fecha = editingTask.fecha;
+            const cabanaId = document.getElementById('edit-cabana').value;
+            const tipoAseo = document.getElementById('edit-tipo').value;
+
+            if (!cabanaId || !tipoAseo) {
+                showToast('Completa todos los campos', 'error');
+                return;
+            }
+
+            const result = await fetchAPI('/api/planificador/editar-tarea', {
+                method: 'POST',
+                body: JSON.stringify({
+                    fecha,
+                    cabanaId,
+                    tipoAseo,
+                    accion: editingTask.isNew ? 'add' : 'edit'
+                })
+            });
+
+            if (result.warning) {
+                document.getElementById('edit-warning').textContent = result.warning;
+                document.getElementById('edit-warning').classList.remove('hidden');
+            }
+
+            showToast(result.message);
+            closeModal('modal-edit-task');
+
+            // Reload plan
+            loadRangePlan();
+        } catch (error) {
+            console.error('Error saving task:', error);
+            showToast(error.message || 'Error guardando tarea', 'error');
+        }
+    }
+
+    async function deleteTask() {
+        if (!confirm('¿Eliminar esta tarea?')) return;
+
+        try {
+            const result = await fetchAPI('/api/planificador/editar-tarea', {
+                method: 'POST',
+                body: JSON.stringify({
+                    fecha: editingTask.fecha,
+                    cabanaId: editingTask.cabanaId,
+                    accion: 'delete'
+                })
+            });
+
+            showToast(result.message);
+            closeModal('modal-edit-task');
+
+            // Reload plan
+            loadRangePlan();
+        } catch (error) {
+            console.error('Error deleting task:', error);
+            showToast(error.message || 'Error eliminando tarea', 'error');
+        }
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTaskConfig();
+    });
+</script>

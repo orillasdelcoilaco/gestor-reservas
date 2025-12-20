@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,12 +8,27 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .table-container { max-height: 70vh; }
-        thead th { position: sticky; top: 0; z-index: 1; }
-        #edit-modal, #detail-modal { background-color: rgba(0, 0, 0, 0.5); }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .table-container {
+            max-height: 70vh;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        #edit-modal,
+        #detail-modal {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
     </style>
 </head>
+
 <body class="bg-gray-100">
 
     <div id="loader" class="text-center p-8">
@@ -32,31 +48,39 @@
         <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-4">Análisis de Reservas</h2>
-                
+
                 <div class="space-y-4 p-4 border rounded-md bg-gray-50 mb-6">
                     <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div>
-                            <label for="fecha-inicio-filter" class="block text-sm font-medium text-gray-700">Desde</label>
-                            <input type="date" id="fecha-inicio-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                            <label for="fecha-inicio-filter"
+                                class="block text-sm font-medium text-gray-700">Desde</label>
+                            <input type="date" id="fecha-inicio-filter"
+                                class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                         </div>
                         <div>
                             <label for="fecha-fin-filter" class="block text-sm font-medium text-gray-700">Hasta</label>
-                            <input type="date" id="fecha-fin-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                            <input type="date" id="fecha-fin-filter"
+                                class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                         </div>
                         <div>
                             <label for="estado-filter" class="block text-sm font-medium text-gray-700">Estado</label>
-                            <select id="estado-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
+                            <select id="estado-filter"
+                                class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
                         </div>
                         <div>
-                            <label for="estado-gestion-filter" class="block text-sm font-medium text-gray-700">Gestión</label>
-                            <select id="estado-gestion-filter" class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
+                            <label for="estado-gestion-filter"
+                                class="block text-sm font-medium text-gray-700">Gestión</label>
+                            <select id="estado-gestion-filter"
+                                class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm"></select>
                         </div>
                         <div class="w-full">
-                            <label for="search-input" class="block text-sm font-medium text-gray-700">Búsqueda Rápida</label>
-                            <input type="text" id="search-input" placeholder="Nombre, ID..." class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
+                            <label for="search-input" class="block text-sm font-medium text-gray-700">Búsqueda
+                                Rápida</label>
+                            <input type="text" id="search-input" placeholder="Nombre, ID..."
+                                class="filter-input mt-1 block w-full rounded-md border-gray-300 shadow-sm text-sm">
                         </div>
                     </div>
-                     <div class="border-t pt-4 mt-4">
+                    <div class="border-t pt-4 mt-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Canal</label>
                         <div id="canal-filter-container" class="flex flex-wrap gap-x-6 gap-y-2">
                         </div>
@@ -78,22 +102,28 @@
                         </select>
                     </div>
                 </div>
-                
+
                 <div class="table-container overflow-y-auto border rounded-lg">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nº Reserva</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nº Reserva
+                                </th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nombre</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Llegada</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Salida</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cabaña</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Noches</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Total</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingreso Período</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valor Total
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ingreso
+                                    Período</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
                                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado Gestión</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Estado
+                                    Gestión</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Acciones
+                                </th>
                             </tr>
                         </thead>
                         <tbody id="reservas-table-body" class="bg-white divide-y divide-gray-200"></tbody>
@@ -110,164 +140,195 @@
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-3xl my-8">
             <div class="flex justify-between items-center">
                 <h3 class="text-lg font-medium leading-6 text-gray-900" id="modal-title">Editar Reserva</h3>
-                <button type="button" id="delete-btn" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">Eliminar Reserva</button>
+                <button type="button" id="delete-btn"
+                    class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700">Eliminar
+                    Reserva</button>
             </div>
             <form id="edit-form" class="mt-4 space-y-4 max-h-[70vh] overflow-y-auto pr-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium">ID Original</label>
-                        <input type="text" id="reservaIdOriginal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100" readonly>
+                        <input type="text" id="reservaIdOriginal"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100" readonly>
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Nombre Cliente</label>
-                        <input type="text" id="clienteNombre" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <input type="text" id="clienteNombre"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                     <div>
+                    <div>
                         <label class="block text-sm font-medium">Fecha Llegada</label>
-                        <input type="date" id="fechaLlegada" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <input type="date" id="fechaLlegada"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Fecha Salida</label>
-                        <input type="date" id="fechaSalida" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <input type="date" id="fechaSalida"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-medium">Cabaña (Alojamiento)</label>
-                        <select id="alojamiento" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></select>
+                        <select id="alojamiento"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Canal</label>
-                         <select id="canal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                         </select>
+                        <select id="canal" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </select>
                     </div>
                 </div>
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
                     <div>
                         <label class="block text-sm font-medium">Estado Reserva</label>
-                         <select id="estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
-                         </select>
+                        <select id="estado" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Estado Gestión</label>
-                        <select id="estadoGestion" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></select>
+                        <select id="estadoGestion"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm"></select>
                     </div>
                 </div>
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-4">
                     <div>
                         <label class="block text-sm font-medium">Valor Final (CLP)</label>
-                        <input type="number" id="valorCLP" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <input type="number" id="valorCLP"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
-                     <div>
+                    <div>
                         <label class="block text-sm font-medium">Total Noches</label>
-                        <input type="number" id="totalNoches" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <input type="number" id="totalNoches"
+                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                     </div>
                 </div>
                 <div id="modal-status" class="mt-2 text-sm"></div>
             </form>
             <div class="mt-5 sm:mt-6 sm:grid sm:grid-cols-2 sm:gap-3 sm:grid-flow-row-dense">
-                <button type="button" id="save-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar Cambios</button>
-                <button type="button" id="cancel-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0">Cancelar</button>
+                <button type="button" id="save-btn"
+                    class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700">Guardar
+                    Cambios</button>
+                <button type="button" id="cancel-btn"
+                    class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0">Cancelar</button>
             </div>
         </div>
     </div>
-    
+
     <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden overflow-y-auto">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl my-8">
-             <h3 class="text-lg font-medium leading-6 text-gray-900" id="detail-modal-title">Detalles de Gestión</h3>
-             <div id="detail-modal-content" class="mt-4 space-y-6 max-h-[75vh] overflow-y-auto pr-4"></div>
-             <div class="mt-5 sm:mt-6">
-                 <button type="button" id="detail-modal-close-btn" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50">Cerrar</button>
+            <h3 class="text-lg font-medium leading-6 text-gray-900" id="detail-modal-title">Detalles de Gestión</h3>
+            <div id="detail-modal-content" class="mt-4 space-y-6 max-h-[75vh] overflow-y-auto pr-4"></div>
+            <div class="mt-5 sm:mt-6">
+                <button type="button" id="detail-modal-close-btn"
+                    class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50">Cerrar</button>
             </div>
         </div>
     </div>
 
-<script type="module">
-    import { checkSession, logout, fetchAPI } from './api.js';
+    <script type="module">
+        import { checkSession, logout, fetchAPI } from './api.js';
 
-    // Referencias a elementos del DOM
-    const reservasTableBody = document.getElementById('reservas-table-body');
-    const loadingState = document.getElementById('loading-state');
-    const modal = document.getElementById('edit-modal');
-    const detailModal = document.getElementById('detail-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalStatus = document.getElementById('modal-status');
-    const saveBtn = document.getElementById('save-btn');
-    const cancelBtn = document.getElementById('cancel-btn');
-    const deleteBtn = document.getElementById('delete-btn');
-    const totalSumEl = document.getElementById('total-sum');
-    const channelSummaryEl = document.getElementById('channel-summary');
+        // Referencias a elementos del DOM
+        const reservasTableBody = document.getElementById('reservas-table-body');
+        const loadingState = document.getElementById('loading-state');
+        const modal = document.getElementById('edit-modal');
+        const detailModal = document.getElementById('detail-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalStatus = document.getElementById('modal-status');
+        const saveBtn = document.getElementById('save-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const deleteBtn = document.getElementById('delete-btn');
+        const totalSumEl = document.getElementById('total-sum');
+        const channelSummaryEl = document.getElementById('channel-summary');
 
-    // Referencias a filtros
-    const filterInputs = document.querySelectorAll('.filter-input, .canal-checkbox');
-    
-    // Opciones para los filtros
-    const canales = ['SODC', 'Booking', 'Airbnb', 'App'];
-    const estados = ['Todos', 'Confirmada', 'Cancelada', 'no_show', 'Pendiente Aprobación'];
-    const estadosGestion = ['Todos', 'Pendiente Bienvenida', 'Pendiente Cobro', 'Pendiente Pago', 'Pendiente Boleta', 'Facturado'];
+        // Referencias a filtros
+        const filterInputs = document.querySelectorAll('.filter-input, .canal-checkbox');
 
-    let allReservas = [];
-    let reservaParaEditarId = null;
-    let reservaOriginalParaComparar = null; // --- NUEVO: Para detectar cambios en el ID
+        // Opciones para los filtros
+        const canales = ['SODC', 'Booking', 'Airbnb', 'App'];
+        const estados = ['Todos', 'Confirmada', 'Cancelada', 'no_show', 'Pendiente Aprobación'];
+        const estadosGestion = ['Todos', 'Pendiente Bienvenida', 'Pendiente Cobro', 'Pendiente Pago', 'Pendiente Boleta', 'Facturado'];
 
-    function populateSelect(selectId, options) {
-        const select = document.getElementById(selectId);
-        select.innerHTML = '';
-        options.forEach(opt => {
-            const optionEl = new Option(opt, opt);
-            select.add(optionEl);
-        });
-    }
+        let allReservas = [];
+        let reservaParaEditarId = null;
+        let reservaOriginalParaComparar = null; // --- NUEVO: Para detectar cambios en el ID
 
-    function populateCanalCheckboxes() {
-        const container = document.getElementById('canal-filter-container');
-        container.innerHTML = canales.map(canal => `
+        function populateSelect(selectId, options) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '';
+            options.forEach(opt => {
+                const optionEl = new Option(opt, opt);
+                select.add(optionEl);
+            });
+        }
+
+        function populateCanalCheckboxes() {
+            const container = document.getElementById('canal-filter-container');
+            container.innerHTML = canales.map(canal => `
             <div class="flex items-center">
                 <input id="canal-${canal}" type="checkbox" value="${canal}" class="canal-checkbox filter-input h-4 w-4 text-indigo-600 border-gray-300 rounded" checked>
                 <label for="canal-${canal}" class="ml-2 text-sm text-gray-600">${canal}</label>
             </div>
         `).join('');
-    }
-
-    async function loadCabanasIntoSelect() {
-        try {
-            const cabanas = await fetchAPI('/api/cabanas');
-            const select = document.getElementById('alojamiento');
-            select.innerHTML = '';
-            cabanas.forEach(c => {
-                const option = new Option(c.nombre, c.nombre);
-                select.add(option);
-            });
-        } catch (error) {
-            console.error('No se pudieron cargar las cabañas', error);
         }
-    }
 
-    function renderTable(reservas, fechaInicioFilter, fechaFinFilter) {
-        reservasTableBody.innerHTML = '';
-        if (reservas.length === 0) {
-            loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas con los filtros aplicados.</p>';
-            loadingState.style.display = 'block';
-            return;
+        async function loadCabanasIntoSelect() {
+            try {
+                const cabanas = await fetchAPI('/api/cabanas');
+                const select = document.getElementById('alojamiento');
+                select.innerHTML = '';
+                cabanas.forEach(c => {
+                    const option = new Option(c.nombre, c.nombre);
+                    select.add(option);
+                });
+            } catch (error) {
+                console.error('No se pudieron cargar las cabañas', error);
+            }
         }
-        loadingState.style.display = 'none';
-        
-        reservas.forEach(reserva => {
-            const row = document.createElement('tr');
-            row.className = "hover:bg-gray-50";
-            const valorTotalFormateado = `$${(reserva.valorCLP || 0).toLocaleString('es-CL')}`;
 
-            const valorPorNoche = (reserva.valorCLP && reserva.totalNoches) ? reserva.valorCLP / reserva.totalNoches : 0;
-            const nochesEnPeriodo = calcularNochesEnPeriodo(reserva.llegada, reserva.salida, fechaInicioFilter, fechaFinFilter);
-            const ingresoEnPeriodo = nochesEnPeriodo * valorPorNoche;
-            const ingresoEnPeriodoFormateado = `(${nochesEnPeriodo} - $${Math.round(ingresoEnPeriodo).toLocaleString('es-CL')})`;
+        function renderTable(reservas, fechaInicioFilter, fechaFinFilter) {
+            reservasTableBody.innerHTML = '';
+            if (reservas.length === 0) {
+                loadingState.innerHTML = '<p class="text-gray-500">No se encontraron reservas con los filtros aplicados.</p>';
+                loadingState.style.display = 'block';
+                return;
+            }
+            loadingState.style.display = 'none';
 
-            row.innerHTML = `
+            reservas.forEach((reserva, index) => {
+                let comisionCLP = 0;
+                if (reserva.monedaOriginal === 'USD' && reserva.valorDolarDia) {
+                    comisionCLP = reserva.comision * reserva.valorDolarDia;
+                } else {
+                    comisionCLP = reserva.comision || 0;
+                }
+                const ingresoNetoTotal = (reserva.valorCLP || 0) - comisionCLP;
+                const valorPorNocheNeto = (reserva.totalNoches > 0) ? ingresoNetoTotal / reserva.totalNoches : 0;
+
+                let nochesEnPeriodo, ingresoEnPeriodo;
+                // Si no hay filtro, mostrar el total real neto
+                if (!fechaInicioFilter || !fechaFinFilter) {
+                    nochesEnPeriodo = reserva.totalNoches;
+                    ingresoEnPeriodo = ingresoNetoTotal;
+                } else {
+                    nochesEnPeriodo = calcularNochesEnPeriodo(reserva.llegada, reserva.salida, fechaInicioFilter, fechaFinFilter);
+                    ingresoEnPeriodo = nochesEnPeriodo * valorPorNocheNeto;
+                }
+
+                const row = document.createElement('tr');
+                row.className = "hover:bg-gray-50";
+                const valorTotalFormateado = `$${(reserva.valorCLP || 0).toLocaleString('es-CL')}`;
+
+                const ingresoEnPeriodoFormateado = `(${nochesEnPeriodo} - $${Math.round(ingresoEnPeriodo).toLocaleString('es-CL')})`;
+
+                row.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.reservaIdOriginal}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800">${reserva.nombre}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.llegada}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.salida}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${reserva.alojamiento}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-800">${reserva.totalNoches}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${valorTotalFormateado}</td>
@@ -280,105 +341,136 @@
                     <button class="edit-btn text-indigo-600 hover:text-indigo-900" data-id="${reserva.id}">Editar</button>
                 </td>`;
 
-            reservasTableBody.appendChild(row);
-        });
-        document.querySelectorAll('.edit-btn').forEach(button => button.addEventListener('click', handleEditClick));
-        document.querySelectorAll('.detail-btn').forEach(button => button.addEventListener('click', handleDetailClick));
-    }
-
-    function calcularNochesEnPeriodo(llegadaStr, salidaStr, inicioFiltro, finFiltro) {
-        if (!inicioFiltro || !finFiltro) {
-             return 0;
+                reservasTableBody.appendChild(row);
+            });
+            document.querySelectorAll('.edit-btn').forEach(button => button.addEventListener('click', handleEditClick));
+            document.querySelectorAll('.detail-btn').forEach(button => button.addEventListener('click', handleDetailClick));
         }
 
-        const llegada = new Date(llegadaStr.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
-        const salida = new Date(salidaStr.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
-        const inicio = new Date(inicioFiltro + 'T00:00:00Z');
-        const fin = new Date(finFiltro + 'T00:00:00Z');
-        
-        const start = new Date(Math.max(llegada, inicio));
-        const end = new Date(Math.min(salida, fin));
-
-        if (end <= start) {
-            return 0;
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+            // Try ISO YYYY-MM-DD
+            if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                return new Date(dateStr + 'T00:00:00Z');
+            }
+            // Try DD-MM-YYYY or DD/MM/YYYY
+            if (dateStr.match(/^\d{2}[-/]\d{2}[-/]\d{4}$/)) {
+                const part = dateStr.includes('-') ? dateStr.split('-') : dateStr.split('/');
+                return new Date(`${part[2]}-${part[1]}-${part[0]}T00:00:00Z`);
+            }
+            return new Date(dateStr); // Fallback
         }
-        
-        return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    }
 
-    function updateTableView() {
-        const fechaInicio = document.getElementById('fecha-inicio-filter').value;
-        const fechaFin = document.getElementById('fecha-fin-filter').value;
-        const selectedCanales = Array.from(document.querySelectorAll('.canal-checkbox:checked')).map(cb => cb.value);
-        const estado = document.getElementById('estado-filter').value;
-        const estadoGestion = document.getElementById('estado-gestion-filter').value;
-        const searchTerm = document.getElementById('search-input').value.toLowerCase();
-        const pageSize = parseInt(document.getElementById('page-size-select').value);
+        function calcularNochesEnPeriodo(llegadaStr, salidaStr, inicioFiltro, finFiltro) {
+            if (!inicioFiltro || !finFiltro) {
+                return 0; // Si no hay filtros, no calculamos "en periodo"
+            }
 
-        const filteredReservas = allReservas.filter(r => {
-            const llegadaDate = new Date(r.llegada.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
-            const salidaDate = new Date(r.salida.replace(/(\d{2})-(\d{2})-(\d{4})/, '$3-$2-$1') + 'T00:00:00Z');
+            const llegada = parseDate(llegadaStr);
+            const salida = parseDate(salidaStr);
+            const inicio = parseDate(inicioFiltro);
+            const fin = parseDate(finFiltro);
 
-            const matchFechas = (!fechaInicio || !fechaFin) || (llegadaDate < new Date(fechaFin + 'T00:00:00Z') && salidaDate > new Date(fechaInicio + 'T00:00:00Z'));
-            const matchCanal = selectedCanales.length === 0 || selectedCanales.includes(r.canal);
-            const matchEstado = estado === 'Todos' || r.estado === estado;
-            const matchEstadoGestion = estadoGestion === 'Todos' || r.estadoGestion === estadoGestion;
-            const matchSearch = !searchTerm || 
-                                (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
-                                (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm));
-            
-            return matchFechas && matchCanal && matchEstado && matchEstadoGestion && matchSearch;
-        });
+            if (!llegada || !salida || !inicio || !fin) return 0;
 
-        const total = filteredReservas.reduce((sum, r) => {
-            const valorPorNoche = (r.valorCLP && r.totalNoches) ? r.valorCLP / r.totalNoches : 0;
-            const nochesEnPeriodo = calcularNochesEnPeriodo(r.llegada, r.salida, fechaInicio, fechaFin);
-            return sum + (nochesEnPeriodo * valorPorNoche);
-        }, 0);
-        totalSumEl.textContent = `$${Math.round(total).toLocaleString('es-CL')}`;
-        
-        const canalCounts = filteredReservas.reduce((acc, r) => {
-            acc[r.canal] = (acc[r.canal] || 0) + 1;
-            return acc;
-        }, {});
-        channelSummaryEl.innerHTML = Object.entries(canalCounts).map(([canal, count]) => `<span><strong>${canal}:</strong> ${count}</span>`).join('');
+            const start = new Date(Math.max(llegada, inicio));
+            const end = new Date(Math.min(salida, fin));
 
-        const paginatedReservas = pageSize === -1 ? filteredReservas : filteredReservas.slice(0, pageSize);
-        renderTable(paginatedReservas, fechaInicio, fechaFin);
-    }
+            if (end <= start) {
+                return 0;
+            }
 
-    async function loadReservas() {
-        loadingState.innerHTML = '<p class="text-gray-500">Cargando reservas...</p>';
-        try {
-            const rawReservas = await fetchAPI('/api/reservas');
-            allReservas = rawReservas.map(r => ({
-                ...r,
-                llegada: r.llegada.replace(/\//g, '-'),
-                salida: r.salida.replace(/\//g, '-')
-            }));
-            updateTableView();
-        } catch (error) {
-            loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar las reservas: ${error.message}</p>`;
+            return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
         }
-    }
 
-    async function handleDetailClick(event) {
-        const reservaIdOriginal = event.target.dataset.id;
-        const modal = document.getElementById('detail-modal');
-        const title = document.getElementById('detail-modal-title');
-        const content = document.getElementById('detail-modal-content');
-        
-        title.textContent = `Cargando detalles para Reserva ${reservaIdOriginal}...`;
-        content.innerHTML = '<p>Cargando...</p>';
-        modal.classList.remove('hidden');
+        function updateTableView() {
+            const fechaInicio = document.getElementById('fecha-inicio-filter').value;
+            const fechaFin = document.getElementById('fecha-fin-filter').value;
+            const selectedCanales = Array.from(document.querySelectorAll('.canal-checkbox:checked')).map(cb => cb.value);
+            const estado = document.getElementById('estado-filter').value;
+            const estadoGestion = document.getElementById('estado-gestion-filter').value;
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const pageSize = parseInt(document.getElementById('page-size-select').value);
 
-        try {
-            const data = await fetchAPI(`/api/reservas/grupo-detalles/${reservaIdOriginal}`);
-            const descuento = data.valorPotencialTotalCLP > 0 ? data.valorPotencialTotalCLP - data.valorTotalCLP : 0;
+            const filteredReservas = allReservas.filter(r => {
+                const llegadaDate = parseDate(r.llegada);
+                const salidaDate = parseDate(r.salida);
 
-            let transaccionesHtml = '<tr><td colspan="4" class="p-2 text-center text-gray-500">No hay pagos registrados.</td></tr>';
-            if (data.transacciones && data.transacciones.length > 0) {
-                transaccionesHtml = data.transacciones.map(t => `
+                const inicioDate = fechaInicio ? parseDate(fechaInicio) : null;
+                const finDate = fechaFin ? parseDate(fechaFin) : null;
+
+                const matchFechas = (!inicioDate || !finDate) || (llegadaDate < finDate && salidaDate > inicioDate);
+                const matchCanal = selectedCanales.length === 0 || selectedCanales.includes(r.canal);
+                const matchEstado = estado === 'Todos' || r.estado === estado;
+                const matchEstadoGestion = estadoGestion === 'Todos' || r.estadoGestion === estadoGestion;
+                const matchSearch = !searchTerm ||
+                    (r.nombre && r.nombre.toLowerCase().includes(searchTerm)) ||
+                    (r.reservaIdOriginal && r.reservaIdOriginal.toLowerCase().includes(searchTerm));
+
+                return matchFechas && matchCanal && matchEstado && matchEstadoGestion && matchSearch;
+            });
+
+            const total = filteredReservas.reduce((sum, r) => {
+                // Solo sumar al total global si la reserva está Confirmada
+                if (r.estado !== 'Confirmada') return sum;
+
+                let comisionCLP = 0;
+                if (r.monedaOriginal === 'USD' && r.valorDolarDia) {
+                    comisionCLP = (r.comision || 0) * r.valorDolarDia;
+                } else {
+                    comisionCLP = r.comision || 0;
+                }
+                const ingresoNetoTotal = (r.valorCLP || 0) - comisionCLP;
+                const valorPorNocheNeto = (r.totalNoches > 0) ? ingresoNetoTotal / r.totalNoches : 0;
+
+                let nochesEnPeriodo;
+                if (!fechaInicio || !fechaFin) {
+                    nochesEnPeriodo = r.totalNoches;
+                } else {
+                    nochesEnPeriodo = calcularNochesEnPeriodo(r.llegada, r.salida, fechaInicio, fechaFin);
+                }
+                return sum + (nochesEnPeriodo * valorPorNocheNeto);
+            }, 0);
+            totalSumEl.textContent = `$${Math.round(total).toLocaleString('es-CL')}`;
+
+            const canalCounts = filteredReservas.reduce((acc, r) => {
+                acc[r.canal] = (acc[r.canal] || 0) + 1;
+                return acc;
+            }, {});
+            channelSummaryEl.innerHTML = Object.entries(canalCounts).map(([canal, count]) => `<span><strong>${canal}:</strong> ${count}</span>`).join('');
+
+            const paginatedReservas = pageSize === -1 ? filteredReservas : filteredReservas.slice(0, pageSize);
+            renderTable(paginatedReservas, fechaInicio, fechaFin);
+        }
+
+        async function loadReservas() {
+            loadingState.innerHTML = '<p class="text-gray-500">Cargando reservas...</p>';
+            try {
+                const rawReservas = await fetchAPI('/api/reservas');
+                allReservas = rawReservas; // Ya vienen en ISO y con datos de comision    }));
+                updateTableView();
+            } catch (error) {
+                loadingState.innerHTML = `<p class="text-red-500 font-semibold">Error al cargar las reservas: ${error.message}</p>`;
+            }
+        }
+
+        async function handleDetailClick(event) {
+            const reservaIdOriginal = event.target.dataset.id;
+            const modal = document.getElementById('detail-modal');
+            const title = document.getElementById('detail-modal-title');
+            const content = document.getElementById('detail-modal-content');
+
+            title.textContent = `Cargando detalles para Reserva ${reservaIdOriginal}...`;
+            content.innerHTML = '<p>Cargando...</p>';
+            modal.classList.remove('hidden');
+
+            try {
+                const data = await fetchAPI(`/api/reservas/grupo-detalles/${reservaIdOriginal}`);
+                const descuento = data.valorPotencialTotalCLP > 0 ? data.valorPotencialTotalCLP - data.valorTotalCLP : 0;
+
+                let transaccionesHtml = '<tr><td colspan="4" class="p-2 text-center text-gray-500">No hay pagos registrados.</td></tr>';
+                if (data.transacciones && data.transacciones.length > 0) {
+                    transaccionesHtml = data.transacciones.map(t => `
                     <tr class="border-b">
                         <td class="p-2 text-sm">${t.fecha}</td>
                         <td class="p-2 text-sm">${t.tipo}</td>
@@ -386,19 +478,19 @@
                         <td class="p-2 text-sm">${t.enlaceComprobante ? `<a href="${t.enlaceComprobante}" target="_blank" class="text-blue-600 hover:underline">Ver</a>` : 'N/A'}</td>
                     </tr>
                 `).join('');
-            }
+                }
 
-            let notasHtml = '<p class="text-sm text-center text-gray-500">No hay notas registradas.</p>';
-            if (data.notas && data.notas.length > 0) {
-                notasHtml = `<div class="space-y-2 max-h-48 overflow-y-auto pr-2">${data.notas.map(nota => `
+                let notasHtml = '<p class="text-sm text-center text-gray-500">No hay notas registradas.</p>';
+                if (data.notas && data.notas.length > 0) {
+                    notasHtml = `<div class="space-y-2 max-h-48 overflow-y-auto pr-2">${data.notas.map(nota => `
                     <div class="bg-gray-50 p-3 rounded-md border text-sm">
                         <p class="text-gray-800">${nota.texto}</p>
                         <p class="text-xs text-gray-500 mt-1">Por: ${nota.autor} - ${nota.fecha}</p>
                     </div>
                 `).join('')}</div>`;
-            }
+                }
 
-            content.innerHTML = `
+                content.innerHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <h4 class="font-semibold text-gray-800 mb-2">Resumen Financiero</h4>
@@ -427,168 +519,169 @@
                      <h4 class="font-semibold text-gray-800 mb-2">Bitácora de Notas</h4>
                      ${notasHtml}
                 </div>`;
-        } catch (error) {
-            content.innerHTML = `<p class="text-red-500">Error al cargar los detalles: ${error.message}</p>`;
-        }
-    }
-
-    async function handleEditClick(event) {
-        reservaParaEditarId = event.target.dataset.id;
-        modalStatus.innerHTML = '';
-        document.getElementById('edit-form').reset();
-        modalTitle.textContent = `Cargando datos...`;
-        modal.classList.remove('hidden');
-
-        try {
-            const reserva = await fetchAPI(`/api/reservas/detalles/${reservaParaEditarId}`);
-            modalTitle.textContent = `Editando Reserva N° ${reserva.reservaIdOriginal}`;
-            
-            // --- INICIO DE LA MODIFICACIÓN: Guardar estado original ---
-            reservaOriginalParaComparar = {
-                reservaIdOriginal: reserva.reservaIdOriginal,
-                canal: reserva.canal
-            };
-            document.getElementById('reservaIdOriginal').readOnly = false; // Hacer el campo editable
-            document.getElementById('reservaIdOriginal').classList.remove('bg-gray-100');
-            // --- FIN DE LA MODIFICACIÓN ---
-            
-            document.getElementById('reservaIdOriginal').value = reserva.reservaIdOriginal || '';
-            document.getElementById('clienteNombre').value = reserva.clienteNombre || '';
-            document.getElementById('fechaLlegada').value = reserva.fechaLlegada;
-            document.getElementById('fechaSalida').value = reserva.fechaSalida;
-            document.getElementById('alojamiento').value = reserva.alojamiento;
-            document.getElementById('canal').value = reserva.canal;
-            document.getElementById('estado').value = reserva.estado;
-            document.getElementById('estadoGestion').value = reserva.estadoGestion;
-            document.getElementById('valorCLP').value = reserva.valorCLP || 0;
-            document.getElementById('totalNoches').value = reserva.totalNoches || 0;
-
-        } catch (error) {
-            modalTitle.textContent = 'Error';
-            modalStatus.innerHTML = `<p class="text-red-500">No se pudieron cargar los detalles: ${error.message}</p>`;
-        }
-    }
-
-    async function handleSave() {
-        if (!reservaParaEditarId) return;
-
-        const payload = {
-            clienteNombre: document.getElementById('clienteNombre').value,
-            fechaLlegada: document.getElementById('fechaLlegada').value,
-            fechaSalida: document.getElementById('fechaSalida').value,
-            alojamiento: document.getElementById('alojamiento').value,
-            canal: document.getElementById('canal').value,
-            estado: document.getElementById('estado').value,
-            estadoGestion: document.getElementById('estadoGestion').value,
-            valorCLP: parseInt(document.getElementById('valorCLP').value) || 0,
-            totalNoches: parseInt(document.getElementById('totalNoches').value) || 0,
-            reservaIdOriginal: document.getElementById('reservaIdOriginal').value
-        };
-
-        const idCambio = payload.reservaIdOriginal !== reservaOriginalParaComparar.reservaIdOriginal;
-        const canalCambio = payload.canal !== reservaOriginalParaComparar.canal;
-
-        if (idCambio || canalCambio) {
-            if (!confirm('Has cambiado el Nº de Reserva o el Canal. Esta acción moverá permanentemente la reserva y todos sus datos asociados (pagos, notas) a una nueva identidad y eliminará la original para evitar duplicados. ¿Estás seguro de que quieres continuar?')) {
-                return;
+            } catch (error) {
+                content.innerHTML = `<p class="text-red-500">Error al cargar los detalles: ${error.message}</p>`;
             }
+        }
 
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Moviendo...';
-            modalStatus.textContent = '';
+        async function handleEditClick(event) {
+            reservaParaEditarId = event.target.dataset.id;
+            modalStatus.innerHTML = '';
+            document.getElementById('edit-form').reset();
+            modalTitle.textContent = `Cargando datos...`;
+            modal.classList.remove('hidden');
 
-            const correccionPayload = {
-                viejoIdCompleto: reservaParaEditarId,
-                nuevosDatos: payload
-            };
-            
             try {
-                const result = await fetchAPI('/api/reservas/corregir-identidad', { method: 'POST', body: correccionPayload });
-                alert(result.summary);
+                const reserva = await fetchAPI(`/api/reservas/detalles/${reservaParaEditarId}`);
+                modalTitle.textContent = `Editando Reserva N° ${reserva.reservaIdOriginal}`;
+
+                // --- INICIO DE LA MODIFICACIÓN: Guardar estado original ---
+                reservaOriginalParaComparar = {
+                    reservaIdOriginal: reserva.reservaIdOriginal,
+                    canal: reserva.canal
+                };
+                document.getElementById('reservaIdOriginal').readOnly = false; // Hacer el campo editable
+                document.getElementById('reservaIdOriginal').classList.remove('bg-gray-100');
+                // --- FIN DE LA MODIFICACIÓN ---
+
+                document.getElementById('reservaIdOriginal').value = reserva.reservaIdOriginal || '';
+                document.getElementById('clienteNombre').value = reserva.clienteNombre || '';
+                document.getElementById('fechaLlegada').value = reserva.fechaLlegada;
+                document.getElementById('fechaSalida').value = reserva.fechaSalida;
+                document.getElementById('alojamiento').value = reserva.alojamiento;
+                document.getElementById('canal').value = reserva.canal;
+                document.getElementById('estado').value = reserva.estado;
+                document.getElementById('estadoGestion').value = reserva.estadoGestion;
+                document.getElementById('valorCLP').value = reserva.valorCLP || 0;
+                document.getElementById('totalNoches').value = reserva.totalNoches || 0;
+
+            } catch (error) {
+                modalTitle.textContent = 'Error';
+                modalStatus.innerHTML = `<p class="text-red-500">No se pudieron cargar los detalles: ${error.message}</p>`;
+            }
+        }
+
+        async function handleSave() {
+            if (!reservaParaEditarId) return;
+
+            const payload = {
+                clienteNombre: document.getElementById('clienteNombre').value,
+                fechaLlegada: document.getElementById('fechaLlegada').value,
+                fechaSalida: document.getElementById('fechaSalida').value,
+                alojamiento: document.getElementById('alojamiento').value,
+                canal: document.getElementById('canal').value,
+                estado: document.getElementById('estado').value,
+                estadoGestion: document.getElementById('estadoGestion').value,
+                valorCLP: parseInt(document.getElementById('valorCLP').value) || 0,
+                totalNoches: parseInt(document.getElementById('totalNoches').value) || 0,
+                reservaIdOriginal: document.getElementById('reservaIdOriginal').value
+            };
+
+            const idCambio = payload.reservaIdOriginal !== reservaOriginalParaComparar.reservaIdOriginal;
+            const canalCambio = payload.canal !== reservaOriginalParaComparar.canal;
+
+            if (idCambio || canalCambio) {
+                if (!confirm('Has cambiado el Nº de Reserva o el Canal. Esta acción moverá permanentemente la reserva y todos sus datos asociados (pagos, notas) a una nueva identidad y eliminará la original para evitar duplicados. ¿Estás seguro de que quieres continuar?')) {
+                    return;
+                }
+
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Moviendo...';
+                modalStatus.textContent = '';
+
+                const correccionPayload = {
+                    viejoIdCompleto: reservaParaEditarId,
+                    nuevosDatos: payload
+                };
+
+                try {
+                    const result = await fetchAPI('/api/reservas/corregir-identidad', { method: 'POST', body: correccionPayload });
+                    alert(result.summary);
+                    modal.classList.add('hidden');
+                    await loadReservas();
+                } catch (error) {
+                    modalStatus.textContent = `Error al mover la reserva: ${error.message}`;
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Guardar Cambios';
+                    reservaParaEditarId = null;
+                    reservaOriginalParaComparar = null;
+                }
+            } else {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Guardando...';
+                modalStatus.textContent = '';
+
+                try {
+                    await fetchAPI(`/api/reservas/${reservaParaEditarId}`, { method: 'PUT', body: payload });
+                    modal.classList.add('hidden');
+                    await loadReservas();
+                } catch (error) {
+                    modalStatus.textContent = `Error al guardar: ${error.message}`;
+                } finally {
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Guardar Cambios';
+                    reservaParaEditarId = null;
+                    reservaOriginalParaComparar = null;
+                }
+            }
+        }
+
+        async function handleDelete() {
+            if (!reservaParaEditarId) return;
+            if (!confirm('¿Estás SEGURO de que quieres eliminar esta reserva? Esta acción no se puede deshacer.')) return;
+
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'Eliminando...';
+
+            try {
+                await fetchAPI(`/api/reservas/${reservaParaEditarId}`, { method: 'DELETE' });
                 modal.classList.add('hidden');
                 await loadReservas();
             } catch (error) {
-                modalStatus.textContent = `Error al mover la reserva: ${error.message}`;
+                modalStatus.textContent = `Error al eliminar: ${error.message}`;
             } finally {
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Guardar Cambios';
+                deleteBtn.disabled = false;
+                deleteBtn.textContent = 'Eliminar Reserva';
                 reservaParaEditarId = null;
-                reservaOriginalParaComparar = null;
-            }
-        } else {
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Guardando...';
-            modalStatus.textContent = '';
-            
-            try {
-                await fetchAPI(`/api/reservas/${reservaParaEditarId}`, { method: 'PUT', body: payload });
-                modal.classList.add('hidden');
-                await loadReservas();
-            } catch (error) {
-                modalStatus.textContent = `Error al guardar: ${error.message}`;
-            } finally {
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Guardar Cambios';
-                reservaParaEditarId = null;
-                reservaOriginalParaComparar = null;
             }
         }
-    }
 
-    async function handleDelete() {
-        if (!reservaParaEditarId) return;
-        if (!confirm('¿Estás SEGURO de que quieres eliminar esta reserva? Esta acción no se puede deshacer.')) return;
+        document.addEventListener('DOMContentLoaded', () => {
+            const loader = document.getElementById('loader');
+            const appContent = document.getElementById('app-content');
+            const authInfo = document.getElementById('auth-info');
 
-        deleteBtn.disabled = true;
-        deleteBtn.textContent = 'Eliminando...';
-        
-        try {
-            await fetchAPI(`/api/reservas/${reservaParaEditarId}`, { method: 'DELETE' });
-            modal.classList.add('hidden');
-            await loadReservas();
-        } catch (error) {
-            modalStatus.textContent = `Error al eliminar: ${error.message}`;
-        } finally {
-            deleteBtn.disabled = false;
-            deleteBtn.textContent = 'Eliminar Reserva';
-            reservaParaEditarId = null;
-        }
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const loader = document.getElementById('loader');
-        const appContent = document.getElementById('app-content');
-        const authInfo = document.getElementById('auth-info');
-
-        const session = checkSession();
-        if (session) {
-            loader.style.display = 'none';
-            appContent.classList.remove('hidden');
-            authInfo.innerHTML = `
+            const session = checkSession();
+            if (session) {
+                loader.style.display = 'none';
+                appContent.classList.remove('hidden');
+                authInfo.innerHTML = `
                 <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
                 <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
             `;
-            document.getElementById('logout-btn').addEventListener('click', logout);
+                document.getElementById('logout-btn').addEventListener('click', logout);
 
-            populateCanalCheckboxes();
-            populateSelect('estado-filter', estados);
-            populateSelect('estado-gestion-filter', estadosGestion);
-            populateSelect('canal', canales);
-            populateSelect('estado', estados.slice(1));
-            populateSelect('estadoGestion', estadosGestion.slice(1));
+                populateCanalCheckboxes();
+                populateSelect('estado-filter', estados);
+                populateSelect('estado-gestion-filter', estadosGestion);
+                populateSelect('canal', canales);
+                populateSelect('estado', estados.slice(1));
+                populateSelect('estadoGestion', estadosGestion.slice(1));
 
-            loadCabanasIntoSelect();
-            
-            document.querySelectorAll('.filter-input').forEach(input => input.addEventListener('input', updateTableView));
-            document.getElementById('canal-filter-container').addEventListener('change', updateTableView);
-            
-            cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
-            document.getElementById('detail-modal-close-btn').addEventListener('click', () => detailModal.classList.add('hidden'));
-            saveBtn.addEventListener('click', handleSave);
-            deleteBtn.addEventListener('click', handleDelete);
-            loadReservas();
-        }
-    });
-</script>
+                loadCabanasIntoSelect();
+
+                document.querySelectorAll('.filter-input').forEach(input => input.addEventListener('input', updateTableView));
+                document.getElementById('canal-filter-container').addEventListener('change', updateTableView);
+
+                cancelBtn.addEventListener('click', () => modal.classList.add('hidden'));
+                document.getElementById('detail-modal-close-btn').addEventListener('click', () => detailModal.classList.add('hidden'));
+                saveBtn.addEventListener('click', handleSave);
+                deleteBtn.addEventListener('click', handleDelete);
+                loadReservas();
+            }
+        });
+    </script>
 </body>
+
 </html>

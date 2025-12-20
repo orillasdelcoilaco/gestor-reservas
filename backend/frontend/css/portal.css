@@ -1,0 +1,44 @@
+/* backend/frontend/css/portal.css */
+body {
+    background-color: #f3f4f6;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.card-tarea {
+    transition: all 0.2s ease-in-out;
+}
+
+.card-tarea:active {
+    transform: scale(0.98);
+}
+
+.btn-large {
+    min-height: 48px;
+    font-size: 1.125rem; /* 18px */
+}
+
+/* Colores de Estado */
+.bg-task-red { background-color: #fee2e2; border-left: 4px solid #ef4444; }
+.bg-task-green { background-color: #dcfce7; border-left: 4px solid #22c55e; }
+.bg-task-yellow { background-color: #fef9c3; border-left: 4px solid #eab308; }
+
+/* SOP Checklist */
+.sop-item {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+.sop-item:last-child {
+    border-bottom: none;
+}
+.sop-checkbox {
+    width: 24px;
+    height: 24px;
+    margin-right: 12px;
+}
+
+/* Modal */
+.modal-overlay {
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(2px);
+}

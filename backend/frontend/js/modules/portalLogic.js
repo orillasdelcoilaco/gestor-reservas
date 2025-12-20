@@ -85,8 +85,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('Logged in as:', currentWorkerId);
             initPortal();
         } else {
-            console.warn('No active session. Redirecting...');
-            window.location.href = 'index.html';
+            // Check if we are currently processing a magic token
+            const params = new URLSearchParams(window.location.search);
+            if (!params.get('token')) {
+                console.warn('No active session and no token. Redirecting...');
+                window.location.href = 'index.html';
+            } else {
+                console.log('⏳ Waiting for Magic Login...');
+            }
         }
     });
 });

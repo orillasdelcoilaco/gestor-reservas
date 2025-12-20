@@ -1,6 +1,6 @@
-// backend/frontend/js/modules/portalLogic.js
-import { db } from '../firebase-init.js';
+import { db, auth } from '../firebase-init.js';
 import { collection, query, where, onSnapshot, updateDoc, doc, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 // --- CONFIG ---
 // TODO: Fetch from backend config?
@@ -34,15 +34,61 @@ const SOP_PROTOCOLS = {
 let currentTasks = [];
 let currentWorkerId = 'Principal';
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Read workerId from URL
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Check for Magic Token
     const params = new URLSearchParams(window.location.search);
-    const wId = params.get('workerId');
-    if (wId) {
-        currentWorkerId = wId;
-        console.log('Worker Mode:', currentWorkerId);
+    const magicToken = params.get('token');
+
+    if (magicToken) {
+        // Attempt Magic Login
+        try {
+            console.log('🔮 Magic Link detected. Authenticating...');
+            document.getElementById('loading-spinner').classList.remove('hidden');
+
+            const response = await fetch('/api/auth/magic-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ accessToken: magicToken })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                await signInWithCustomToken(auth, data.token);
+                console.log('✅ Magic Login Success. Welcome ' + data.worker.nombre);
+                currentWorkerId = data.worker.id;
+
+                // Clean URL (Security)
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } else {
+                alert('Enlace expirado o inválido. Por favor solicita uno nuevo.');
+                window.location.href = 'index.html';
+                return;
+            }
+        } catch (error) {
+            console.error('Magic Login Error:', error);
+            alert('Error iniciando sesión. Intenta nuevamente.');
+            window.location.href = 'index.html';
+            return;
+        }
     }
-    initPortal();
+
+    // 2. Init App (only if auth state is resolved)
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // User is signed in.
+            // If we didn't set currentWorkerId from magic login, we might want to fetch it from profile
+            // For now, if logged in via magic link, the id matches the claim.
+            // But if previously logged in, user.uid matches worker.id? 
+            // In magic flow: uid = worker.id.
+            currentWorkerId = user.uid; // Since we set uid to workerId in createCustomToken
+            console.log('Logged in as:', currentWorkerId);
+            initPortal();
+        } else {
+            console.warn('No active session. Redirecting...');
+            window.location.href = 'index.html';
+        }
+    });
 });
 
 function initPortal() {

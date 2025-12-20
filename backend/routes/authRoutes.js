@@ -7,7 +7,7 @@ const router = express.Router();
 
 // --- Configuración del Cliente OAuth2 ---
 const isProduction = process.env.RENDER === 'true';
-const CREDENTIALS_PATH = isProduction 
+const CREDENTIALS_PATH = isProduction
     ? '/etc/secrets/oauth_credentials.json'
     : path.join(process.cwd(), 'oauth_credentials.json');
 
@@ -36,7 +36,7 @@ module.exports = (db) => {
         });
         return router;
     }
-    
+
     // Esta ruta se convierte en /auth/google
     router.get('/google', (req, res) => {
         const authUrl = oauth2Client.generateAuthUrl({
@@ -72,6 +72,47 @@ module.exports = (db) => {
         } catch (err) {
             console.error('Error al obtener el token:', err);
             res.status(500).send('Error al procesar la autorización de Google.');
+        }
+    });
+
+    // --- RUTA: MAGIC LOGIN (Token Exchange) ---
+    router.post('/magic-login', async (req, res) => {
+        const { accessToken } = req.body;
+        if (!accessToken) return res.status(400).json({ error: 'Token requerido' });
+
+        try {
+            // 1. Buscar trabajador con ese token
+            const workersRef = db.collection('trabajadores');
+            const snapshot = await workersRef.where('accessToken', '==', accessToken).limit(1).get();
+
+            if (snapshot.empty) {
+                return res.status(401).json({ error: 'Token inválido o expirado' });
+            }
+
+            const workerDoc = snapshot.docs[0];
+            const worker = workerDoc.data();
+
+            // 2. Generar Custom Token de Firebase
+            const admin = require('firebase-admin');
+            const customToken = await admin.auth().createCustomToken(worker.id, {
+                role: 'worker',
+                workerId: worker.id
+            });
+
+            // 3. Retornar Session Token
+            res.json({
+                success: true,
+                token: customToken,
+                worker: {
+                    id: worker.id,
+                    nombre: worker.nombre,
+                    esPrincipal: worker.esPrincipal
+                }
+            });
+
+        } catch (error) {
+            console.error('Error in Magic Login:', error);
+            res.status(500).json({ error: 'Error interno de autenticación' });
         }
     });
 

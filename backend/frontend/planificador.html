@@ -1243,6 +1243,7 @@
             document.getElementById('worker-form-title').textContent = '✏️ Editar Trabajador';
             document.getElementById('btn-save-worker').textContent = 'Actualizar Datos';
             document.getElementById('btn-cancel-edit-worker').classList.remove('hidden');
+            document.getElementById('btn-reset-token').classList.remove('hidden'); // Show reset button on edit
         }
 
         window.resetWorkerForm = () => {
@@ -1252,6 +1253,23 @@
             document.getElementById('worker-form-title').textContent = '➕ Agregar Nuevo Trabajador';
             document.getElementById('btn-save-worker').textContent = 'Guardar Trabajador';
             document.getElementById('btn-cancel-edit-worker').classList.add('hidden');
+            document.getElementById('btn-reset-token').classList.add('hidden'); // Hide on new
+        };
+
+        window.resetWorkerToken = async () => {
+            const id = document.getElementById('modal-w-id').value;
+            if (!id) return;
+            if (!confirm('⚠️ ¿Estás seguro de invalidar el enlace de acceso actual y generar uno nuevo?\nEl trabajador deberá recibir el nuevo enlace para entrar.')) return;
+
+            try {
+                const res = await fetchAPI('/api/planificador/reset-token', {
+                    method: 'POST',
+                    body: { workerId: id }
+                });
+                showToast('Token reseteado correctamente');
+            } catch (e) {
+                showToast('Error: ' + e.message, true);
+            }
         };
 
         async function saveWorkerConfig() {

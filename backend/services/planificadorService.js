@@ -740,23 +740,46 @@ async function sendWorkerDailySummary(db, workerId) {
         let msg = `📅 *Plan de Trabajo - ${todayStr}*\nHola ${escapeMd(worker.nombre)}, aquí están tus tareas de hoy:\n\n`;
 
         tareas.forEach((t, index) => {
-            msg += `${index + 1}. *${escapeMd(t.cabanaId)}*: ${escapeMd(t.tipoAseo)} (${t.duracion} min)\n   ⏰ Inicio aprox: ${t.horarioInicio}\n`;
+            const dur = Number(t.duracion) || 30; // Fallback to 30 min
+            msg += `${index + 1}. *${escapeMd(t.cabanaId)}*: ${escapeMd(t.tipoAseo)} (${dur} min)\n   ⏰ Inicio aprox: ${t.horarioInicio}\n`;
         });
 
-        const totalMin = tareas.reduce((sum, t) => sum + t.duracion, 0);
+        const totalMin = tareas.reduce((sum, t) => sum + (Number(t.duracion) || 30), 0);
         const hours = Math.floor(totalMin / 60);
         const mins = totalMin % 60;
 
         msg += `\n⏱ Total: ${hours}h ${mins}m\n`;
-        msg += `[Ver Dashboard](https://gestor-reservas.onrender.com/planificador.html)`;
+        msg += `\n👇 *Acceso Directo Seguro*`;
+
+        // --- SECURITY: Ensure Access Token ---
+        if (!worker.accessToken) {
+            const crypto = require('crypto');
+            const newAccessToken = crypto.randomBytes(32).toString('hex');
+            await db.collection('trabajadores').doc(worker.id).update({ accessToken: newAccessToken });
+            worker.accessToken = newAccessToken;
+            console.log(`[Security] Generated token for ${worker.nombre} in planificadorService`);
+        }
+
+        const baseUrl = process.env.BASE_URL || 'https://gestor-reservas.onrender.com';
+        const portalUrl = `${baseUrl}/portal-operativo.html?token=${worker.accessToken}`;
+
+        // Options with Inline Button
+        const options = {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: '📱 Abrir Portal Operativo', url: portalUrl }]
+                ]
+            }
+        };
 
         // 4. Send Summary
-        console.log(`[DEBUG] Step 2: Sending summary content...`);
-        const result = await sendDirectMessage(db, worker.telegramChatId, msg);
+        console.log(`[DEBUG] Step 2: Sending summary with Magic Link...`);
+        const result = await sendDirectMessage(db, worker.telegramChatId, msg, options);
         if (!result.sent) {
             console.error('[DEBUG] Step 2 Failed:', result.error);
-            // Don't throw immediately, try Step 3 to confirm partial success
-            await sendDirectMessage(db, worker.telegramChatId, `❌ Error enviando resumen completo. Revisa formato. Log: ${result.error}`);
+            // Retry textual failure message
+            await sendDirectMessage(db, worker.telegramChatId, `❌ Error enviando resumen. Log: ${result.error}`);
             throw new Error(`Telegram Step 2 Error: ${result.error || result.reason}`);
         }
 

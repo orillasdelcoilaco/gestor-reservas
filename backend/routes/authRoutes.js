@@ -90,13 +90,17 @@ module.exports = (db) => {
             }
 
             const workerDoc = snapshot.docs[0];
-            const worker = workerDoc.data();
+            const workerData = workerDoc.data();
+            const workerId = workerDoc.id; // Use Doc ID to be safe
 
             // 2. Generar Custom Token de Firebase
             const admin = require('firebase-admin');
-            const customToken = await admin.auth().createCustomToken(worker.id, {
+
+            console.log(`[MagicLogin] Creating token for ${workerId} (${workerData.nombre})`);
+
+            const customToken = await admin.auth().createCustomToken(workerId, {
                 role: 'worker',
-                workerId: worker.id
+                workerId: workerId
             });
 
             // 3. Retornar Session Token
@@ -104,15 +108,20 @@ module.exports = (db) => {
                 success: true,
                 token: customToken,
                 worker: {
-                    id: worker.id,
-                    nombre: worker.nombre,
-                    esPrincipal: worker.esPrincipal
+                    id: workerId,
+                    nombre: workerData.nombre,
+                    esPrincipal: workerData.esPrincipal
                 }
             });
 
         } catch (error) {
             console.error('Error in Magic Login:', error);
-            res.status(500).json({ error: 'Error interno de autenticación' });
+            // DEBUG: Returning full error to client for diagnosis
+            res.status(500).json({
+                error: 'Error interno de autenticación',
+                details: error.message,
+                code: error.code
+            });
         }
     });
 

@@ -45,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.log('🔮 Magic Link detected. Authenticating...');
             document.getElementById('loading-spinner').classList.remove('hidden');
 
-            const response = await fetch('/api/auth/magic-login', {
+            const response = await fetch('/auth/magic-login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ accessToken: magicToken })

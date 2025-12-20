@@ -61,14 +61,28 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Clean URL (Security)
                 window.history.replaceState({}, document.title, window.location.pathname);
             } else {
-                alert('Enlace expirado o inválido. Por favor solicita uno nuevo.');
-                window.location.href = 'index.html';
+                // FALLBACK: ERROR VISUAL
+                document.body.innerHTML = `
+                    <div style="padding: 20px; color: red; font-family: sans-serif;">
+                        <h1>⚠️ Error de Acceso</h1>
+                        <p>El enlace no es válido o ha expirado.</p>
+                        <p>Respuesta del servidor: ${JSON.stringify(data)}</p>
+                        <button onclick="window.location.reload()">Reintentar</button>
+                    </div>
+                `;
                 return;
             }
         } catch (error) {
             console.error('Magic Login Error:', error);
-            alert('Error iniciando sesión. Intenta nuevamente.');
-            window.location.href = 'index.html';
+            // FALLBACK: ERROR VISUAL
+            document.body.innerHTML = `
+                <div style="padding: 20px; color: red; font-family: sans-serif;">
+                    <h1>⚠️ Error de Sistema</h1>
+                    <p>No se pudo iniciar sesión.</p>
+                    <p>Detalle Técnico: ${error.message}</p>
+                    <button onclick="window.location.reload()">Reintentar</button>
+                </div>
+            `;
             return;
         }
     }

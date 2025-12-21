@@ -157,123 +157,124 @@
                 </div>
             </div>
 
+
+            <!-- Historial Modal -->
+
+            <div class="bg-white p-8 rounded-lg shadow">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas de Gestión</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <a href="gestion.html"
+                        class="relative bg-red-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-700 transition shadow">
+                        <span id="gestion-badge"
+                            class="absolute -top-2 -right-2 bg-red-800 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center hidden"></span>
+                        <span class="text-3xl">!</span>
+                        <p class="mt-2">Gestión Diaria</p>
+                    </a>
+                    <a href="calendario.html"
+                        class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow flex items-center justify-center">
+                        <p>Calendario de Ocupación</p>
+                    </a>
+                    <a href="agregar-reserva.html"
+                        class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow flex items-center justify-center">
+                        <p>Agregar Propuesta</p>
+                    </a>
+                    <a href="propuestas.html"
+                        class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow flex items-center justify-center">
+                        <p>Gestionar Propuestas</p>
+                    </a>
+                    <a href="reportes.html"
+                        class="bg-pink-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-pink-600 transition shadow flex items-center justify-center">
+                        <p>Generar Reportes Rápidos</p>
+                    </a>
+                    <a href="planificador.html"
+                        class="bg-indigo-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-600 transition shadow flex items-center justify-center">
+                        <p>Planificación Operativa</p>
+                    </a>
+                    <!-- NEW: Historial Operativo Button -->
+                    <button id="abrir-historial-btn"
+                        class="bg-gray-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-700 transition shadow flex items-center justify-center">
+                        <p>Historial Operativo</p>
+                    </button>
+                </div>
+            </div>
+            <div class="bg-white p-8 rounded-lg shadow mt-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas y Configuración</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <a href="clientes.html"
+                        class="bg-blue-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-blue-700 transition shadow">Gestionar
+                        Clientes</a>
+                    <a href="reservas.html"
+                        class="bg-white border border-gray-300 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">Ver
+                        y Editar Reservas</a>
+                    <a href="tarifas.html"
+                        class="bg-purple-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-purple-700 transition shadow">Gestionar
+                        Tarifas</a>
+                    <a href="sincronizar.html"
+                        class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow">Sincronizar
+                        Datos</a>
+                    <a href="procesar.html"
+                        class="bg-teal-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-teal-700 transition shadow">Procesar
+                        y Consolidar</a>
+                    <a href="sincronizacion-ical.html"
+                        class="bg-orange-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-orange-600 transition shadow">Sincronizar
+                        Calendarios (iCal)</a>
+                    <a href="mensajes.html"
+                        class="bg-gray-700 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-800 transition shadow">Generar
+                        Mensajes</a>
+                    <a href="presupuestos.html"
+                        class="bg-pink-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-pink-700 transition shadow">Generar
+                        Presupuestos</a>
+                    <a href="gestion-cabanas.html"
+                        class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow">Gestionar
+                        Cabañas</a>
+                    <a href="autorizar.html"
+                        class="bg-red-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-600 transition shadow">Autorizar
+                        Google Contacts</a>
+
+                    <!-- NEW: Configuración Maestra Button -->
+                    <button id="abrir-settings-btn"
+                        class="bg-slate-800 text-white p-6 rounded-lg text-center font-semibold hover:bg-slate-900 transition shadow flex items-center justify-center">
+                        <p>Configuración Maestra</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Settings Removed from Main Flow (Moved to Modal) -->
+            <div class="bg-white p-8 rounded-lg shadow mt-8">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas de Mantenimiento</h2>
+                <div class="space-y-4">
+                    <div>
+                        <p class="text-gray-600 mb-2">Si las reservas antiguas no aparecen en "Gestión Diaria", usa este
+                            botón una vez para reparar los datos.</p>
+                        <button id="repair-btn"
+                            class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-800">
+                            Reparar Estados de Reservas
+                        </button>
+                        <div id="repair-status" class="mt-4 p-4 rounded-md hidden"></div>
+                    </div>
+                    <div class="border-t pt-4 mt-4">
+                        <p class="text-gray-600 mb-2">Si las reservas de Booking aparecen sin teléfono en "Gestión
+                            Diaria", usa este botón una vez para repararlas.</p>
+                        <button id="repair-phones-btn"
+                            class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-800">
+                            Reparar Teléfonos Faltantes
+                        </button>
+                        <div id="repair-phones-status" class="mt-4 p-4 rounded-md hidden"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
+    </div>
+
     <footer class="bg-white mt-12 py-6 border-t">
         <div class="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
             <p>Gestor de Reservas &copy; 2025 - Orillas del Coilaco</p>
-            <p class="mt-1">Versión 2.1 (Configuración de Tareas)</p>
+            <p class="mt-1">Versión 2.2 (Configuración de Tareas)</p>
         </div>
     </footer>
-    </div>
 
-    <!-- Historial Modal -->
-
-    <div class="bg-white p-8 rounded-lg shadow">
-        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas de Gestión</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <a href="gestion.html"
-                class="relative bg-red-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-700 transition shadow">
-                <span id="gestion-badge"
-                    class="absolute -top-2 -right-2 bg-red-800 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center hidden"></span>
-                <span class="text-3xl">!</span>
-                <p class="mt-2">Gestión Diaria</p>
-            </a>
-            <a href="calendario.html"
-                class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow flex items-center justify-center">
-                <p>Calendario de Ocupación</p>
-            </a>
-            <a href="agregar-reserva.html"
-                class="bg-green-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-green-700 transition shadow flex items-center justify-center">
-                <p>Agregar Propuesta</p>
-            </a>
-            <a href="propuestas.html"
-                class="bg-yellow-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-yellow-600 transition shadow flex items-center justify-center">
-                <p>Gestionar Propuestas</p>
-            </a>
-            <a href="reportes.html"
-                class="bg-pink-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-pink-600 transition shadow flex items-center justify-center">
-                <p>Generar Reportes Rápidos</p>
-            </a>
-            <a href="planificador.html"
-                class="bg-indigo-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-600 transition shadow flex items-center justify-center">
-                <p>Planificación Operativa</p>
-            </a>
-            <!-- NEW: Historial Operativo Button -->
-            <button id="abrir-historial-btn"
-                class="bg-gray-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-700 transition shadow flex items-center justify-center">
-                <p>Historial Operativo</p>
-            </button>
-        </div>
-    </div>
-    <div class="bg-white p-8 rounded-lg shadow mt-8">
-        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas y Configuración</h2>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <a href="clientes.html"
-                class="bg-blue-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-blue-700 transition shadow">Gestionar
-                Clientes</a>
-            <a href="reservas.html"
-                class="bg-white border border-gray-300 p-6 rounded-lg text-center font-medium text-gray-700 hover:bg-gray-50 transition">Ver
-                y Editar Reservas</a>
-            <a href="tarifas.html"
-                class="bg-purple-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-purple-700 transition shadow">Gestionar
-                Tarifas</a>
-            <a href="sincronizar.html"
-                class="bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow">Sincronizar
-                Datos</a>
-            <a href="procesar.html"
-                class="bg-teal-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-teal-700 transition shadow">Procesar
-                y Consolidar</a>
-            <a href="sincronizacion-ical.html"
-                class="bg-orange-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-orange-600 transition shadow">Sincronizar
-                Calendarios (iCal)</a>
-            <a href="mensajes.html"
-                class="bg-gray-700 text-white p-6 rounded-lg text-center font-semibold hover:bg-gray-800 transition shadow">Generar
-                Mensajes</a>
-            <a href="presupuestos.html"
-                class="bg-pink-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-pink-700 transition shadow">Generar
-                Presupuestos</a>
-            <a href="gestion-cabanas.html"
-                class="bg-cyan-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-cyan-700 transition shadow">Gestionar
-                Cabañas</a>
-            <a href="autorizar.html"
-                class="bg-red-500 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-600 transition shadow">Autorizar
-                Google Contacts</a>
-
-            <!-- NEW: Configuración Maestra Button -->
-            <button id="abrir-settings-btn"
-                class="bg-slate-800 text-white p-6 rounded-lg text-center font-semibold hover:bg-slate-900 transition shadow flex items-center justify-center">
-                <p>Configuración Maestra</p>
-            </button>
-        </div>
-    </div>
-
-    <!-- Settings Removed from Main Flow (Moved to Modal) -->
-    <div class="bg-white p-8 rounded-lg shadow mt-8">
-        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Herramientas de Mantenimiento</h2>
-        <div class="space-y-4">
-            <div>
-                <p class="text-gray-600 mb-2">Si las reservas antiguas no aparecen en "Gestión Diaria", usa este
-                    botón una vez para reparar los datos.</p>
-                <button id="repair-btn"
-                    class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-800">
-                    Reparar Estados de Reservas
-                </button>
-                <div id="repair-status" class="mt-4 p-4 rounded-md hidden"></div>
-            </div>
-            <div class="border-t pt-4 mt-4">
-                <p class="text-gray-600 mb-2">Si las reservas de Booking aparecen sin teléfono en "Gestión
-                    Diaria", usa este botón una vez para repararlas.</p>
-                <button id="repair-phones-btn"
-                    class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-gray-700 hover:bg-gray-800">
-                    Reparar Teléfonos Faltantes
-                </button>
-                <div id="repair-phones-status" class="mt-4 p-4 rounded-md hidden"></div>
-            </div>
-        </div>
-    </div>
-    </main>
-    </div>
-
+    <!-- Detail Modal -->
     <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
         <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
             <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="detail-modal-title">Detalle por Canal</h3>
@@ -566,15 +567,15 @@
                     <script type="module" src="js/modules/historyViewer.js"></script>
                     <script type="module">
                         import { initTaskConfig } from './js/modules/taskConfig.js';
+                        import { checkSession, logout, fetchAPI } from './api.js';
+                        import { initBadgeMonitor } from './js/modules/badgeMonitor.js';
+                        import { initIncidentsAdmin } from './js/modules/incidentsAdmin.js';
+                        import { initHistoryViewer } from './js/modules/historyViewer.js';
 
                         // Init on load
                         document.addEventListener('DOMContentLoaded', () => {
                             initTaskConfig();
                         });
-                        import { checkSession, logout, fetchAPI } from './api.js';
-                        import { initBadgeMonitor } from './js/modules/badgeMonitor.js';
-                        import { initIncidentsAdmin } from './js/modules/incidentsAdmin.js';
-                        import { initHistoryViewer } from './js/modules/historyViewer.js';
 
                         let fullKpiResults = null;
                         let ingresoPotencialBase = 0;

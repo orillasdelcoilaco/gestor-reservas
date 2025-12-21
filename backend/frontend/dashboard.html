@@ -270,7 +270,7 @@
     <footer class="bg-white mt-12 py-6 border-t">
         <div class="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
             <p>Gestor de Reservas &copy; 2025 - Orillas del Coilaco</p>
-            <p class="mt-1">Versión 2.2 (Configuración de Tareas)</p>
+            <p class="mt-1">Versión 2.3 (Fix Dashboard Crash)</p>
         </div>
     </footer>
 
@@ -572,37 +572,28 @@
                         import { initIncidentsAdmin } from './js/modules/incidentsAdmin.js';
                         import { initHistoryViewer } from './js/modules/historyViewer.js';
 
-                        // Init on load
-                        document.addEventListener('DOMContentLoaded', () => {
-                            initTaskConfig();
-                        });
-
+                        // --- State Variables ---
                         let fullKpiResults = null;
                         let ingresoPotencialBase = 0;
 
+                        // --- Helper Functions ---
                         function formatCurrency(value) {
                             return `$${(Math.round(value) || 0).toLocaleString('es-CL')}`;
                         }
 
                         function updateProjectedValues(proyeccion) {
                             if (!fullKpiResults) return;
-
                             const nuevoIngresoProyectado = ingresoPotencialBase * (proyeccion / 100);
                             const ingresoProyectadoEl = document.getElementById('ingreso-proyectado-valor');
-                            if (ingresoProyectadoEl) {
-                                ingresoProyectadoEl.textContent = formatCurrency(nuevoIngresoProyectado);
-                            }
+                            if (ingresoProyectadoEl) ingresoProyectadoEl.textContent = formatCurrency(nuevoIngresoProyectado);
 
                             fullKpiResults.rankingCabañas.forEach((cabaña, index) => {
                                 const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccion / 100);
                                 const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
-
                                 const row = document.getElementById(`ranking-row-${index}`);
                                 if (row) {
                                     const cell = row.querySelector('.noches-faltantes-cell');
-                                    if (cell) {
-                                        cell.textContent = Math.round(nochesFaltantesProyectadas);
-                                    }
+                                    if (cell) cell.textContent = Math.round(nochesFaltantesProyectadas);
                                 }
                             });
                         }
@@ -611,43 +602,23 @@
                             fullKpiResults = results;
                             const { kpisGenerales } = results;
                             ingresoPotencialBase = kpisGenerales.ingresoPotencialTotalBase || 0;
-
                             const proyeccionActual = parseInt(document.getElementById('kpi-proyeccion-slider').value);
                             const ingresoProyectadoActual = ingresoPotencialBase * (proyeccionActual / 100);
-
                             const kpiCardsContainer = document.getElementById('kpi-cards');
                             kpiCardsContainer.innerHTML = `
-            <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">Ocupación</div><div class="text-2xl font-bold text-gray-900">${kpisGenerales.tasaOcupacion}%</div></div>
-            <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">ADR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.adr)}</div></div>
-            <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">RevPAR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.revPar)}</div></div>
-            <div class="p-4 bg-green-100 rounded-lg"><div class="text-sm font-medium text-green-700">Ingreso Real</div><div class="text-2xl font-bold text-green-900">${formatCurrency(kpisGenerales.ingresoTotal)}</div></div>
-            <div class="p-4 bg-blue-100 rounded-lg"><div class="text-sm font-medium text-blue-700">Ingreso Proyectado</div><div id="ingreso-proyectado-valor" class="text-2xl font-bold text-blue-900">${formatCurrency(ingresoProyectadoActual)}</div></div>
-            <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuento Real</div><div class="text-2xl font-bold text-red-900">${formatCurrency(kpisGenerales.descuentosTotalesReales)}</div></div>
-          `;
+                                <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">Ocupación</div><div class="text-2xl font-bold text-gray-900">${kpisGenerales.tasaOcupacion}%</div></div>
+                                <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">ADR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.adr)}</div></div>
+                                <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">RevPAR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.revPar)}</div></div>
+                                <div class="p-4 bg-green-100 rounded-lg"><div class="text-sm font-medium text-green-700">Ingreso Real</div><div class="text-2xl font-bold text-green-900">${formatCurrency(kpisGenerales.ingresoTotal)}</div></div>
+                                <div class="p-4 bg-blue-100 rounded-lg"><div id="ingreso-proyectado-valor" class="text-sm font-medium text-blue-700">Ingreso Proyectado</div><div class="text-2xl font-bold text-blue-900">${formatCurrency(ingresoProyectadoActual)}</div></div>
+                                <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuento Real</div><div class="text-2xl font-bold text-red-900">${formatCurrency(kpisGenerales.descuentosTotalesReales)}</div></div>`;
 
                             const canalDetailsTable = document.getElementById('canal-details-table');
-                            const canalData = kpisGenerales.reservasPorCanal;
-                            let canalTableHtml = `
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"># Reservas</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ingreso Real</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    ${Object.entries(canalData).map(([canal, data]) => `
-                        <tr>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${canal}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${data.count}</td>
-                            <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(data.ingreso)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-          `;
-                            canalDetailsTable.innerHTML = canalTableHtml;
+                            canalDetailsTable.innerHTML = `
+                                <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Canal</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"># Reservas</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ingreso Real</th></tr></thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    ${Object.entries(kpisGenerales.reservasPorCanal).map(([canal, data]) => `<tr><td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${canal}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${data.count}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(data.ingreso)}</td></tr>`).join('')}
+                                </tbody></table>`;
 
                             const rankingTableBody = document.getElementById('ranking-table-body');
                             rankingTableBody.innerHTML = '';
@@ -655,17 +626,9 @@
                                 const row = document.createElement('tr');
                                 row.id = `ranking-row-${index}`;
                                 row.setAttribute('data-cabaña-nombre', cabaña.nombre);
-
                                 const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccionActual / 100);
                                 const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
-
-                                row.innerHTML = `
-                <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${cabaña.nombre}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${cabaña.nochesOcupadas}</td>
-                <td class="noches-faltantes-cell px-4 py-3 whitespace-nowrap text-sm text-gray-700">${Math.round(nochesFaltantesProyectadas)}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(cabaña.ingresoRealTotal)}</td>
-                <td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">${formatCurrency(cabaña.descuentoTotal)}</td>
-              `;
+                                row.innerHTML = `<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${cabaña.nombre}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${cabaña.nochesOcupadas}</td><td class="noches-faltantes-cell px-4 py-3 whitespace-nowrap text-sm text-gray-700">${Math.round(nochesFaltantesProyectadas)}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(cabaña.ingresoRealTotal)}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">${formatCurrency(cabaña.descuentoTotal)}</td>`;
                                 rankingTableBody.appendChild(row);
                             });
                         }
@@ -673,254 +636,249 @@
                         function showDetailModal(cabañaNombre) {
                             const cabañaData = fullKpiResults.rankingCabañas.find(c => c.nombre === cabañaNombre);
                             if (!cabañaData) return;
-
                             const modal = document.getElementById('detail-modal');
                             const title = document.getElementById('detail-modal-title');
                             const content = document.getElementById('detail-modal-content');
-
                             title.textContent = `Detalle por Canal - ${cabañaNombre}`;
-
                             let tableHtml = `<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>`;
                             if (cabañaData.canales && Object.keys(cabañaData.canales).length > 0) {
-                                tableHtml = `
-              <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Canal</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Noches con Descuento</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descuento Total</th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                    ${Object.entries(cabañaData.canales).map(([canal, data]) => `
-                        <tr>
-                            <td class="px-4 py-2 text-sm font-medium">${canal}</td>
-                            <td class="px-4 py-2 text-sm">${data.noches}</td>
-                            <td class="px-4 py-2 text-sm text-red-600">${formatCurrency(data.descuento)}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-              </table>`;
+                                tableHtml = `<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Canal</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Noches con Descuento</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descuento Total</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${Object.entries(cabañaData.canales).map(([canal, data]) => `<tr><td class="px-4 py-2 text-sm font-medium">${canal}</td><td class="px-4 py-2 text-sm">${data.noches}</td><td class="px-4 py-2 text-sm text-red-600">${formatCurrency(data.descuento)}</td></tr>`).join('')}</tbody></table>`;
                             }
-
                             content.innerHTML = tableHtml;
                             modal.classList.remove('hidden');
                         }
 
-                        document.addEventListener('DOMContentLoaded', () => {
+                        // --- Main Init ---
+                        document.addEventListener('DOMContentLoaded', async () => {
                             const loader = document.getElementById('loader');
                             const appContent = document.getElementById('app-content');
                             const authInfo = document.getElementById('auth-info');
+
                             const session = checkSession();
+                            if (!session) return;
 
-                            // --- Cargar Configuración Paramétrica en Header ---
-                            async function loadParams() {
-                                try {
-                                    const settings = await fetchAPI('/api/settings/empresa');
-                                    if (settings.nombreEmpresa) {
-                                        document.querySelector('h1.text-xl').textContent = settings.nombreEmpresa;
-                                    }
-                                    if (settings.adminNombre) {
-                                        const authInfoDiv = document.getElementById('auth-info');
-                                        // Keep existing structure but prepend name
-                                        // Actually authInfo has the email span.
-                                    }
-                                } catch (e) { console.error('Error loading settings for header', e); }
-                            }
+                            // Force visible
+                            if (loader) loader.style.display = 'none';
+                            if (appContent) appContent.classList.remove('hidden');
 
-                            if (session) {
-                                loadParams();
-                                // Init Modules
-                                initBadgeMonitor();
-                                initIncidentsAdmin();
-                                initHistoryViewer();
-
-                                loader.style.display = 'none';
-                                appContent.classList.remove('hidden');
+                            if (authInfo) {
                                 authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
                                 document.getElementById('logout-btn').addEventListener('click', logout);
-
-                                const calculateBtn = document.getElementById('kpi-calculate-btn');
-                                const fechaInicioInput = document.getElementById('kpi-fecha-inicio');
-                                const fechaFinInput = document.getElementById('kpi-fecha-fin');
-                                const proyeccionSlider = document.getElementById('kpi-proyeccion-slider');
-                                const proyeccionValor = document.getElementById('proyeccion-valor');
-                                const resultsContainer = document.getElementById('kpi-results-container');
-                                const loadingIndicator = document.getElementById('kpi-loading');
-                                const warningContainer = document.getElementById('kpi-warning-container');
-
-                                const repairBtn = document.getElementById('repair-btn');
-                                const repairStatus = document.getElementById('repair-status');
-
-                                const repairPhonesBtn = document.getElementById('repair-phones-btn');
-                                const repairPhonesStatus = document.getElementById('repair-phones-status');
-
-                                const detailModal = document.getElementById('detail-modal');
-                                const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
-                                const rankingTableBody = document.getElementById('ranking-table-body');
-
-                                async function loadPendingTasksCount() {
-                                    try {
-                                        const pendingTasks = await fetchAPI('/api/gestion/pendientes');
-                                        const badge = document.getElementById('gestion-badge');
-                                        if (badge && pendingTasks.length > 0) {
-                                            badge.textContent = pendingTasks.length;
-                                            badge.classList.remove('hidden');
-                                        }
-                                    } catch (error) {
-                                        console.error("Error al cargar el contador de tareas pendientes:", error);
-                                    }
-                                }
-
-                                loadPendingTasksCount();
-
-                                calculateBtn.addEventListener('click', async () => {
-                                    const fechaInicio = fechaInicioInput.value;
-                                    const fechaFin = fechaFinInput.value;
-                                    if (!fechaInicio || !fechaFin) {
-                                        alert('Por favor, selecciona una fecha de inicio y una de fin.'); return;
-                                    }
-                                    loadingIndicator.classList.remove('hidden');
-                                    resultsContainer.classList.add('hidden');
-                                    warningContainer.classList.add('hidden');
-                                    calculateBtn.disabled = true;
-                                    try {
-                                        const apiUrl = `/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-                                        const kpiResults = await fetchAPI(apiUrl);
-
-                                        if (kpiResults.warning) {
-                                            warningContainer.textContent = kpiResults.warning;
-                                            warningContainer.classList.remove('hidden');
-                                        }
-
-                                        displayKPIs(kpiResults);
-                                    } catch (error) {
-                                        alert(`Error al calcular KPIs: ${error.message}`);
-                                        resultsContainer.innerHTML = `<p class="text-red-500 font-semibold">Error al calcular KPIs: ${error.message}</p>`;
-                                    } finally {
-                                        loadingIndicator.classList.add('hidden');
-                                        resultsContainer.classList.remove('hidden');
-                                        calculateBtn.disabled = false;
-                                    }
-                                });
-
-                                repairBtn.addEventListener('click', async () => {
-                                    if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un estado de gestión. ¿Deseas continuar?')) { return; }
-                                    repairBtn.disabled = true;
-                                    repairBtn.textContent = 'Reparando...';
-                                    repairStatus.classList.remove('hidden');
-                                    repairStatus.textContent = 'Iniciando proceso...';
-                                    try {
-                                        const result = await fetchAPI('/api/gestion/fix-missing-states', { method: 'POST' });
-                                        repairStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
-                                    } catch (error) {
-                                        repairStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
-                                    } finally {
-                                        repairBtn.disabled = false;
-                                        repairBtn.textContent = 'Reparar Estados de Reservas Antiguas';
-                                    }
-                                });
-
-                                repairPhonesBtn.addEventListener('click', async () => {
-                                    if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas continuar?')) { return; }
-                                    repairPhonesBtn.disabled = true;
-                                    repairPhonesBtn.textContent = 'Reparando...';
-                                    repairPhonesStatus.classList.remove('hidden');
-                                    repairPhonesStatus.textContent = 'Iniciando reparación...';
-                                    try {
-                                        const result = await fetchAPI('/api/gestion/fix-missing-phones', { method: 'POST' });
-                                        repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
-                                    } catch (error) {
-                                        repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
-                                    } finally {
-                                        repairPhonesBtn.disabled = false;
-                                        repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
-                                    }
-                                });
-
-                                proyeccionSlider.addEventListener('input', () => {
-                                    const nuevoPorcentaje = proyeccionSlider.value;
-                                    proyeccionValor.textContent = nuevoPorcentaje;
-                                    updateProjectedValues(parseInt(nuevoPorcentaje));
-                                });
-
-                                rankingTableBody.addEventListener('click', (e) => {
-                                    const row = e.target.closest('tr');
-                                    if (row && row.dataset.cabañaNombre) {
-                                        showDetailModal(row.dataset.cabañaNombre);
-                                    }
-                                });
-                                detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
-                                detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
-
-                                // --- SETTINGS LOGIC ---
-                                const settingsForm = document.getElementById('settings-form');
-                                const settingsStatus = document.getElementById('settings-status');
-
-                                async function loadSettings() {
-                                    try {
-                                        const settings = await fetchAPI('/api/settings/empresa');
-                                        document.getElementById('nombreEmpresa').value = settings.nombreEmpresa || '';
-                                        document.getElementById('adminNombre').value = settings.adminNombre || '';
-                                        document.getElementById('adminEmail').value = settings.adminEmail || '';
-                                        document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
-                                        document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
-                                        document.getElementById('telegramChatId').value = settings.telegramChatId || '';
-                                        document.getElementById('workerChatId').value = settings.workerChatId || '';
-                                        document.getElementById('botToken').value = settings.botToken || '';
-                                    } catch (error) {
-                                        console.error('Error cargando configuración:', error);
-                                    }
-                                }
-
-                                settingsForm.addEventListener('submit', async (e) => {
-                                    e.preventDefault();
-                                    settingsStatus.textContent = 'Guardando...';
-                                    settingsStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
-
-                                    const data = {
-                                        nombreEmpresa: document.getElementById('nombreEmpresa').value,
-                                        adminNombre: document.getElementById('adminNombre').value,
-                                        adminEmail: document.getElementById('adminEmail').value,
-                                        telefonoContacto: document.getElementById('telefonoContacto').value,
-                                        telefonoContacto: document.getElementById('telefonoContacto').value,
-                                        telegramChatId: document.getElementById('telegramChatId').value,
-                                        workerChatId: document.getElementById('workerChatId').value,
-                                        botToken: document.getElementById('botToken').value,
-                                    };
-
-                                    try {
-                                        const result = await fetchAPI('/api/settings/empresa', {
-                                            method: 'PUT',
-                                            body: data, // FIXED: Removed JSON.stringify because api.js handles it
-                                            headers: { 'Content-Type': 'application/json' }
-                                        });
-                                        settingsStatus.textContent = 'Guardado correctamente.';
-                                        settingsStatus.classList.add('text-green-600');
-                                        setTimeout(() => settingsStatus.classList.add('hidden'), 3000);
-                                    } catch (error) {
-                                        settingsStatus.textContent = 'Error al guardar.';
-                                        settingsStatus.classList.add('text-red-600');
-                                    }
-                                });
-
-                                // --- MODALS TOGGLES ---
-                                const btnHist = document.getElementById('abrir-historial-btn');
-                                const modalHist = document.getElementById('modal-historial');
-                                const closeHist = document.getElementById('cerrar-historial-btn');
-
-                                if (btnHist) btnHist.addEventListener('click', () => modalHist.classList.remove('hidden'));
-                                if (closeHist) closeHist.addEventListener('click', () => modalHist.classList.add('hidden'));
-
-                                const btnSet = document.getElementById('abrir-settings-btn');
-                                const modalSet = document.getElementById('modal-settings');
-                                const closeSet = document.getElementById('cerrar-settings-btn');
-
-                                if (btnSet) btnSet.addEventListener('click', () => modalSet.classList.remove('hidden'));
-                                if (closeSet) closeSet.addEventListener('click', () => modalSet.classList.add('hidden'));
-
-                                loadSettings();
                             }
+
+                            // Safe Module Init
+                            try { initTaskConfig(); } catch (e) { console.error('TaskConfig:', e); }
+                            try { initBadgeMonitor(); } catch (e) { console.error('BadgeMonitor:', e); }
+                            try { initIncidentsAdmin(); } catch (e) { console.error('IncidentsAdmin:', e); }
+                            try { initHistoryViewer(); } catch (e) { console.error('HistoryViewer:', e); }
+
+                            // Load Async Data
+                            loadSettingsHeader();
+                            loadPendingTasksCount();
+
+                            // Bind Events
+                            bindDashboardEvents();
+                        });
+
+                        async function loadSettingsHeader() {
+                            try {
+                                const settings = await fetchAPI('/api/settings/empresa');
+                                if (settings.nombreEmpresa) document.querySelector('h1.text-xl').textContent = settings.nombreEmpresa;
+                            } catch (e) { console.error('Error header settings:', e); }
+                        }
+
+                        async function loadPendingTasksCount() {
+                            try {
+                                const pendingTasks = await fetchAPI('/api/gestion/pendientes');
+                                const badge = document.getElementById('gestion-badge');
+                                if (badge && pendingTasks.length > 0) {
+                                    badge.textContent = pendingTasks.length;
+                                    badge.classList.remove('hidden');
+                                }
+                            } catch (e) { console.error("Error pending tasks:", e); }
+                        }
+
+                        function bindDashboardEvents() {
+                            const calculateBtn = document.getElementById('kpi-calculate-btn');
+                            const repairBtn = document.getElementById('repair-btn');
+                            const repairPhonesBtn = document.getElementById('repair-phones-btn');
+                            const proyeccionSlider = document.getElementById('kpi-proyeccion-slider');
+                            const rankingTableBody = document.getElementById('ranking-table-body');
+                            const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
+                            const warningContainer = document.getElementById('kpi-warning-container');
+
+                            const repairBtn = document.getElementById('repair-btn');
+                            const repairStatus = document.getElementById('repair-status');
+
+                            const repairPhonesBtn = document.getElementById('repair-phones-btn');
+                            const repairPhonesStatus = document.getElementById('repair-phones-status');
+
+                            const detailModal = document.getElementById('detail-modal');
+                            const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
+                            const rankingTableBody = document.getElementById('ranking-table-body');
+
+                            async function loadPendingTasksCount() {
+                                try {
+                                    const pendingTasks = await fetchAPI('/api/gestion/pendientes');
+                                    const badge = document.getElementById('gestion-badge');
+                                    if (badge && pendingTasks.length > 0) {
+                                        badge.textContent = pendingTasks.length;
+                                        badge.classList.remove('hidden');
+                                    }
+                                } catch (error) {
+                                    console.error("Error al cargar el contador de tareas pendientes:", error);
+                                }
+                            }
+
+                            loadPendingTasksCount();
+
+                            calculateBtn.addEventListener('click', async () => {
+                                const fechaInicio = fechaInicioInput.value;
+                                const fechaFin = fechaFinInput.value;
+                                if (!fechaInicio || !fechaFin) {
+                                    alert('Por favor, selecciona una fecha de inicio y una de fin.'); return;
+                                }
+                                loadingIndicator.classList.remove('hidden');
+                                resultsContainer.classList.add('hidden');
+                                warningContainer.classList.add('hidden');
+                                calculateBtn.disabled = true;
+                                try {
+                                    const apiUrl = `/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
+                                    const kpiResults = await fetchAPI(apiUrl);
+
+                                    if (kpiResults.warning) {
+                                        warningContainer.textContent = kpiResults.warning;
+                                        warningContainer.classList.remove('hidden');
+                                    }
+
+                                    displayKPIs(kpiResults);
+                                } catch (error) {
+                                    alert(`Error al calcular KPIs: ${error.message}`);
+                                    resultsContainer.innerHTML = `<p class="text-red-500 font-semibold">Error al calcular KPIs: ${error.message}</p>`;
+                                } finally {
+                                    loadingIndicator.classList.add('hidden');
+                                    resultsContainer.classList.remove('hidden');
+                                    calculateBtn.disabled = false;
+                                }
+                            });
+
+                            repairBtn.addEventListener('click', async () => {
+                                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un estado de gestión. ¿Deseas continuar?')) { return; }
+                                repairBtn.disabled = true;
+                                repairBtn.textContent = 'Reparando...';
+                                repairStatus.classList.remove('hidden');
+                                repairStatus.textContent = 'Iniciando proceso...';
+                                try {
+                                    const result = await fetchAPI('/api/gestion/fix-missing-states', { method: 'POST' });
+                                    repairStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+                                } catch (error) {
+                                    repairStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                                } finally {
+                                    repairBtn.disabled = false;
+                                    repairBtn.textContent = 'Reparar Estados de Reservas Antiguas';
+                                }
+                            });
+
+                            repairPhonesBtn.addEventListener('click', async () => {
+                                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas continuar?')) { return; }
+                                repairPhonesBtn.disabled = true;
+                                repairPhonesBtn.textContent = 'Reparando...';
+                                repairPhonesStatus.classList.remove('hidden');
+                                repairPhonesStatus.textContent = 'Iniciando reparación...';
+                                try {
+                                    const result = await fetchAPI('/api/gestion/fix-missing-phones', { method: 'POST' });
+                                    repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+                                } catch (error) {
+                                    repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                                } finally {
+                                    repairPhonesBtn.disabled = false;
+                                    repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
+                                }
+                            });
+
+                            proyeccionSlider.addEventListener('input', () => {
+                                const nuevoPorcentaje = proyeccionSlider.value;
+                                proyeccionValor.textContent = nuevoPorcentaje;
+                                updateProjectedValues(parseInt(nuevoPorcentaje));
+                            });
+
+                            rankingTableBody.addEventListener('click', (e) => {
+                                const row = e.target.closest('tr');
+                                if (row && row.dataset.cabañaNombre) {
+                                    showDetailModal(row.dataset.cabañaNombre);
+                                }
+                            });
+                            detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+                            detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+
+                            // --- SETTINGS LOGIC ---
+                            const settingsForm = document.getElementById('settings-form');
+                            const settingsStatus = document.getElementById('settings-status');
+
+                            async function loadSettings() {
+                                try {
+                                    const settings = await fetchAPI('/api/settings/empresa');
+                                    document.getElementById('nombreEmpresa').value = settings.nombreEmpresa || '';
+                                    document.getElementById('adminNombre').value = settings.adminNombre || '';
+                                    document.getElementById('adminEmail').value = settings.adminEmail || '';
+                                    document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
+                                    document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
+                                    document.getElementById('telegramChatId').value = settings.telegramChatId || '';
+                                    document.getElementById('workerChatId').value = settings.workerChatId || '';
+                                    document.getElementById('botToken').value = settings.botToken || '';
+                                } catch (error) {
+                                    console.error('Error cargando configuración:', error);
+                                }
+                            }
+
+                            settingsForm.addEventListener('submit', async (e) => {
+                                e.preventDefault();
+                                settingsStatus.textContent = 'Guardando...';
+                                settingsStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
+
+                                const data = {
+                                    nombreEmpresa: document.getElementById('nombreEmpresa').value,
+                                    adminNombre: document.getElementById('adminNombre').value,
+                                    adminEmail: document.getElementById('adminEmail').value,
+                                    telefonoContacto: document.getElementById('telefonoContacto').value,
+                                    telefonoContacto: document.getElementById('telefonoContacto').value,
+                                    telegramChatId: document.getElementById('telegramChatId').value,
+                                    workerChatId: document.getElementById('workerChatId').value,
+                                    botToken: document.getElementById('botToken').value,
+                                };
+
+                                try {
+                                    const result = await fetchAPI('/api/settings/empresa', {
+                                        method: 'PUT',
+                                        body: data, // FIXED: Removed JSON.stringify because api.js handles it
+                                        headers: { 'Content-Type': 'application/json' }
+                                    });
+                                    settingsStatus.textContent = 'Guardado correctamente.';
+                                    settingsStatus.classList.add('text-green-600');
+                                    setTimeout(() => settingsStatus.classList.add('hidden'), 3000);
+                                } catch (error) {
+                                    settingsStatus.textContent = 'Error al guardar.';
+                                    settingsStatus.classList.add('text-red-600');
+                                }
+                            });
+
+                            // --- MODALS TOGGLES ---
+                            const btnHist = document.getElementById('abrir-historial-btn');
+                            const modalHist = document.getElementById('modal-historial');
+                            const closeHist = document.getElementById('cerrar-historial-btn');
+
+                            if (btnHist) btnHist.addEventListener('click', () => modalHist.classList.remove('hidden'));
+                            if (closeHist) closeHist.addEventListener('click', () => modalHist.classList.add('hidden'));
+
+                            const btnSet = document.getElementById('abrir-settings-btn');
+                            const modalSet = document.getElementById('modal-settings');
+                            const closeSet = document.getElementById('cerrar-settings-btn');
+
+                            if (btnSet) btnSet.addEventListener('click', () => modalSet.classList.remove('hidden'));
+                            if (closeSet) closeSet.addEventListener('click', () => modalSet.classList.add('hidden'));
+
+                            loadSettings();
+                        }
                         });
                     </script>
 </body>

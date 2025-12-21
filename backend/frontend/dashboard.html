@@ -270,7 +270,7 @@
     <footer class="bg-white mt-12 py-6 border-t">
         <div class="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
             <p>Gestor de Reservas &copy; 2025 - Orillas del Coilaco</p>
-            <p class="mt-1">Versión 2.5 (Script Logic Fixed)</p>
+            <p class="mt-1">Versión 2.6 (Nested Form Fix)</p>
         </div>
     </footer>
 
@@ -444,160 +444,157 @@
                             Guardar Configuración
                         </button>
                     </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-                    <!-- Modal: Configuración de Tareas -->
-                    <div id="task-config-modal"
-                        class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
-                        <div
-                            class="bg-white w-full max-w-6xl h-[90vh] rounded-xl flex shadow-2xl overflow-hidden slide-up-animation">
+    <!-- Modal: Configuración de Tareas -->
+    <div id="task-config-modal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-6xl h-[90vh] rounded-xl flex shadow-2xl overflow-hidden slide-up-animation">
 
-                            <!-- Left: List -->
-                            <div class="w-1/3 border-r bg-gray-50 flex flex-col">
-                                <div class="p-4 border-b bg-white">
-                                    <h3 class="text-lg font-bold text-gray-800">Tipos de Tarea</h3>
-                                    <p class="text-xs text-gray-500">Haz clic en editar para ver detalles</p>
-                                </div>
-                                <div id="task-types-list" class="flex-1 overflow-y-auto p-4 space-y-2">
-                                    <!-- Dynamic List -->
-                                </div>
-                                <div class="p-4 border-t bg-white">
-                                    <button onclick="document.getElementById('task-type-form').reset()"
-                                        class="w-full py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-semibold">
-                                        + Nueva Tarea
-                                    </button>
-                                </div>
+            <!-- Left: List -->
+            <div class="w-1/3 border-r bg-gray-50 flex flex-col">
+                <div class="p-4 border-b bg-white">
+                    <h3 class="text-lg font-bold text-gray-800">Tipos de Tarea</h3>
+                    <p class="text-xs text-gray-500">Haz clic en editar para ver detalles</p>
+                </div>
+                <div id="task-types-list" class="flex-1 overflow-y-auto p-4 space-y-2">
+                    <!-- Dynamic List -->
+                </div>
+                <div class="p-4 border-t bg-white">
+                    <button onclick="document.getElementById('task-type-form').reset()"
+                        class="w-full py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-semibold">
+                        + Nueva Tarea
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right: Form -->
+            <div class="w-2/3 flex flex-col bg-white">
+                <div class="p-6 border-b flex justify-between items-center">
+                    <h3 class="text-xl font-bold text-blue-900">Editor de Protocolo</h3>
+                    <button id="btn-cancel-task-type" class="text-gray-500 hover:text-gray-700">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-8">
+                    <form id="task-type-form" class="space-y-6">
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Tarea
+                                    (ID)</label>
+                                <input type="text" id="task-name"
+                                    class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                                    placeholder="Ej: Limpieza Salida" required>
+                                <p class="text-xs text-orange-500 mt-1">Debe coincidir con lo asignado
+                                    en el Planificador</p>
                             </div>
-
-                            <!-- Right: Form -->
-                            <div class="w-2/3 flex flex-col bg-white">
-                                <div class="p-6 border-b flex justify-between items-center">
-                                    <h3 class="text-xl font-bold text-blue-900">Editor de Protocolo</h3>
-                                    <button id="btn-cancel-task-type" class="text-gray-500 hover:text-gray-700">
-                                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </button>
-                                </div>
-
-                                <div class="flex-1 overflow-y-auto p-8">
-                                    <form id="task-type-form" class="space-y-6">
-                                        <div class="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre Tarea
-                                                    (ID)</label>
-                                                <input type="text" id="task-name"
-                                                    class="w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-                                                    placeholder="Ej: Limpieza Salida" required>
-                                                <p class="text-xs text-orange-500 mt-1">Debe coincidir con lo asignado
-                                                    en el Planificador</p>
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Color
-                                                    Identificador</label>
-                                                <input type="color" id="task-color"
-                                                    class="w-full h-10 border-gray-300 rounded-md shadow-sm"
-                                                    value="#3B82F6">
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label
-                                                class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                                            <textarea id="task-desc" rows="2"
-                                                class="w-full border-gray-300 rounded-md shadow-sm"
-                                                placeholder="Descripción breve para la tarjeta..."></textarea>
-                                        </div>
-
-                                        <div class="grid grid-cols-2 gap-6">
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Peso
-                                                    (Prioridad)</label>
-                                                <input type="number" id="task-weight"
-                                                    class="w-full border-gray-300 rounded-md shadow-sm" value="1"
-                                                    min="1">
-                                            </div>
-                                            <div>
-                                                <label class="block text-sm font-medium text-gray-700 mb-1">Duración
-                                                    (min)</label>
-                                                <input type="number" id="task-duration"
-                                                    class="w-full border-gray-300 rounded-md shadow-sm" value="30"
-                                                    step="5">
-                                            </div>
-                                        </div>
-
-                                        <div class="border-t pt-4">
-                                            <div class="flex justify-between items-center mb-4">
-                                                <label class="block text-lg font-medium text-gray-800">Ckecklist
-                                                    (Protocolo)</label>
-                                                <button type="button" id="btn-add-checklist-item"
-                                                    class="text-sm text-blue-600 font-bold hover:underline">+ Agregar
-                                                    Paso</button>
-                                            </div>
-                                            <div id="checklist-items-container"
-                                                class="space-y-3 bg-gray-50 p-4 rounded-lg min-h-[200px]">
-                                                <!-- Checklist Items -->
-                                            </div>
-                                        </div>
-                                    </form>
-                                </div>
-
-                                <div class="p-6 border-t bg-gray-50 flex justify-end">
-                                    <button type="submit" form="task-type-form"
-                                        class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">
-                                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4">
-                                            </path>
-                                        </svg>
-                                        Guardar Configuración
-                                    </button>
-                                </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Color
+                                    Identificador</label>
+                                <input type="color" id="task-color"
+                                    class="w-full h-10 border-gray-300 rounded-md shadow-sm" value="#3B82F6">
                             </div>
                         </div>
-                    </div>
 
-                    <script type="module">
-                        import { initTaskConfig } from './js/modules/taskConfig.js';
-                        import { checkSession, logout, fetchAPI } from './api.js';
-                        import { initBadgeMonitor } from './js/modules/badgeMonitor.js';
-                        import { initIncidentsAdmin } from './js/modules/incidentsAdmin.js';
-                        import { initHistoryViewer } from './js/modules/historyViewer.js';
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                            <textarea id="task-desc" rows="2" class="w-full border-gray-300 rounded-md shadow-sm"
+                                placeholder="Descripción breve para la tarjeta..."></textarea>
+                        </div>
 
-                        // --- State Variables ---
-                        let fullKpiResults = null;
-                        let ingresoPotencialBase = 0;
+                        <div class="grid grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Peso
+                                    (Prioridad)</label>
+                                <input type="number" id="task-weight"
+                                    class="w-full border-gray-300 rounded-md shadow-sm" value="1" min="1">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Duración
+                                    (min)</label>
+                                <input type="number" id="task-duration"
+                                    class="w-full border-gray-300 rounded-md shadow-sm" value="30" step="5">
+                            </div>
+                        </div>
 
-                        // --- Helper Functions ---
-                        function formatCurrency(value) {
-                            return `$${(Math.round(value) || 0).toLocaleString('es-CL')}`;
-                        }
+                        <div class="border-t pt-4">
+                            <div class="flex justify-between items-center mb-4">
+                                <label class="block text-lg font-medium text-gray-800">Ckecklist
+                                    (Protocolo)</label>
+                                <button type="button" id="btn-add-checklist-item"
+                                    class="text-sm text-blue-600 font-bold hover:underline">+ Agregar
+                                    Paso</button>
+                            </div>
+                            <div id="checklist-items-container"
+                                class="space-y-3 bg-gray-50 p-4 rounded-lg min-h-[200px]">
+                                <!-- Checklist Items -->
+                            </div>
+                        </div>
+                    </form>
+                </div>
 
-                        function updateProjectedValues(proyeccion) {
-                            if (!fullKpiResults) return;
-                            const nuevoIngresoProyectado = ingresoPotencialBase * (proyeccion / 100);
-                            const ingresoProyectadoEl = document.getElementById('ingreso-proyectado-valor');
-                            if (ingresoProyectadoEl) ingresoProyectadoEl.textContent = formatCurrency(nuevoIngresoProyectado);
+                <div class="p-6 border-t bg-gray-50 flex justify-end">
+                    <button type="submit" form="task-type-form"
+                        class="bg-blue-600 text-white px-6 py-3 rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4">
+                            </path>
+                        </svg>
+                        Guardar Configuración
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                            fullKpiResults.rankingCabañas.forEach((cabaña, index) => {
-                                const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccion / 100);
-                                const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
-                                const row = document.getElementById(`ranking-row-${index}`);
-                                if (row) {
-                                    const cell = row.querySelector('.noches-faltantes-cell');
-                                    if (cell) cell.textContent = Math.round(nochesFaltantesProyectadas);
-                                }
-                            });
-                        }
+    <script type="module">
+        import { initTaskConfig } from './js/modules/taskConfig.js';
+        import { checkSession, logout, fetchAPI } from './api.js';
+        import { initBadgeMonitor } from './js/modules/badgeMonitor.js';
+        import { initIncidentsAdmin } from './js/modules/incidentsAdmin.js';
+        import { initHistoryViewer } from './js/modules/historyViewer.js';
 
-                        function displayKPIs(results) {
-                            fullKpiResults = results;
-                            const { kpisGenerales } = results;
-                            ingresoPotencialBase = kpisGenerales.ingresoPotencialTotalBase || 0;
-                            const proyeccionActual = parseInt(document.getElementById('kpi-proyeccion-slider').value);
-                            const ingresoProyectadoActual = ingresoPotencialBase * (proyeccionActual / 100);
-                            const kpiCardsContainer = document.getElementById('kpi-cards');
-                            kpiCardsContainer.innerHTML = `
+        // --- State Variables ---
+        let fullKpiResults = null;
+        let ingresoPotencialBase = 0;
+
+        // --- Helper Functions ---
+        function formatCurrency(value) {
+            return `$${(Math.round(value) || 0).toLocaleString('es-CL')}`;
+        }
+
+        function updateProjectedValues(proyeccion) {
+            if (!fullKpiResults) return;
+            const nuevoIngresoProyectado = ingresoPotencialBase * (proyeccion / 100);
+            const ingresoProyectadoEl = document.getElementById('ingreso-proyectado-valor');
+            if (ingresoProyectadoEl) ingresoProyectadoEl.textContent = formatCurrency(nuevoIngresoProyectado);
+
+            fullKpiResults.rankingCabañas.forEach((cabaña, index) => {
+                const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccion / 100);
+                const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
+                const row = document.getElementById(`ranking-row-${index}`);
+                if (row) {
+                    const cell = row.querySelector('.noches-faltantes-cell');
+                    if (cell) cell.textContent = Math.round(nochesFaltantesProyectadas);
+                }
+            });
+        }
+
+        function displayKPIs(results) {
+            fullKpiResults = results;
+            const { kpisGenerales } = results;
+            ingresoPotencialBase = kpisGenerales.ingresoPotencialTotalBase || 0;
+            const proyeccionActual = parseInt(document.getElementById('kpi-proyeccion-slider').value);
+            const ingresoProyectadoActual = ingresoPotencialBase * (proyeccionActual / 100);
+            const kpiCardsContainer = document.getElementById('kpi-cards');
+            kpiCardsContainer.innerHTML = `
                                 <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">Ocupación</div><div class="text-2xl font-bold text-gray-900">${kpisGenerales.tasaOcupacion}%</div></div>
                                 <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">ADR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.adr)}</div></div>
                                 <div class="p-4 bg-gray-100 rounded-lg"><div class="text-sm font-medium text-gray-500">RevPAR</div><div class="text-2xl font-bold text-gray-900">${formatCurrency(kpisGenerales.revPar)}</div></div>
@@ -605,243 +602,243 @@
                                 <div class="p-4 bg-blue-100 rounded-lg"><div id="ingreso-proyectado-valor" class="text-sm font-medium text-blue-700">Ingreso Proyectado</div><div class="text-2xl font-bold text-blue-900">${formatCurrency(ingresoProyectadoActual)}</div></div>
                                 <div class="p-4 bg-red-100 rounded-lg"><div class="text-sm font-medium text-red-700">Descuento Real</div><div class="text-2xl font-bold text-red-900">${formatCurrency(kpisGenerales.descuentosTotalesReales)}</div></div>`;
 
-                            const canalDetailsTable = document.getElementById('canal-details-table');
-                            canalDetailsTable.innerHTML = `
+            const canalDetailsTable = document.getElementById('canal-details-table');
+            canalDetailsTable.innerHTML = `
                                 <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Canal</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase"># Reservas</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Ingreso Real</th></tr></thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     ${Object.entries(kpisGenerales.reservasPorCanal).map(([canal, data]) => `<tr><td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${canal}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${data.count}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(data.ingreso)}</td></tr>`).join('')}
                                 </tbody></table>`;
 
-                            const rankingTableBody = document.getElementById('ranking-table-body');
-                            rankingTableBody.innerHTML = '';
-                            results.rankingCabañas.forEach((cabaña, index) => {
-                                const row = document.createElement('tr');
-                                row.id = `ranking-row-${index}`;
-                                row.setAttribute('data-cabaña-nombre', cabaña.nombre);
-                                const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccionActual / 100);
-                                const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
-                                row.innerHTML = `<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${cabaña.nombre}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${cabaña.nochesOcupadas}</td><td class="noches-faltantes-cell px-4 py-3 whitespace-nowrap text-sm text-gray-700">${Math.round(nochesFaltantesProyectadas)}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(cabaña.ingresoRealTotal)}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">${formatCurrency(cabaña.descuentoTotal)}</td>`;
-                                rankingTableBody.appendChild(row);
-                            });
-                        }
+            const rankingTableBody = document.getElementById('ranking-table-body');
+            rankingTableBody.innerHTML = '';
+            results.rankingCabañas.forEach((cabaña, index) => {
+                const row = document.createElement('tr');
+                row.id = `ranking-row-${index}`;
+                row.setAttribute('data-cabaña-nombre', cabaña.nombre);
+                const nochesDisponiblesProyectadas = cabaña.nochesDisponibles * (proyeccionActual / 100);
+                const nochesFaltantesProyectadas = Math.max(0, nochesDisponiblesProyectadas - cabaña.nochesOcupadas);
+                row.innerHTML = `<td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">${cabaña.nombre}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${cabaña.nochesOcupadas}</td><td class="noches-faltantes-cell px-4 py-3 whitespace-nowrap text-sm text-gray-700">${Math.round(nochesFaltantesProyectadas)}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">${formatCurrency(cabaña.ingresoRealTotal)}</td><td class="px-4 py-3 whitespace-nowrap text-sm text-red-600">${formatCurrency(cabaña.descuentoTotal)}</td>`;
+                rankingTableBody.appendChild(row);
+            });
+        }
 
-                        function showDetailModal(cabañaNombre) {
-                            const cabañaData = fullKpiResults.rankingCabañas.find(c => c.nombre === cabañaNombre);
-                            if (!cabañaData) return;
-                            const modal = document.getElementById('detail-modal');
-                            const title = document.getElementById('detail-modal-title');
-                            const content = document.getElementById('detail-modal-content');
-                            title.textContent = `Detalle por Canal - ${cabañaNombre}`;
-                            let tableHtml = `<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>`;
-                            if (cabañaData.canales && Object.keys(cabañaData.canales).length > 0) {
-                                tableHtml = `<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Canal</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Noches con Descuento</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descuento Total</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${Object.entries(cabañaData.canales).map(([canal, data]) => `<tr><td class="px-4 py-2 text-sm font-medium">${canal}</td><td class="px-4 py-2 text-sm">${data.noches}</td><td class="px-4 py-2 text-sm text-red-600">${formatCurrency(data.descuento)}</td></tr>`).join('')}</tbody></table>`;
-                            }
-                            content.innerHTML = tableHtml;
-                            modal.classList.remove('hidden');
-                        }
+        function showDetailModal(cabañaNombre) {
+            const cabañaData = fullKpiResults.rankingCabañas.find(c => c.nombre === cabañaNombre);
+            if (!cabañaData) return;
+            const modal = document.getElementById('detail-modal');
+            const title = document.getElementById('detail-modal-title');
+            const content = document.getElementById('detail-modal-content');
+            title.textContent = `Detalle por Canal - ${cabañaNombre}`;
+            let tableHtml = `<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>`;
+            if (cabañaData.canales && Object.keys(cabañaData.canales).length > 0) {
+                tableHtml = `<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Canal</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Noches con Descuento</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descuento Total</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${Object.entries(cabañaData.canales).map(([canal, data]) => `<tr><td class="px-4 py-2 text-sm font-medium">${canal}</td><td class="px-4 py-2 text-sm">${data.noches}</td><td class="px-4 py-2 text-sm text-red-600">${formatCurrency(data.descuento)}</td></tr>`).join('')}</tbody></table>`;
+            }
+            content.innerHTML = tableHtml;
+            modal.classList.remove('hidden');
+        }
 
-                        // --- Main Init ---
-                        document.addEventListener('DOMContentLoaded', async () => {
-                            const loader = document.getElementById('loader');
-                            const appContent = document.getElementById('app-content');
-                            const authInfo = document.getElementById('auth-info');
+        // --- Main Init ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            const loader = document.getElementById('loader');
+            const appContent = document.getElementById('app-content');
+            const authInfo = document.getElementById('auth-info');
 
-                            const session = checkSession();
-                            if (!session) return;
+            const session = checkSession();
+            if (!session) return;
 
-                            // Force visible
-                            if (loader) loader.style.display = 'none';
-                            if (appContent) appContent.classList.remove('hidden');
+            // Force visible
+            if (loader) loader.style.display = 'none';
+            if (appContent) appContent.classList.remove('hidden');
 
-                            if (authInfo) {
-                                authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
-                                document.getElementById('logout-btn').addEventListener('click', logout);
-                            }
+            if (authInfo) {
+                authInfo.innerHTML = `<span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span><button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>`;
+                document.getElementById('logout-btn').addEventListener('click', logout);
+            }
 
-                            // Safe Module Init
-                            try { initTaskConfig(); } catch (e) { console.error('TaskConfig:', e); }
-                            try { initBadgeMonitor(); } catch (e) { console.error('BadgeMonitor:', e); }
-                            try { initIncidentsAdmin(); } catch (e) { console.error('IncidentsAdmin:', e); }
-                            try { initHistoryViewer(); } catch (e) { console.error('HistoryViewer:', e); }
+            // Safe Module Init
+            try { initTaskConfig(); } catch (e) { console.error('TaskConfig:', e); }
+            try { initBadgeMonitor(); } catch (e) { console.error('BadgeMonitor:', e); }
+            try { initIncidentsAdmin(); } catch (e) { console.error('IncidentsAdmin:', e); }
+            try { initHistoryViewer(); } catch (e) { console.error('HistoryViewer:', e); }
 
-                            // Load Async Data
-                            loadSettingsHeader();
-                            loadPendingTasksCount();
+            // Load Async Data
+            loadSettingsHeader();
+            loadPendingTasksCount();
 
-                            // Bind Events
-                            bindDashboardEvents();
-                        });
+            // Bind Events
+            bindDashboardEvents();
+        });
 
-                        async function loadSettingsHeader() {
-                            try {
-                                const settings = await fetchAPI('/api/settings/empresa');
-                                if (settings.nombreEmpresa) document.querySelector('h1.text-xl').textContent = settings.nombreEmpresa;
-                            } catch (e) { console.error('Error header settings:', e); }
-                        }
+        async function loadSettingsHeader() {
+            try {
+                const settings = await fetchAPI('/api/settings/empresa');
+                if (settings.nombreEmpresa) document.querySelector('h1.text-xl').textContent = settings.nombreEmpresa;
+            } catch (e) { console.error('Error header settings:', e); }
+        }
 
-                        async function loadPendingTasksCount() {
-                            try {
-                                const pendingTasks = await fetchAPI('/api/gestion/pendientes');
-                                const badge = document.getElementById('gestion-badge');
-                                if (badge && pendingTasks.length > 0) {
-                                    badge.textContent = pendingTasks.length;
-                                    badge.classList.remove('hidden');
-                                }
-                            } catch (e) { console.error("Error pending tasks:", e); }
-                        }
+        async function loadPendingTasksCount() {
+            try {
+                const pendingTasks = await fetchAPI('/api/gestion/pendientes');
+                const badge = document.getElementById('gestion-badge');
+                if (badge && pendingTasks.length > 0) {
+                    badge.textContent = pendingTasks.length;
+                    badge.classList.remove('hidden');
+                }
+            } catch (e) { console.error("Error pending tasks:", e); }
+        }
 
-                        function bindDashboardEvents() {
-                            const calculateBtn = document.getElementById('kpi-calculate-btn');
-                            const repairBtn = document.getElementById('repair-btn');
-                            const repairPhonesBtn = document.getElementById('repair-phones-btn');
-                            const proyeccionSlider = document.getElementById('kpi-proyeccion-slider');
-                            const rankingTableBody = document.getElementById('ranking-table-body');
-                            const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
-                            const warningContainer = document.getElementById('kpi-warning-container');
-                            const repairStatus = document.getElementById('repair-status');
-                            const repairPhonesStatus = document.getElementById('repair-phones-status');
-                            const detailModal = document.getElementById('detail-modal');
+        function bindDashboardEvents() {
+            const calculateBtn = document.getElementById('kpi-calculate-btn');
+            const repairBtn = document.getElementById('repair-btn');
+            const repairPhonesBtn = document.getElementById('repair-phones-btn');
+            const proyeccionSlider = document.getElementById('kpi-proyeccion-slider');
+            const rankingTableBody = document.getElementById('ranking-table-body');
+            const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
+            const warningContainer = document.getElementById('kpi-warning-container');
+            const repairStatus = document.getElementById('repair-status');
+            const repairPhonesStatus = document.getElementById('repair-phones-status');
+            const detailModal = document.getElementById('detail-modal');
 
-                            // KPIs
-                            if (calculateBtn) calculateBtn.addEventListener('click', async () => {
-                                const fechaInicio = document.getElementById('kpi-fecha-inicio').value;
-                                const fechaFin = document.getElementById('kpi-fecha-fin').value;
-                                const resultsContainer = document.getElementById('kpi-results-container');
-                                const loadingIndicator = document.getElementById('kpi-loading');
+            // KPIs
+            if (calculateBtn) calculateBtn.addEventListener('click', async () => {
+                const fechaInicio = document.getElementById('kpi-fecha-inicio').value;
+                const fechaFin = document.getElementById('kpi-fecha-fin').value;
+                const resultsContainer = document.getElementById('kpi-results-container');
+                const loadingIndicator = document.getElementById('kpi-loading');
 
-                                if (!fechaInicio || !fechaFin) { alert('Selecciona fechas.'); return; }
+                if (!fechaInicio || !fechaFin) { alert('Selecciona fechas.'); return; }
 
-                                loadingIndicator.classList.remove('hidden');
-                                resultsContainer.classList.add('hidden');
-                                if (warningContainer) warningContainer.classList.add('hidden');
+                loadingIndicator.classList.remove('hidden');
+                resultsContainer.classList.add('hidden');
+                if (warningContainer) warningContainer.classList.add('hidden');
 
-                                try {
-                                    const results = await fetchAPI(`/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
-                                    if (results.warning && warningContainer) {
-                                        warningContainer.textContent = results.warning;
-                                        warningContainer.classList.remove('hidden');
-                                    }
-                                    displayKPIs(results);
-                                    resultsContainer.classList.remove('hidden');
-                                } catch (e) { alert(e.message); }
-                                finally { loadingIndicator.classList.add('hidden'); }
-                            });
+                try {
+                    const results = await fetchAPI(`/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
+                    if (results.warning && warningContainer) {
+                        warningContainer.textContent = results.warning;
+                        warningContainer.classList.remove('hidden');
+                    }
+                    displayKPIs(results);
+                    resultsContainer.classList.remove('hidden');
+                } catch (e) { alert(e.message); }
+                finally { loadingIndicator.classList.add('hidden'); }
+            });
 
-                            if (proyeccionSlider) proyeccionSlider.addEventListener('input', (e) => {
-                                document.getElementById('proyeccion-valor').textContent = e.target.value;
-                                updateProjectedValues(parseInt(e.target.value));
-                            });
+            if (proyeccionSlider) proyeccionSlider.addEventListener('input', (e) => {
+                document.getElementById('proyeccion-valor').textContent = e.target.value;
+                updateProjectedValues(parseInt(e.target.value));
+            });
 
-                            if (rankingTableBody) rankingTableBody.addEventListener('click', (e) => {
-                                const row = e.target.closest('tr');
-                                if (row && row.dataset.cabañaNombre) showDetailModal(row.dataset.cabañaNombre);
-                            });
+            if (rankingTableBody) rankingTableBody.addEventListener('click', (e) => {
+                const row = e.target.closest('tr');
+                if (row && row.dataset.cabañaNombre) showDetailModal(row.dataset.cabañaNombre);
+            });
 
-                            if (detailModalCloseBtn) detailModalCloseBtn.addEventListener('click', () => {
-                                if (detailModal) detailModal.classList.add('hidden');
-                            });
+            if (detailModalCloseBtn) detailModalCloseBtn.addEventListener('click', () => {
+                if (detailModal) detailModal.classList.add('hidden');
+            });
 
-                            // Repairs
-                            if (repairBtn) repairBtn.addEventListener('click', async () => {
-                                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un estado de gestión. ¿Deseas continuar?')) return;
-                                repairBtn.disabled = true;
-                                repairBtn.textContent = 'Reparando...';
-                                if (repairStatus) {
-                                    repairStatus.classList.remove('hidden');
-                                    repairStatus.textContent = 'Iniciando proceso...';
-                                }
-                                try {
-                                    const result = await fetchAPI('/api/gestion/fix-missing-states', { method: 'POST' });
-                                    if (repairStatus) repairStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
-                                } catch (error) {
-                                    if (repairStatus) repairStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
-                                } finally {
-                                    repairBtn.disabled = false;
-                                    repairBtn.textContent = 'Reparar Estados de Reservas Antiguas';
-                                }
-                            });
+            // Repairs
+            if (repairBtn) repairBtn.addEventListener('click', async () => {
+                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un estado de gestión. ¿Deseas continuar?')) return;
+                repairBtn.disabled = true;
+                repairBtn.textContent = 'Reparando...';
+                if (repairStatus) {
+                    repairStatus.classList.remove('hidden');
+                    repairStatus.textContent = 'Iniciando proceso...';
+                }
+                try {
+                    const result = await fetchAPI('/api/gestion/fix-missing-states', { method: 'POST' });
+                    if (repairStatus) repairStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+                } catch (error) {
+                    if (repairStatus) repairStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                } finally {
+                    repairBtn.disabled = false;
+                    repairBtn.textContent = 'Reparar Estados de Reservas Antiguas';
+                }
+            });
 
-                            if (repairPhonesBtn) repairPhonesBtn.addEventListener('click', async () => {
-                                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas continuar?')) return;
-                                repairPhonesBtn.disabled = true;
-                                repairPhonesBtn.textContent = 'Reparando...';
-                                if (repairPhonesStatus) {
-                                    repairPhonesStatus.classList.remove('hidden');
-                                    repairPhonesStatus.textContent = 'Iniciando reparación...';
-                                }
-                                try {
-                                    const result = await fetchAPI('/api/gestion/fix-missing-phones', { method: 'POST' });
-                                    if (repairPhonesStatus) repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
-                                } catch (error) {
-                                    if (repairPhonesStatus) repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
-                                } finally {
-                                    repairPhonesBtn.disabled = false;
-                                    repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
-                                }
-                            });
+            if (repairPhonesBtn) repairPhonesBtn.addEventListener('click', async () => {
+                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas continuar?')) return;
+                repairPhonesBtn.disabled = true;
+                repairPhonesBtn.textContent = 'Reparando...';
+                if (repairPhonesStatus) {
+                    repairPhonesStatus.classList.remove('hidden');
+                    repairPhonesStatus.textContent = 'Iniciando reparación...';
+                }
+                try {
+                    const result = await fetchAPI('/api/gestion/fix-missing-phones', { method: 'POST' });
+                    if (repairPhonesStatus) repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+                } catch (error) {
+                    if (repairPhonesStatus) repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                } finally {
+                    repairPhonesBtn.disabled = false;
+                    repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
+                }
+            });
 
-                            // Settings Modal Logic
-                            const settingsForm = document.getElementById('settings-form');
-                            const settingsStatus = document.getElementById('settings-status');
+            // Settings Modal Logic
+            const settingsForm = document.getElementById('settings-form');
+            const settingsStatus = document.getElementById('settings-status');
 
-                            if (settingsForm) settingsForm.addEventListener('submit', async (e) => {
-                                e.preventDefault();
-                                if (settingsStatus) {
-                                    settingsStatus.textContent = 'Guardando...';
-                                    settingsStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
-                                }
+            if (settingsForm) settingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (settingsStatus) {
+                    settingsStatus.textContent = 'Guardando...';
+                    settingsStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
+                }
 
-                                const data = {
-                                    nombreEmpresa: document.getElementById('nombreEmpresa')?.value,
-                                    adminNombre: document.getElementById('adminNombre')?.value,
-                                    adminEmail: document.getElementById('adminEmail')?.value,
-                                    telefonoContacto: document.getElementById('telefonoContacto')?.value,
-                                    telegramChatId: document.getElementById('telegramChatId')?.value,
-                                    workerChatId: document.getElementById('workerChatId')?.value,
-                                    botToken: document.getElementById('botToken')?.value,
-                                };
+                const data = {
+                    nombreEmpresa: document.getElementById('nombreEmpresa')?.value,
+                    adminNombre: document.getElementById('adminNombre')?.value,
+                    adminEmail: document.getElementById('adminEmail')?.value,
+                    telefonoContacto: document.getElementById('telefonoContacto')?.value,
+                    telegramChatId: document.getElementById('telegramChatId')?.value,
+                    workerChatId: document.getElementById('workerChatId')?.value,
+                    botToken: document.getElementById('botToken')?.value,
+                };
 
-                                try {
-                                    await fetchAPI('/api/settings/empresa', { method: 'PUT', body: data });
-                                    if (settingsStatus) {
-                                        settingsStatus.textContent = 'Guardado correctamente.';
-                                        settingsStatus.classList.add('text-green-600');
-                                        setTimeout(() => settingsStatus.classList.add('hidden'), 3000);
-                                    }
-                                } catch (error) {
-                                    if (settingsStatus) {
-                                        settingsStatus.textContent = 'Error al guardar.';
-                                        settingsStatus.classList.add('text-red-600');
-                                    }
-                                }
-                            });
+                try {
+                    await fetchAPI('/api/settings/empresa', { method: 'PUT', body: data });
+                    if (settingsStatus) {
+                        settingsStatus.textContent = 'Guardado correctamente.';
+                        settingsStatus.classList.add('text-green-600');
+                        setTimeout(() => settingsStatus.classList.add('hidden'), 3000);
+                    }
+                } catch (error) {
+                    if (settingsStatus) {
+                        settingsStatus.textContent = 'Error al guardar.';
+                        settingsStatus.classList.add('text-red-600');
+                    }
+                }
+            });
 
-                            async function loadSettingsForm() {
-                                try {
-                                    const s = await fetchAPI('/api/settings/empresa');
-                                    if (document.getElementById('nombreEmpresa')) document.getElementById('nombreEmpresa').value = s.nombreEmpresa || '';
-                                    if (document.getElementById('adminNombre')) document.getElementById('adminNombre').value = s.adminNombre || '';
-                                    if (document.getElementById('adminEmail')) document.getElementById('adminEmail').value = s.adminEmail || '';
-                                    if (document.getElementById('telefonoContacto')) document.getElementById('telefonoContacto').value = s.telefonoContacto || '';
-                                    if (document.getElementById('telegramChatId')) document.getElementById('telegramChatId').value = s.telegramChatId || '';
-                                    if (document.getElementById('workerChatId')) document.getElementById('workerChatId').value = s.workerChatId || '';
-                                    if (document.getElementById('botToken')) document.getElementById('botToken').value = s.botToken || '';
-                                } catch (e) { }
-                            }
-                            loadSettingsForm();
+            async function loadSettingsForm() {
+                try {
+                    const s = await fetchAPI('/api/settings/empresa');
+                    if (document.getElementById('nombreEmpresa')) document.getElementById('nombreEmpresa').value = s.nombreEmpresa || '';
+                    if (document.getElementById('adminNombre')) document.getElementById('adminNombre').value = s.adminNombre || '';
+                    if (document.getElementById('adminEmail')) document.getElementById('adminEmail').value = s.adminEmail || '';
+                    if (document.getElementById('telefonoContacto')) document.getElementById('telefonoContacto').value = s.telefonoContacto || '';
+                    if (document.getElementById('telegramChatId')) document.getElementById('telegramChatId').value = s.telegramChatId || '';
+                    if (document.getElementById('workerChatId')) document.getElementById('workerChatId').value = s.workerChatId || '';
+                    if (document.getElementById('botToken')) document.getElementById('botToken').value = s.botToken || '';
+                } catch (e) { }
+            }
+            loadSettingsForm();
 
-                            // Toggle Modals
-                            const bindModal = (btnId, modalId, closeId) => {
-                                const btn = document.getElementById(btnId);
-                                const modal = document.getElementById(modalId);
-                                const close = document.getElementById(closeId);
-                                if (btn) btn.addEventListener('click', () => modal.classList.remove('hidden'));
-                                if (close) close.addEventListener('click', () => modal.classList.add('hidden'));
-                            };
-                            bindModal('abrir-historial-btn', 'modal-historial', 'cerrar-historial-btn');
-                            bindModal('abrir-settings-btn', 'modal-settings', 'cerrar-settings-btn');
-                        }
-                    </script>
+            // Toggle Modals
+            const bindModal = (btnId, modalId, closeId) => {
+                const btn = document.getElementById(btnId);
+                const modal = document.getElementById(modalId);
+                const close = document.getElementById(closeId);
+                if (btn) btn.addEventListener('click', () => modal.classList.remove('hidden'));
+                if (close) close.addEventListener('click', () => modal.classList.add('hidden'));
+            };
+            bindModal('abrir-historial-btn', 'modal-historial', 'cerrar-historial-btn');
+            bindModal('abrir-settings-btn', 'modal-settings', 'cerrar-settings-btn');
+        }
+    </script>
 </body>
 
 </html>

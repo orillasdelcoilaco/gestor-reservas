@@ -270,7 +270,7 @@
     <footer class="bg-white mt-12 py-6 border-t">
         <div class="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
             <p>Gestor de Reservas &copy; 2025 - Orillas del Coilaco</p>
-            <p class="mt-1">Versión 2.3 (Fix Dashboard Crash)</p>
+            <p class="mt-1">Versión 2.4 (Syntaxis Fix)</p>
         </div>
     </footer>
 
@@ -706,181 +706,257 @@
                             const rankingTableBody = document.getElementById('ranking-table-body');
                             const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
                             const warningContainer = document.getElementById('kpi-warning-container');
-
-                            const repairBtn = document.getElementById('repair-btn');
                             const repairStatus = document.getElementById('repair-status');
-
-                            const repairPhonesBtn = document.getElementById('repair-phones-btn');
                             const repairPhonesStatus = document.getElementById('repair-phones-status');
-
                             const detailModal = document.getElementById('detail-modal');
-                            const detailModalCloseBtn = document.getElementById('detail-modal-close-btn');
-                            const rankingTableBody = document.getElementById('ranking-table-body');
 
-                            async function loadPendingTasksCount() {
-                                try {
-                                    const pendingTasks = await fetchAPI('/api/gestion/pendientes');
-                                    const badge = document.getElementById('gestion-badge');
-                                    if (badge && pendingTasks.length > 0) {
-                                        badge.textContent = pendingTasks.length;
-                                        badge.classList.remove('hidden');
-                                    }
-                                } catch (error) {
-                                    console.error("Error al cargar el contador de tareas pendientes:", error);
-                                }
-                            }
+                            // KPIs
+                            if (calculateBtn) calculateBtn.addEventListener('click', async () => {
+                                const fechaInicio = document.getElementById('kpi-fecha-inicio').value;
+                                const fechaFin = document.getElementById('kpi-fecha-fin').value;
+                                const resultsContainer = document.getElementById('kpi-results-container');
+                                const loadingIndicator = document.getElementById('kpi-loading');
 
-                            loadPendingTasksCount();
+                                if (!fechaInicio || !fechaFin) { alert('Selecciona fechas.'); return; }
 
-                            calculateBtn.addEventListener('click', async () => {
-                                const fechaInicio = fechaInicioInput.value;
-                                const fechaFin = fechaFinInput.value;
-                                if (!fechaInicio || !fechaFin) {
-                                    alert('Por favor, selecciona una fecha de inicio y una de fin.'); return;
-                                }
                                 loadingIndicator.classList.remove('hidden');
                                 resultsContainer.classList.add('hidden');
-                                warningContainer.classList.add('hidden');
-                                calculateBtn.disabled = true;
-                                try {
-                                    const apiUrl = `/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`;
-                                    const kpiResults = await fetchAPI(apiUrl);
+                                if (warningContainer) warningContainer.classList.add('hidden');
 
-                                    if (kpiResults.warning) {
-                                        warningContainer.textContent = kpiResults.warning;
+                                try {
+                                    const results = await fetchAPI(`/api/kpi?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
+                                    if (results.warning && warningContainer) {
+                                        warningContainer.textContent = results.warning;
                                         warningContainer.classList.remove('hidden');
                                     }
-
-                                    displayKPIs(kpiResults);
-                                } catch (error) {
-                                    alert(`Error al calcular KPIs: ${error.message}`);
-                                    resultsContainer.innerHTML = `<p class="text-red-500 font-semibold">Error al calcular KPIs: ${error.message}</p>`;
-                                } finally {
-                                    loadingIndicator.classList.add('hidden');
+                                    displayKPIs(results);
                                     resultsContainer.classList.remove('hidden');
-                                    calculateBtn.disabled = false;
-                                }
+                                } catch (e) { alert(e.message); }
+                                finally { loadingIndicator.classList.add('hidden'); }
                             });
 
-                            repairBtn.addEventListener('click', async () => {
-                                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un estado de gestión. ¿Deseas continuar?')) { return; }
+                            if (proyeccionSlider) proyeccionSlider.addEventListener('input', (e) => {
+                                document.getElementById('proyeccion-valor').textContent = e.target.value;
+                                updateProjectedValues(parseInt(e.target.value));
+                            });
+
+                            if (rankingTableBody) rankingTableBody.addEventListener('click', (e) => {
+                                const row = e.target.closest('tr');
+                                if (row && row.dataset.cabañaNombre) showDetailModal(row.dataset.cabañaNombre);
+                            });
+
+                            if (detailModalCloseBtn) detailModalCloseBtn.addEventListener('click', () => {
+                                if (detailModal) detailModal.classList.add('hidden');
+                            });
+
+                            // Repairs
+                            if (repairBtn) repairBtn.addEventListener('click', async () => {
+                                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un estado de gestión. ¿Deseas continuar?')) return;
                                 repairBtn.disabled = true;
                                 repairBtn.textContent = 'Reparando...';
-                                repairStatus.classList.remove('hidden');
-                                repairStatus.textContent = 'Iniciando proceso...';
+                                if (repairStatus) {
+                                    repairStatus.classList.remove('hidden');
+                                    repairStatus.textContent = 'Iniciando proceso...';
+                                }
                                 try {
                                     const result = await fetchAPI('/api/gestion/fix-missing-states', { method: 'POST' });
-                                    repairStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+                                    if (repairStatus) repairStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
                                 } catch (error) {
-                                    repairStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                                    if (repairStatus) repairStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
                                 } finally {
                                     repairBtn.disabled = false;
                                     repairBtn.textContent = 'Reparar Estados de Reservas Antiguas';
                                 }
                             });
 
-                            repairPhonesBtn.addEventListener('click', async () => {
-                                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas continuar?')) { return; }
+                            if (repairPhonesBtn) repairPhonesBtn.addEventListener('click', async () => {
+                                if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas continuar?')) return;
                                 repairPhonesBtn.disabled = true;
                                 repairPhonesBtn.textContent = 'Reparando...';
-                                repairPhonesStatus.classList.remove('hidden');
-                                repairPhonesStatus.textContent = 'Iniciando reparación...';
+                                if (repairPhonesStatus) {
+                                    repairPhonesStatus.classList.remove('hidden');
+                                    repairPhonesStatus.textContent = 'Iniciando reparación...';
+                                }
                                 try {
                                     const result = await fetchAPI('/api/gestion/fix-missing-phones', { method: 'POST' });
-                                    repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+                                    if (repairPhonesStatus) repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
                                 } catch (error) {
-                                    repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+                                    if (repairPhonesStatus) repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
                                 } finally {
                                     repairPhonesBtn.disabled = false;
                                     repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
                                 }
                             });
 
-                            proyeccionSlider.addEventListener('input', () => {
-                                const nuevoPorcentaje = proyeccionSlider.value;
-                                proyeccionValor.textContent = nuevoPorcentaje;
-                                updateProjectedValues(parseInt(nuevoPorcentaje));
-                            });
-
-                            rankingTableBody.addEventListener('click', (e) => {
-                                const row = e.target.closest('tr');
-                                if (row && row.dataset.cabañaNombre) {
-                                    showDetailModal(row.dataset.cabañaNombre);
-                                }
-                            });
-                            detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
-                            detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
-
-                            // --- SETTINGS LOGIC ---
+                            // Settings Modal Logic
                             const settingsForm = document.getElementById('settings-form');
                             const settingsStatus = document.getElementById('settings-status');
 
-                            async function loadSettings() {
-                                try {
-                                    const settings = await fetchAPI('/api/settings/empresa');
-                                    document.getElementById('nombreEmpresa').value = settings.nombreEmpresa || '';
-                                    document.getElementById('adminNombre').value = settings.adminNombre || '';
-                                    document.getElementById('adminEmail').value = settings.adminEmail || '';
-                                    document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
-                                    document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
-                                    document.getElementById('telegramChatId').value = settings.telegramChatId || '';
-                                    document.getElementById('workerChatId').value = settings.workerChatId || '';
-                                    document.getElementById('botToken').value = settings.botToken || '';
-                                } catch (error) {
-                                    console.error('Error cargando configuración:', error);
-                                }
-                            }
-
-                            settingsForm.addEventListener('submit', async (e) => {
+                            if (settingsForm) settingsForm.addEventListener('submit', async (e) => {
                                 e.preventDefault();
-                                settingsStatus.textContent = 'Guardando...';
-                                settingsStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
+                                if (settingsStatus) {
+                                    settingsStatus.textContent = 'Guardando...';
+                                    settingsStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
+                                }
 
                                 const data = {
-                                    nombreEmpresa: document.getElementById('nombreEmpresa').value,
-                                    adminNombre: document.getElementById('adminNombre').value,
-                                    adminEmail: document.getElementById('adminEmail').value,
-                                    telefonoContacto: document.getElementById('telefonoContacto').value,
-                                    telefonoContacto: document.getElementById('telefonoContacto').value,
-                                    telegramChatId: document.getElementById('telegramChatId').value,
-                                    workerChatId: document.getElementById('workerChatId').value,
-                                    botToken: document.getElementById('botToken').value,
+                                    nombreEmpresa: document.getElementById('nombreEmpresa')?.value,
+                                    adminNombre: document.getElementById('adminNombre')?.value,
+                                    adminEmail: document.getElementById('adminEmail')?.value,
+                                    telefonoContacto: document.getElementById('telefonoContacto')?.value,
+                                    telegramChatId: document.getElementById('telegramChatId')?.value,
+                                    workerChatId: document.getElementById('workerChatId')?.value,
+                                    botToken: document.getElementById('botToken')?.value,
                                 };
 
                                 try {
-                                    const result = await fetchAPI('/api/settings/empresa', {
-                                        method: 'PUT',
-                                        body: data, // FIXED: Removed JSON.stringify because api.js handles it
-                                        headers: { 'Content-Type': 'application/json' }
-                                    });
-                                    settingsStatus.textContent = 'Guardado correctamente.';
-                                    settingsStatus.classList.add('text-green-600');
-                                    setTimeout(() => settingsStatus.classList.add('hidden'), 3000);
+                                    await fetchAPI('/api/settings/empresa', { method: 'PUT', body: data });
+                                    if (settingsStatus) {
+                                        settingsStatus.textContent = 'Guardado correctamente.';
+                                        settingsStatus.classList.add('text-green-600');
+                                        setTimeout(() => settingsStatus.classList.add('hidden'), 3000);
+                                    }
                                 } catch (error) {
-                                    settingsStatus.textContent = 'Error al guardar.';
-                                    settingsStatus.classList.add('text-red-600');
+                                    if (settingsStatus) {
+                                        settingsStatus.textContent = 'Error al guardar.';
+                                        settingsStatus.classList.add('text-red-600');
+                                    }
                                 }
                             });
 
-                            // --- MODALS TOGGLES ---
-                            const btnHist = document.getElementById('abrir-historial-btn');
-                            const modalHist = document.getElementById('modal-historial');
-                            const closeHist = document.getElementById('cerrar-historial-btn');
+                            async function loadSettingsForm() {
+                                try {
+                                    const s = await fetchAPI('/api/settings/empresa');
+                                    if (document.getElementById('nombreEmpresa')) document.getElementById('nombreEmpresa').value = s.nombreEmpresa || '';
+                                    if (document.getElementById('adminNombre')) document.getElementById('adminNombre').value = s.adminNombre || '';
+                                    if (document.getElementById('adminEmail')) document.getElementById('adminEmail').value = s.adminEmail || '';
+                                    if (document.getElementById('telefonoContacto')) document.getElementById('telefonoContacto').value = s.telefonoContacto || '';
+                                    if (document.getElementById('telegramChatId')) document.getElementById('telegramChatId').value = s.telegramChatId || '';
+                                    if (document.getElementById('workerChatId')) document.getElementById('workerChatId').value = s.workerChatId || '';
+                                    if (document.getElementById('botToken')) document.getElementById('botToken').value = s.botToken || '';
+                                } catch (e) { }
+                            }
+                            loadSettingsForm();
 
-                            if (btnHist) btnHist.addEventListener('click', () => modalHist.classList.remove('hidden'));
-                            if (closeHist) closeHist.addEventListener('click', () => modalHist.classList.add('hidden'));
-
-                            const btnSet = document.getElementById('abrir-settings-btn');
-                            const modalSet = document.getElementById('modal-settings');
-                            const closeSet = document.getElementById('cerrar-settings-btn');
-
-                            if (btnSet) btnSet.addEventListener('click', () => modalSet.classList.remove('hidden'));
-                            if (closeSet) closeSet.addEventListener('click', () => modalSet.classList.add('hidden'));
-
-                            loadSettings();
+                            // Toggle Modals
+                            const bindModal = (btnId, modalId, closeId) => {
+                                const btn = document.getElementById(btnId);
+                                const modal = document.getElementById(modalId);
+                                const close = document.getElementById(closeId);
+                                if (btn) btn.addEventListener('click', () => modal.classList.remove('hidden'));
+                                if (close) close.addEventListener('click', () => modal.classList.add('hidden'));
+                            };
+                            bindModal('abrir-historial-btn', 'modal-historial', 'cerrar-historial-btn');
+                            bindModal('abrir-settings-btn', 'modal-settings', 'cerrar-settings-btn');
                         }
-                        });
                     </script>
+</body>
+
+</html>
+
+repairPhonesBtn.addEventListener('click', async () => {
+if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas
+continuar?')) { return; }
+repairPhonesBtn.disabled = true;
+repairPhonesBtn.textContent = 'Reparando...';
+repairPhonesStatus.classList.remove('hidden');
+repairPhonesStatus.textContent = 'Iniciando reparación...';
+try {
+const result = await fetchAPI('/api/gestion/fix-missing-phones', { method: 'POST' });
+repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
+} catch (error) {
+repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
+} finally {
+repairPhonesBtn.disabled = false;
+repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
+}
+});
+
+proyeccionSlider.addEventListener('input', () => {
+const nuevoPorcentaje = proyeccionSlider.value;
+proyeccionValor.textContent = nuevoPorcentaje;
+updateProjectedValues(parseInt(nuevoPorcentaje));
+});
+
+rankingTableBody.addEventListener('click', (e) => {
+const row = e.target.closest('tr');
+if (row && row.dataset.cabañaNombre) {
+showDetailModal(row.dataset.cabañaNombre);
+}
+});
+detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
+
+// --- SETTINGS LOGIC ---
+const settingsForm = document.getElementById('settings-form');
+const settingsStatus = document.getElementById('settings-status');
+
+async function loadSettings() {
+try {
+const settings = await fetchAPI('/api/settings/empresa');
+document.getElementById('nombreEmpresa').value = settings.nombreEmpresa || '';
+document.getElementById('adminNombre').value = settings.adminNombre || '';
+document.getElementById('adminEmail').value = settings.adminEmail || '';
+document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
+document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
+document.getElementById('telegramChatId').value = settings.telegramChatId || '';
+document.getElementById('workerChatId').value = settings.workerChatId || '';
+document.getElementById('botToken').value = settings.botToken || '';
+} catch (error) {
+console.error('Error cargando configuración:', error);
+}
+}
+
+settingsForm.addEventListener('submit', async (e) => {
+e.preventDefault();
+settingsStatus.textContent = 'Guardando...';
+settingsStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
+
+const data = {
+nombreEmpresa: document.getElementById('nombreEmpresa').value,
+adminNombre: document.getElementById('adminNombre').value,
+adminEmail: document.getElementById('adminEmail').value,
+telefonoContacto: document.getElementById('telefonoContacto').value,
+telefonoContacto: document.getElementById('telefonoContacto').value,
+telegramChatId: document.getElementById('telegramChatId').value,
+workerChatId: document.getElementById('workerChatId').value,
+botToken: document.getElementById('botToken').value,
+};
+
+try {
+const result = await fetchAPI('/api/settings/empresa', {
+method: 'PUT',
+body: data, // FIXED: Removed JSON.stringify because api.js handles it
+headers: { 'Content-Type': 'application/json' }
+});
+settingsStatus.textContent = 'Guardado correctamente.';
+settingsStatus.classList.add('text-green-600');
+setTimeout(() => settingsStatus.classList.add('hidden'), 3000);
+} catch (error) {
+settingsStatus.textContent = 'Error al guardar.';
+settingsStatus.classList.add('text-red-600');
+}
+});
+
+// --- MODALS TOGGLES ---
+const btnHist = document.getElementById('abrir-historial-btn');
+const modalHist = document.getElementById('modal-historial');
+const closeHist = document.getElementById('cerrar-historial-btn');
+
+if (btnHist) btnHist.addEventListener('click', () => modalHist.classList.remove('hidden'));
+if (closeHist) closeHist.addEventListener('click', () => modalHist.classList.add('hidden'));
+
+const btnSet = document.getElementById('abrir-settings-btn');
+const modalSet = document.getElementById('modal-settings');
+const closeSet = document.getElementById('cerrar-settings-btn');
+
+if (btnSet) btnSet.addEventListener('click', () => modalSet.classList.remove('hidden'));
+if (closeSet) closeSet.addEventListener('click', () => modalSet.classList.add('hidden'));
+
+loadSettings();
+}
+});
+</script>
 </body>
 
 </html>

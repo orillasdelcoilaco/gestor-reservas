@@ -1,14 +1,16 @@
+// backend/frontend/js/modules/activityAdmin.js
 import { db } from '../firebase-init.js';
 import { collection, query, where, onSnapshot, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-const modal = document.getElementById('admin-activities-modal');
-const btnOpen = document.getElementById('btn-workflow-actividades');
-const btnClose = document.getElementById('close-admin-activities');
-const tableBody = document.getElementById('activities-table-body');
-
+let modal, btnOpen, btnClose, tableBody;
 let unsubscribe = null;
 
 export function initActivityAdmin() {
+    modal = document.getElementById('admin-activities-modal');
+    btnOpen = document.getElementById('btn-workflow-actividades');
+    btnClose = document.getElementById('close-admin-activities');
+    tableBody = document.getElementById('activities-table-body');
+
     if (btnOpen) {
         btnOpen.addEventListener('click', () => {
             openModal();

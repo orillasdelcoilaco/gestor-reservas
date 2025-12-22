@@ -4,15 +4,15 @@ import {
     collection, query, where, onSnapshot, orderBy, doc, updateDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-const modal = document.getElementById('admin-incidents-modal');
-const listContainer = document.getElementById('admin-incidents-list');
-const btnClose = document.getElementById('close-admin-incidents');
-const btnOpen = document.getElementById('btn-workflow-incidencias');
-// const btnViewResolved = document.getElementById('view-resolved-btn');
-
+let modal, listContainer, btnClose, btnOpen;
 let unsubscribeList = null;
 
 export function initIncidentsAdmin() {
+    modal = document.getElementById('admin-incidents-modal');
+    listContainer = document.getElementById('admin-incidents-list');
+    btnClose = document.getElementById('close-admin-incidents');
+    btnOpen = document.getElementById('btn-workflow-incidencias');
+
     if (btnOpen) {
         btnOpen.addEventListener('click', () => {
             openModal();

@@ -24,6 +24,7 @@ async function createIncident(db, data) {
         reportadoPor: reportadoPor || { nombre: 'Desconocido', id: null },
         tareaId: tareaId || null,
         reservaId: reservaId || null,
+        fotoUrl: data.fotoUrl || null, // Added photo support
         fechaReporte: admin.firestore.FieldValue.serverTimestamp(),
         // Para agregaciones/debounce simples
         fechaReporteStr: new Date().toISOString()

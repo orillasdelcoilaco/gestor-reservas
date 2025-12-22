@@ -270,7 +270,7 @@
     <footer class="bg-white mt-12 py-6 border-t">
         <div class="max-w-7xl mx-auto px-4 text-center text-gray-400 text-sm">
             <p>Gestor de Reservas &copy; 2025 - Orillas del Coilaco</p>
-            <p class="mt-1">Versión 2.6 (Nested Form Fix)</p>
+            <p class="mt-1">Versión 2.7 (Cleanup)</p>
         </div>
     </footer>
 
@@ -839,113 +839,6 @@
             bindModal('abrir-settings-btn', 'modal-settings', 'cerrar-settings-btn');
         }
     </script>
-</body>
-
-</html>
-
-repairPhonesBtn.addEventListener('click', async () => {
-if (!confirm('Esta acción revisará todas las reservas y reparará las que no tengan un número de teléfono. ¿Deseas
-continuar?')) { return; }
-repairPhonesBtn.disabled = true;
-repairPhonesBtn.textContent = 'Reparando...';
-repairPhonesStatus.classList.remove('hidden');
-repairPhonesStatus.textContent = 'Iniciando reparación...';
-try {
-const result = await fetchAPI('/api/gestion/fix-missing-phones', { method: 'POST' });
-repairPhonesStatus.innerHTML = `<strong>Éxito:</strong> ${result.message}`;
-} catch (error) {
-repairPhonesStatus.innerHTML = `<strong>Error:</strong> ${error.message}`;
-} finally {
-repairPhonesBtn.disabled = false;
-repairPhonesBtn.textContent = 'Reparar Teléfonos Faltantes';
-}
-});
-
-proyeccionSlider.addEventListener('input', () => {
-const nuevoPorcentaje = proyeccionSlider.value;
-proyeccionValor.textContent = nuevoPorcentaje;
-updateProjectedValues(parseInt(nuevoPorcentaje));
-});
-
-rankingTableBody.addEventListener('click', (e) => {
-const row = e.target.closest('tr');
-if (row && row.dataset.cabañaNombre) {
-showDetailModal(row.dataset.cabañaNombre);
-}
-});
-detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
-detailModalCloseBtn.addEventListener('click', () => detailModal.classList.add('hidden'));
-
-// --- SETTINGS LOGIC ---
-const settingsForm = document.getElementById('settings-form');
-const settingsStatus = document.getElementById('settings-status');
-
-async function loadSettings() {
-try {
-const settings = await fetchAPI('/api/settings/empresa');
-document.getElementById('nombreEmpresa').value = settings.nombreEmpresa || '';
-document.getElementById('adminNombre').value = settings.adminNombre || '';
-document.getElementById('adminEmail').value = settings.adminEmail || '';
-document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
-document.getElementById('telefonoContacto').value = settings.telefonoContacto || '';
-document.getElementById('telegramChatId').value = settings.telegramChatId || '';
-document.getElementById('workerChatId').value = settings.workerChatId || '';
-document.getElementById('botToken').value = settings.botToken || '';
-} catch (error) {
-console.error('Error cargando configuración:', error);
-}
-}
-
-settingsForm.addEventListener('submit', async (e) => {
-e.preventDefault();
-settingsStatus.textContent = 'Guardando...';
-settingsStatus.classList.remove('hidden', 'text-green-600', 'text-red-600');
-
-const data = {
-nombreEmpresa: document.getElementById('nombreEmpresa').value,
-adminNombre: document.getElementById('adminNombre').value,
-adminEmail: document.getElementById('adminEmail').value,
-telefonoContacto: document.getElementById('telefonoContacto').value,
-telefonoContacto: document.getElementById('telefonoContacto').value,
-telegramChatId: document.getElementById('telegramChatId').value,
-workerChatId: document.getElementById('workerChatId').value,
-botToken: document.getElementById('botToken').value,
-};
-
-try {
-const result = await fetchAPI('/api/settings/empresa', {
-method: 'PUT',
-body: data, // FIXED: Removed JSON.stringify because api.js handles it
-headers: { 'Content-Type': 'application/json' }
-});
-settingsStatus.textContent = 'Guardado correctamente.';
-settingsStatus.classList.add('text-green-600');
-setTimeout(() => settingsStatus.classList.add('hidden'), 3000);
-} catch (error) {
-settingsStatus.textContent = 'Error al guardar.';
-settingsStatus.classList.add('text-red-600');
-}
-});
-
-// --- MODALS TOGGLES ---
-const btnHist = document.getElementById('abrir-historial-btn');
-const modalHist = document.getElementById('modal-historial');
-const closeHist = document.getElementById('cerrar-historial-btn');
-
-if (btnHist) btnHist.addEventListener('click', () => modalHist.classList.remove('hidden'));
-if (closeHist) closeHist.addEventListener('click', () => modalHist.classList.add('hidden'));
-
-const btnSet = document.getElementById('abrir-settings-btn');
-const modalSet = document.getElementById('modal-settings');
-const closeSet = document.getElementById('cerrar-settings-btn');
-
-if (btnSet) btnSet.addEventListener('click', () => modalSet.classList.remove('hidden'));
-if (closeSet) closeSet.addEventListener('click', () => modalSet.classList.add('hidden'));
-
-loadSettings();
-}
-});
-</script>
 </body>
 
 </html>

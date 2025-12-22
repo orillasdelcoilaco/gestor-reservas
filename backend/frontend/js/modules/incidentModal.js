@@ -1,18 +1,12 @@
 // backend/frontend/js/modules/incidentModal.js
 import { fetchAPI } from '../../api.js';
+import { storage } from '../firebase-init.js'; // Updated import
+import { ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
 
-// TODO: Fetch from backend config?
+// ESPACIOS is still useful as a constant or could be dynamic. Keeping it static for now as it's standard.
 const ESPACIOS = [
-    'Dormitorio Principal',
-    'Dormitorio',
-    'Baño en Suite',
-    'Baño',
-    'Living',
-    'Comedor',
-    'Cocina',
-    'Terraza',
-    'Quincho',
-    'Exterior'
+    'Dormitorio Principal', 'Dormitorio', 'Baño en Suite', 'Baño', 'Living',
+    'Comedor', 'Cocina', 'Terraza', 'Quincho', 'Exterior'
 ];
 
 const modal = document.getElementById('incident-modal');
@@ -21,8 +15,15 @@ const btnClose = document.getElementById('close-modal');
 const form = document.getElementById('incident-form');
 const selectSpace = document.getElementById('incident-space');
 
-export function initIncidentModal() {
-    // Populate Select
+// Elements for Photo
+const btnAddPhoto = document.getElementById('btn-add-photo');
+const inputPhoto = document.getElementById('incident-photo');
+const photoPreview = document.getElementById('photo-preview');
+const photoStatus = document.getElementById('photo-status');
+let compressedImageBase64 = null; // Store compressed data
+
+export async function initIncidentModal() {
+    // Populate Space Select
     selectSpace.innerHTML = '<option value="">Selecciona espacio...</option>';
     ESPACIOS.forEach(esp => {
         const opt = document.createElement('option');
@@ -31,67 +32,141 @@ export function initIncidentModal() {
         selectSpace.appendChild(opt);
     });
 
-    // Events
-    btnReport.addEventListener('click', () => modal.classList.remove('hidden'));
-    btnClose.addEventListener('click', () => modal.classList.add('hidden'));
-
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const icon = btnReport.innerHTML;
-        const submitBtn = form.querySelector('button[type="submit"]');
-
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Enviando...';
-
-        const data = {
-            espacio: selectSpace.value,
-            descripcion: document.getElementById('incident-desc').value,
-            // TODO: Detect actual cabin from Active Task or Selection?
-            // For now, prompt asking Cabin OR assume "General" / "Sin Cabaña" if not in task context?
-            // Requirement says "Obligar a seleccionar un Espacio" but not explicit about Cabaña selector here?
-            // "Gestión de Incidencias: ... seleccionar un Espacio".
-            // Ideally should also select Cabin if not inferred.
-            // Let's add Cabaña selector dynamically or static list for now.
-            // For modularity, maybe add it to form HTML now.
-            cabanaId: 'Cabaña X (Manual)', // Placeholder until UI update
-            reportadoPor: { nombre: 'Estrella (Portal)', id: 'mobile-user' }
-        };
-
-        // Add Cabin Selector logic if missing in HTML (Reviewing HTML... it is missing).
-        // I will inject it or prompt?
-        // Better: I will Update HTML in next step or inject it via JS.
-        // Let's inject a Cabin selector into the form via JS for now to be robust.
-
-        if (!data.cabanaId || data.cabanaId === 'Cabaña X (Manual)') {
-            // Find if there's a cabin selector in form, if not, use prompt or fail.
-            // Actually, let's assume the user is "Reportando desde Cabaña 10" because they are physically there.
-            // But the portal lists ALL tasks.
-            // So we MUST ask for Cabaña.
-            const cabinaExplicita = document.getElementById('incident-cabana')?.value;
-            if (cabinaExplicita) data.cabanaId = cabinaExplicita;
-        }
-
+    // Populate Cabin Select Dynamically
+    const incidentCabanaSelect = document.getElementById('incident-cabana');
+    if (incidentCabanaSelect) {
         try {
-            await fetchAPI('/api/incidencias', {
-                method: 'POST',
-                body: data
-            });
-            alert('Reporte enviado correctamente. El administrador ha sido notificado.');
-            modal.classList.add('hidden');
-            form.reset();
-        } catch (error) {
-            console.error('Error reportando:', error);
-            alert('Error al enviar reporte: ' + error.message);
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'ENVIAR REPORTE';
+            const result = await fetchAPI('/api/cabanas'); // Uses /api/cabanas endpoint
+            incidentCabanaSelect.innerHTML = '<option value="">Selecciona Cabaña...</option>';
+            // Assume result is array of objects { nombre: 'Cabaña 1', ... }
+            if (Array.isArray(result)) {
+                result.forEach(cab => {
+                    const opt = document.createElement('option');
+                    opt.value = cab.nombre;
+                    opt.textContent = cab.nombre;
+                    incidentCabanaSelect.appendChild(opt);
+                });
+            }
+        } catch (e) {
+            console.error("Error fetching cabins:", e);
+            // Fallback?
         }
-    });
+    }
+
+    // --- PHOTO LOGIC ---
+    if (btnAddPhoto && inputPhoto) {
+        btnAddPhoto.addEventListener('click', () => inputPhoto.click());
+
+        inputPhoto.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            photoStatus.textContent = 'Procesando...';
+
+            // Compressor using Canvas
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Max width 1024px
+                    const MAX_WIDTH = 1024;
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Output as JPEG 0.7 quality
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    compressedImageBase64 = dataUrl;
+
+                    // Preview
+                    photoPreview.src = dataUrl;
+                    photoPreview.classList.remove('hidden');
+                    photoStatus.textContent = 'Foto lista';
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Events
+    if (btnReport) btnReport.addEventListener('click', () => modal.classList.remove('hidden'));
+    if (btnClose) btnClose.addEventListener('click', () => modal.classList.add('hidden'));
+
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enviando...';
+
+            let fotoUrl = null;
+
+            // 1. Upload Photo if exists
+            if (compressedImageBase64) {
+                try {
+                    const randomName = `incidencias/${Date.now()}_${Math.floor(Math.random() * 1000)}.jpg`;
+                    const storageRef = ref(storage, randomName);
+
+                    // Upload Base64 string
+                    await uploadString(storageRef, compressedImageBase64, 'data_url');
+                    fotoUrl = await getDownloadURL(storageRef);
+                    console.log('Foto subida:', fotoUrl);
+                } catch (uploadError) {
+                    console.error('Error uploading photo:', uploadError);
+                    alert('Error subiendo foto. Se intentará enviar el reporte sin foto.');
+                }
+            }
+
+            // 2. Prepare Data
+            const cabanaId = document.getElementById('incident-cabana')?.value || 'Sin Cabaña';
+
+            const data = {
+                espacio: selectSpace.value,
+                descripcion: document.getElementById('incident-desc').value,
+                cabanaId: cabanaId,
+                fotoUrl: fotoUrl, // URL pública/tokenizada
+                reportadoPor: { nombre: 'Estrella (Portal)', id: 'mobile-user' }
+            };
+
+            try {
+                await fetchAPI('/api/incidencias', {
+                    method: 'POST',
+                    body: data
+                });
+                alert('Reporte enviado correctamente.');
+                modal.classList.add('hidden');
+                form.reset();
+                compressedImageBase64 = null;
+                photoPreview.classList.add('hidden');
+                photoStatus.textContent = '';
+            } catch (error) {
+                console.error('Error reportando:', error);
+                alert('Error al enviar reporte: ' + error.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'ENVIAR REPORTE';
+            }
+        });
+    }
 }
 
 // Initialize on load
 document.addEventListener('DOMContentLoaded', () => {
-    // Inject Cabin Selector if not present
+    // Inject Cabin Selector if not present (Wait, we want to fetch it dynamically inside init)
+    // Actually, looking at previous logic, it injected the HTML.
+    // Let's ensure the HTML structure exists for `initIncidentModal` to find it.
+
     const spaceDiv = selectSpace.parentElement;
     if (!document.getElementById('incident-cabana')) {
         const div = document.createElement('div');
@@ -99,12 +174,7 @@ document.addEventListener('DOMContentLoaded', () => {
         div.innerHTML = `
             <label class="block text-sm font-medium text-gray-700 mb-2">Cabaña</label>
             <select id="incident-cabana" class="w-full rounded-lg border-gray-300 p-3 bg-gray-50 text-lg" required>
-                <option value="">Selecciona Cabaña...</option>
-                <option value="Cabaña 10">Cabaña 10</option>
-                <option value="Cabaña 11">Cabaña 11</option>
-                <option value="Cabaña 12">Cabaña 12</option>
-                <option value="Cabaña 14">Cabaña 14</option>
-                <option value="Cabaña 15">Cabaña 15</option>
+                <option value="">Cargando...</option>
             </select>
         `;
         form.insertBefore(div, spaceDiv);

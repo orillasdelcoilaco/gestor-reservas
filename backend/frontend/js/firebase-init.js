@@ -12,9 +12,12 @@ const firebaseConfig = {
     appId: "1:177883383809:web:329694a3dc2df074f7d800"
 };
 
+import { getStorage } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-storage.js";
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // Activar persistencia offline
 try {
@@ -33,4 +36,4 @@ try {
     console.error('[Firebase] Error activando persistencia:', e);
 }
 
-export { app, auth, db };
+export { app, auth, db, storage };

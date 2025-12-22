@@ -3,33 +3,48 @@ import { collection, query, where, onSnapshot, updateDoc, doc, orderBy, Timestam
 import { signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
 // --- CONFIG ---
-// TODO: Fetch from backend config?
-const SOP_PROTOCOLS = {
-    'Cambio': [
-        'Retirar sábanas y toallas sucias',
-        'Ventilar habitaciones (min 15 min)',
-        'Limpiar baño completo',
-        'Hacer camas con ropa limpia',
-        'Barrido y mopeado general',
-        'Reponer amenities (shampoo, jabón)',
-        'Verificar luces y control remoto'
-    ],
-    'Salida': [
-        'Revisión Inventario Completo',
-        'Limpieza profunda cocina y refri',
-        'Revisión bajo camas y sofás',
-        'Limpieza vidrios interiores',
-        'Protocolo de olvidos (Lost & Found)',
-        'Cerrar llaves de paso si no hay entrada hoy'
-    ],
-    'Limpieza': [ // Default/Repaso
-        'Hacer camas',
-        'Limpiar baño superficial',
-        'Retirar basura',
-        'Barrido general',
-        'Verificar toallas'
-    ]
-};
+let dynamicProtocols = {};
+
+// Fetch Task Types from Backend
+async function fetchTaskTypes() {
+    try {
+        const response = await fetch('/api/task-types'); // Use relative path, authenticated via session cookie/token usually handled by fetch or we might need headers if strictly protected.
+        // Wait, portalLogic uses custom token auth? 
+        // fetchAPI in api.js handles headers.
+        // Let's import fetchAPI? No, portalLogic imports db/auth directly + generic fetch?
+        // Let's use standard fetch but we need the token.
+        // Or simpler: define a helper or use the one from api.js if available.
+        // portal-operativo.html imports api.js but portalLogic.js DOES NOT use it currently?
+        // Ah, look at imports. It imports db, auth.
+        // I should use `fetch` but append token if needed.
+        // However, /api/task-types might be protected.
+        // Let's try to fetch. If it fails (401), we assume auth issue.
+        // But since we are logged in with Firebase, we can get the token.
+
+        // Simpler: Just fetch(), if it's public-ish or cookie based?
+        // The backend uses `checkFirebaseToken`.
+        // So we need Authorization header.
+
+        const user = auth.currentUser;
+        if (!user) return;
+        const token = await user.getIdToken();
+
+        const res = await fetch('/api/task-types', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (res.ok) {
+            const types = await res.json();
+            // Convert to map: name -> checklist
+            types.forEach(t => {
+                dynamicProtocols[t.nombre] = t.checklist || [];
+            });
+            console.log('✅ Protocols Loaded:', Object.keys(dynamicProtocols));
+        }
+    } catch (e) {
+        console.error('Error fetching protocols:', e);
+    }
+}
 
 let currentTasks = [];
 let currentWorkerId = 'Principal';
@@ -91,10 +106,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     onAuthStateChanged(auth, (user) => {
         if (user) {
             // User is signed in.
-            // If we didn't set currentWorkerId from magic login, we might want to fetch it from profile
-            // For now, if logged in via magic link, the id matches the claim.
-            // But if previously logged in, user.uid matches worker.id? 
-            // In magic flow: uid = worker.id.
             currentWorkerId = user.uid; // Since we set uid to workerId in createCustomToken
             console.log('Logged in as:', currentWorkerId);
             initPortal();
@@ -111,7 +122,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 });
 
-function initPortal() {
+async function initPortal() {
+    await fetchTaskTypes(); // Load protocols first
     updateDateDisplay();
     startTaskListener();
 }
@@ -223,7 +235,8 @@ function openSOP(task) {
     sopModal.classList.remove('hidden');
 
     // Get checklist
-    const checklist = SOP_PROTOCOLS[task.tipoAseo] || SOP_PROTOCOLS['Limpieza'];
+    // Get checklist
+    const checklist = dynamicProtocols[task.tipoAseo] || dynamicProtocols['Limpieza'] || ['Tarea genérica sin checklist'];
 
     sopContent.innerHTML = '';
     let checkedCount = 0;

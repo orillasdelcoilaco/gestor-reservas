@@ -11,6 +11,8 @@ export function initActivityAdmin() {
     btnClose = document.getElementById('close-admin-activities');
     tableBody = document.getElementById('activities-table-body');
 
+    console.log('Init Activity Admin:', { btnOpen, modal }); // DEBUG
+
     if (btnOpen) {
         btnOpen.addEventListener('click', () => {
             openModal();

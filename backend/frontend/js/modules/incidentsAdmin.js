@@ -71,6 +71,7 @@ function renderList(docs) {
                     <span class="text-xs font-bold px-2 py-0.5 rounded ${getPriorityColor(data.prioridad)} text-white">${data.prioridad}</span>
                 </div>
                 <p class="text-gray-800 font-medium">${data.descripcion}</p>
+                ${data.fotoUrl ? `<div class="mt-2"><a href="${data.fotoUrl}" target="_blank"><img src="${data.fotoUrl}" class="h-24 rounded border hover:scale-105 transition"></a></div>` : ''}
                 <div class="text-xs text-gray-500 mt-2">
                     Reportado por: ${data.reportadoPor?.nombre || '??'} • ${dateStr}
                 </div>

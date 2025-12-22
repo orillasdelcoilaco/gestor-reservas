@@ -58,6 +58,7 @@ function renderList(docs) {
     docs.forEach(docSnap => {
         const data = docSnap.data();
         const id = docSnap.id;
+        console.log('Incident Data:', id, data); // DEBUG
         const div = document.createElement('div');
         div.className = `incident-item p-4 rounded-lg border shadow-sm ${data.prioridad} flex justify-between items-start`;
 

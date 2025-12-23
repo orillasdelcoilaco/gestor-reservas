@@ -193,7 +193,6 @@ function recalculateComparison() {
 
             if (expectedType) {
                 // Check if exists in Executed
-                // Matches if Same Date, Same Cabin, and (Same Type OR Type is Cambio which covers Salida)
                 const exists = executedCache.find(t => {
                     const tDate = t.fecha.toDate ? t.fecha.toDate() : new Date(t.fecha);
                     tDate.setHours(0, 0, 0, 0);
@@ -211,8 +210,6 @@ function recalculateComparison() {
                         status = 'PENDIENTE';
                     }
 
-                    console.log(`[DEBUG] Ghost Created: ${res.cabanaId} ${loopDate.getDate()} Status: ${status}`);
-
                     // Push Ghost
                     combinedTasksCache.push({
                         id: `ghost_${res.id}_${d}`,
@@ -227,6 +224,27 @@ function recalculateComparison() {
             }
         });
     }
+
+    // SANITIZATION PASS: Ensure all tasks have valid status
+    combinedTasksCache.forEach(t => {
+        const tDate = t.fecha.toDate ? t.fecha.toDate() : new Date(t.fecha);
+        tDate.setHours(0, 0, 0, 0);
+
+        if (!t.estado) {
+            if (tDate.getTime() > today.getTime()) {
+                t.estado = 'PROGRAMADO';
+            } else {
+                t.estado = 'PENDIENTE'; // Default for past/present executing
+            }
+        }
+
+        // Force Future Tasks to be PROGRAMADO if they are not explicitly Finalized (handle zombies)
+        if (tDate.getTime() > today.getTime() && t.estado !== 'FINALIZADO') {
+            t.estado = 'PROGRAMADO';
+        }
+    });
+
+    console.log('[DEBUG] Combined Cache Final:', combinedTasksCache.length);
 }
 
 // --- RENDER GRID ---

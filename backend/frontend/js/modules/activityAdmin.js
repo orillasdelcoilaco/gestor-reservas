@@ -168,6 +168,8 @@ function recalculateComparison() {
     });
 
     // A. Generate Expected Tasks where missing
+    console.log(`[DEBUG] Recalculating. Reservations: ${reservationsCache.length}, Executed: ${executedCache.length}`);
+
     for (let d = 1; d <= daysInMonth; d++) {
         const loopDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
         loopDate.setHours(0, 0, 0, 0);
@@ -176,32 +178,39 @@ function recalculateComparison() {
             // Check In/Out collision
             const checkIn = res.checkIn.toDate ? res.checkIn.toDate() : new Date(res.checkIn);
             const checkOut = res.checkOut.toDate ? res.checkOut.toDate() : new Date(res.checkOut);
-            checkIn.setHours(0, 0, 0, 0);
-            checkOut.setHours(0, 0, 0, 0);
+
+            // Normalize dates for comparison (Strip time)
+            const ci = new Date(checkIn); ci.setHours(0, 0, 0, 0);
+            const co = new Date(checkOut); co.setHours(0, 0, 0, 0);
 
             let expectedType = null;
-            if (loopDate.getTime() === checkOut.getTime()) {
+            if (loopDate.getTime() === co.getTime()) {
                 expectedType = 'Salida';
+            } else if (loopDate.getTime() === ci.getTime()) {
+                // Check-in logic if needed
             }
-            // Add more logic here (Maintenance, Check-in Repaso) if needed
 
             if (expectedType) {
                 // Check if exists in Executed
                 // Matches if Same Date, Same Cabin, and (Same Type OR Type is Cambio which covers Salida)
-                const exists = executedCache.find(t =>
-                    isSameDay(t.fecha.toDate(), loopDate) &&
-                    t.cabanaId === res.cabanaId &&
-                    (t.tipoAseo === expectedType || t.tipoAseo === 'Cambio')
-                );
+                const exists = executedCache.find(t => {
+                    const tDate = t.fecha.toDate ? t.fecha.toDate() : new Date(t.fecha);
+                    tDate.setHours(0, 0, 0, 0);
+                    return tDate.getTime() === loopDate.getTime() &&
+                        t.cabanaId === res.cabanaId &&
+                        (t.tipoAseo === expectedType || t.tipoAseo === 'Cambio');
+                });
 
                 if (!exists) {
                     // Determine Status
                     let status = 'FALTANTE';
-                    if (loopDate > today) {
+                    if (loopDate.getTime() > today.getTime()) {
                         status = 'PROGRAMADO';
                     } else if (loopDate.getTime() === today.getTime()) {
                         status = 'PENDIENTE';
                     }
+
+                    console.log(`[DEBUG] Ghost Created: ${res.cabanaId} ${loopDate.getDate()} Status: ${status}`);
 
                     // Push Ghost
                     combinedTasksCache.push({

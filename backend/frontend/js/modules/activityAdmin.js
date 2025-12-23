@@ -151,6 +151,7 @@ async function loadMonthData() {
         recalculateComparison();
         renderCalendarGrid();
     }, (error) => {
+        renderCalendarGrid();
         console.error("Error loading tasks:", error);
     });
 }

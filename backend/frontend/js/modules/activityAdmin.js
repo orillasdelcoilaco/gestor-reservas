@@ -243,6 +243,8 @@ function renderDayList() {
 
         // Check assigned worker for ghost tasks
         const workerDisplay = (hasMissing || hasFuture) && c.worker === 'Sin asignar' ? 'Sistema (Automático)' : c.worker;
+
+        const div = document.createElement('div');
         div.className = 'flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm hover:shadow-md cursor-pointer transition';
         div.innerHTML = `
             <div class="flex items-center gap-4">
@@ -251,11 +253,11 @@ function renderDayList() {
                 </div>
                 <div>
                     <h5 class="font-bold text-gray-900">${c.name}</h5>
-                    <p class="text-sm text-gray-500">${c.worker}</p>
+                    <p class="text-sm text-gray-500">${workerDisplay}</p>
                 </div>
             </div>
             <div class="text-right">
-                <p class="text-sm font-semibold ${colorClass}">${allDone ? 'Completado' : 'En Progreso'}</p>
+                <p class="text-sm font-semibold ${colorClass}">${statusText}</p>
                 <p class="text-xs text-gray-400">${c.tasks.length} Tareas</p>
             </div>
         `;

@@ -218,12 +218,31 @@ function renderDayList() {
     });
 
     Object.values(cabins).forEach(c => {
-        // Cabin Status
-        const allDone = c.tasks.every(t => t.estado === 'FINALIZADO');
-        const icon = allDone ? '✅' : '⏳';
-        const colorClass = allDone ? 'text-green-600' : 'text-orange-600';
+        const hasMissing = c.tasks.some(t => t.estado === 'FALTANTE');
+        const hasPending = c.tasks.some(t => t.estado === 'PENDIENTE');
+        const hasFuture = c.tasks.some(t => t.estado === 'PROGRAMADO');
 
-        const div = document.createElement('div');
+        // Default (All Done)
+        let icon = '✅';
+        let colorClass = 'text-green-600';
+        let statusText = 'Completo';
+
+        if (hasMissing) {
+            icon = '⚠️'; // Was ❌
+            colorClass = 'text-red-600';
+            statusText = 'Faltante';
+        } else if (hasPending) {
+            icon = '⏳';
+            colorClass = 'text-orange-600';
+            statusText = 'En Progreso';
+        } else if (hasFuture) {
+            icon = '📅';
+            colorClass = 'text-blue-600';
+            statusText = 'Programado';
+        }
+
+        // Check assigned worker for ghost tasks
+        const workerDisplay = (hasMissing || hasFuture) && c.worker === 'Sin asignar' ? 'Sistema (Automático)' : c.worker;
         div.className = 'flex items-center justify-between p-4 bg-white border rounded-lg shadow-sm hover:shadow-md cursor-pointer transition';
         div.innerHTML = `
             <div class="flex items-center gap-4">

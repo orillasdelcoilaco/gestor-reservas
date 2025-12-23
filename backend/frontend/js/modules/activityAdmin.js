@@ -1,6 +1,6 @@
 // backend/frontend/js/modules/activityAdmin.js
 import { db } from '../firebase-init.js';
-import { collection, query, where, onSnapshot, orderBy, Timestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+import { collection, query, where, onSnapshot, getDocs, Timestamp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
 // DOM Elements
 let modal, btnOpen, btnClose;
@@ -13,8 +13,12 @@ let detailCabinName, detailWorker;
 let currentDate = new Date(); // To track month
 let selectedDate = null;
 let selectedCabin = null;
-let tasksCache = []; // Store fetched tasks for the month
-let unsubscribe = null;
+
+let executedCache = []; // Real tasks (planAseo)
+let reservationsCache = []; // Bookings
+let combinedTasksCache = []; // Merged
+
+let unsubscribeExecuted = null;
 
 export function initActivityAdmin() {
     // Modal & Main Nav
@@ -57,7 +61,7 @@ function openModal() {
 
 function closeModal() {
     if (modal) modal.classList.add('hidden');
-    if (unsubscribe) unsubscribe();
+    if (unsubscribeExecuted) unsubscribeExecuted();
 }
 
 function changeMonth(delta) {
@@ -81,6 +85,7 @@ function showView(viewName) {
     btnBack.classList.add('hidden');
     elCurrentMonth.parentElement.classList.remove('hidden'); // Show month nav by default
 
+    // Logic
     if (viewName === 'calendar') {
         viewCalendar.classList.remove('hidden');
         elTitle.textContent = 'Control de Actividades';
@@ -101,7 +106,7 @@ function showView(viewName) {
 
 // --- DATA LOGIC ---
 
-function loadMonthData() {
+async function loadMonthData() {
     // Update Header
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
     elCurrentMonth.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
@@ -110,31 +115,111 @@ function loadMonthData() {
     const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59);
 
-    if (unsubscribe) unsubscribe();
+    if (unsubscribeExecuted) unsubscribeExecuted();
 
-    // Fetch ALL tasks for the month (optimized)
-    // In a huge app, we might fetch only stats, but for this scale, fetching tasks is fine
-    const q = query(
+    // 1. Fetch Reservations (Buffer for check-ins/outs crossing month)
+    const startRes = new Date(startOfMonth); startRes.setDate(startRes.getDate() - 10);
+    const endRes = new Date(endOfMonth); endRes.setDate(endRes.getDate() + 10);
+
+    const qRes = query(
+        collection(db, "reservas"),
+        where("checkIn", ">=", Timestamp.fromDate(startRes)),
+        where("checkIn", "<=", Timestamp.fromDate(endRes))
+    );
+
+    try {
+        const snapRes = await getDocs(qRes);
+        reservationsCache = snapRes.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (e) {
+        console.error("Error fetching reservations:", e);
+        reservationsCache = [];
+    }
+
+    // 2. Listen to PlanAseo (Executed)
+    const qTasks = query(
         collection(db, "planAseo"),
-        //orderBy("fecha"), // Optional: requires index
         where("fecha", ">=", Timestamp.fromDate(startOfMonth)),
         where("fecha", "<=", Timestamp.fromDate(endOfMonth))
     );
 
-    unsubscribe = onSnapshot(q, (snapshot) => {
-        tasksCache = [];
+    unsubscribeExecuted = onSnapshot(qTasks, (snapshot) => {
+        executedCache = [];
         snapshot.forEach(doc => {
-            tasksCache.push({ id: doc.id, ...doc.data() });
+            executedCache.push({ id: doc.id, ...doc.data() });
         });
+
+        recalculateComparison();
         renderCalendarGrid();
     }, (error) => {
         console.error("Error loading tasks:", error);
-        // Fallback for missing index: render empty or mock if needed
-        renderCalendarGrid();
     });
 }
 
-// --- RENDER CALENDAR ---
+function recalculateComparison() {
+    combinedTasksCache = [];
+
+    const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // B. Add Actual Tasks First
+    executedCache.forEach(t => {
+        combinedTasksCache.push(t);
+    });
+
+    // A. Generate Expected Tasks where missing
+    for (let d = 1; d <= daysInMonth; d++) {
+        const loopDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
+        loopDate.setHours(0, 0, 0, 0);
+
+        reservationsCache.forEach(res => {
+            // Check In/Out collision
+            const checkIn = res.checkIn.toDate ? res.checkIn.toDate() : new Date(res.checkIn);
+            const checkOut = res.checkOut.toDate ? res.checkOut.toDate() : new Date(res.checkOut);
+            checkIn.setHours(0, 0, 0, 0);
+            checkOut.setHours(0, 0, 0, 0);
+
+            let expectedType = null;
+            if (loopDate.getTime() === checkOut.getTime()) {
+                expectedType = 'Salida';
+            }
+            // Add more logic here (Maintenance, Check-in Repaso) if needed
+
+            if (expectedType) {
+                // Check if exists in Executed
+                // Matches if Same Date, Same Cabin, and (Same Type OR Type is Cambio which covers Salida)
+                const exists = executedCache.find(t =>
+                    isSameDay(t.fecha.toDate(), loopDate) &&
+                    t.cabanaId === res.cabanaId &&
+                    (t.tipoAseo === expectedType || t.tipoAseo === 'Cambio')
+                );
+
+                if (!exists) {
+                    // Determine Status
+                    let status = 'FALTANTE';
+                    if (loopDate > today) {
+                        status = 'PROGRAMADO';
+                    } else if (loopDate.getTime() === today.getTime()) {
+                        status = 'PENDIENTE';
+                    }
+
+                    // Push Ghost
+                    combinedTasksCache.push({
+                        id: `ghost_${res.id}_${d}`,
+                        fecha: Timestamp.fromDate(loopDate),
+                        cabanaId: res.cabanaId,
+                        tipoAseo: expectedType,
+                        estado: status,
+                        trabajadorNombre: 'No Asignado',
+                        isGhost: true
+                    });
+                }
+            }
+        });
+    }
+}
+
+// --- RENDER GRID ---
 
 function renderCalendarGrid() {
     gridCalendar.innerHTML = '';
@@ -143,42 +228,39 @@ function renderCalendarGrid() {
 
     const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // Empty cells for first week offset
-    for (let i = 0; i < firstDay; i++) {
-        const div = document.createElement('div');
-        gridCalendar.appendChild(div);
-    }
+    for (let i = 0; i < firstDay; i++) gridCalendar.appendChild(document.createElement('div'));
 
-    // Days
     for (let day = 1; day <= daysInMonth; day++) {
         const dateObj = new Date(year, month, day);
-        const dayTasks = tasksCache.filter(t => isSameDay(t.fecha.toDate(), dateObj));
+        dateObj.setHours(0, 0, 0, 0);
 
-        // Status Logic
+        const tasks = combinedTasksCache.filter(t => isSameDay(t.fecha.toDate(), dateObj));
+
         let statusIcon = '';
         let statusClass = 'bg-gray-50 border-gray-200';
 
-        if (dayTasks.length > 0) {
-            const allDone = dayTasks.every(t => t.estado === 'FINALIZADO');
-            const hasPending = dayTasks.some(t => t.estado === 'PENDIENTE');
-            // Check issues? Assuming estado != FINALIZADO && date < now is issue?
-            // Simple logic:
-            if (allDone) {
+        if (tasks.length > 0) {
+            const missing = tasks.some(t => t.estado === 'FALTANTE');
+            const pending = tasks.some(t => t.estado === 'PENDIENTE');
+            // future implicitly handled
+
+            if (missing) {
+                statusIcon = '⚠️';
+                statusClass = 'bg-red-100 border-red-300 hover:bg-red-200 cursor-pointer';
+            } else if (pending) {
+                statusIcon = '⏳';
+                statusClass = 'bg-orange-50 border-orange-200 hover:bg-orange-100 cursor-pointer';
+            } else if (dateObj > today) {
+                statusIcon = '📅';
+                statusClass = 'bg-blue-50 border-blue-200 hover:bg-blue-100 cursor-pointer';
+            } else {
                 statusIcon = '✅';
                 statusClass = 'bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer';
-            } else if (hasPending) {
-                // Check if date is in past
-                const isPast = dateObj < new Date(new Date().setHours(0, 0, 0, 0));
-                if (isPast) {
-                    statusIcon = '❌';
-                    statusClass = 'bg-red-50 border-red-200 hover:bg-red-100 cursor-pointer';
-                } else {
-                    statusIcon = '⏳';
-                    statusClass = 'bg-orange-50 border-orange-200 hover:bg-orange-100 cursor-pointer';
-                }
             }
-        } // Else empty day
+        }
 
         const cell = document.createElement('div');
         cell.className = `p-2 h-24 rounded border flex flex-col justify-between transition ${statusClass}`;
@@ -187,13 +269,12 @@ function renderCalendarGrid() {
             <div class="self-center text-2xl">${statusIcon}</div>
         `;
 
-        if (dayTasks.length > 0) {
+        if (tasks.length > 0) {
             cell.addEventListener('click', () => {
                 selectedDate = dateObj;
                 showView('day');
             });
         }
-
         gridCalendar.appendChild(cell);
     }
 }
@@ -202,8 +283,7 @@ function renderCalendarGrid() {
 
 function renderDayList() {
     listDay.innerHTML = '';
-    // Group tasks by Cabin
-    const dayTasks = tasksCache.filter(t => isSameDay(t.fecha.toDate(), selectedDate));
+    const dayTasks = combinedTasksCache.filter(t => isSameDay(t.fecha.toDate(), selectedDate));
     const cabins = {};
 
     dayTasks.forEach(t => {
@@ -228,7 +308,7 @@ function renderDayList() {
         let statusText = 'Completo';
 
         if (hasMissing) {
-            icon = '⚠️'; // Was ❌
+            icon = '⚠️';
             colorClass = 'text-red-600';
             statusText = 'Faltante';
         } else if (hasPending) {
@@ -241,7 +321,6 @@ function renderDayList() {
             statusText = 'Programado';
         }
 
-        // Check assigned worker for ghost tasks
         const workerDisplay = (hasMissing || hasFuture) && c.worker === 'Sin asignar' ? 'Sistema (Automático)' : c.worker;
 
         const div = document.createElement('div');
@@ -280,32 +359,47 @@ function renderCabinTasks() {
 
     selectedCabin.tasks.forEach(t => {
         const isDone = t.estado === 'FINALIZADO';
-        const statusColor = isDone ? 'text-green-600 font-bold bg-green-50' : 'text-yellow-600 bg-yellow-50';
+        const isMissing = t.estado === 'FALTANTE';
+        const isFuture = t.estado === 'PROGRAMADO';
+        const isPending = t.estado === 'PENDIENTE';
+
+        let statusColor = 'text-gray-600 bg-gray-100';
+        let icon = '⬜';
+
+        if (isDone) {
+            statusColor = 'text-green-600 font-bold bg-green-50';
+            icon = '☑️';
+        } else if (isMissing) {
+            statusColor = 'text-red-600 font-bold bg-red-50 border border-red-200';
+            icon = '⚠️';
+        } else if (isFuture) {
+            statusColor = 'text-blue-600 font-bold bg-blue-50';
+            icon = '📅';
+        } else if (isPending) {
+            statusColor = 'text-orange-600 font-bold bg-orange-50';
+            icon = '⏳';
+        } else {
+            // Fallback for weird status
+            statusColor = 'text-gray-500 bg-gray-100';
+            icon = '❓';
+        }
 
         let timeStart = '-';
         let timeEnd = '-';
-
-        // Assuming timestamp fields exist or will exist. 
-        // For now using placeholder or existing fields if any.
-        // t.fecha is plan date. t.completedAt is finish.
         if (t.startTime) timeStart = t.startTime.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         if (t.completedAt) timeEnd = t.completedAt.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
         const row = document.createElement('tr');
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center gap-2">
-                <span>${isDone ? '☑️' : '⬜'}</span> ${t.tipoAseo}
+                <span>${icon}</span> ${t.tipoAseo}
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
-                <span class="px-2 py-1 rounded ${statusColor}">${t.estado}</span>
+                <span class="px-2 py-1 rounded ${statusColor}">${t.estado || 'Indefinido'}</span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${timeStart}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${timeEnd}</td>
         `;
-
-        // Click to view details/checklist if we had it
-        // row.addEventListener('click', ...)
-
         listTasks.appendChild(row);
     });
 }

@@ -60,29 +60,29 @@ function renderList(docs) {
         const id = docSnap.id;
         console.log('Incident Data:', id, data); // DEBUG
         const div = document.createElement('div');
-        div.className = `incident-item p-4 rounded-lg border shadow-sm ${data.prioridad} flex justify-between items-start`;
+        div.className = `incident-item p-4 rounded-lg border shadow-sm ${data.prioridad} flex flex-col sm:flex-row justify-between items-start gap-4`;
 
         const dateStr = data.fechaReporte ? data.fechaReporte.toDate().toLocaleString('es-CL') : 'Sin fecha';
 
         div.innerHTML = `
-            <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="font-bold text-gray-900 text-lg">${data.cabanaId}</span>
+            <div class="w-full sm:w-auto">
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                    <span class="font-bold text-gray-900 text-lg">Cabaña ${data.cabanaId}</span>
                     <span class="text-sm px-2 py-0.5 rounded bg-gray-200 text-gray-700">${data.espacio}</span>
                     <span class="text-xs font-bold px-2 py-0.5 rounded ${getPriorityColor(data.prioridad)} text-white">${data.prioridad}</span>
                 </div>
-                <p class="text-gray-800 font-medium">${data.descripcion}</p>
-                ${data.fotoUrl ? `<div class="mt-2"><a href="${data.fotoUrl}" target="_blank"><img src="${data.fotoUrl}" class="h-24 rounded border hover:scale-105 transition"></a></div>` : ''}
-                <div class="text-xs text-gray-500 mt-2">
+                <p class="text-gray-800 font-medium text-base mb-2">${data.descripcion}</p>
+                ${data.fotoUrl ? `<div class="mb-2"><a href="${data.fotoUrl}" target="_blank"><img src="${data.fotoUrl}" class="h-32 w-full object-cover rounded border hover:scale-105 transition sm:h-24 sm:w-auto"></a></div>` : ''}
+                <div class="text-xs text-gray-500">
                     Reportado por: ${data.reportadoPor?.nombre || '??'} • ${dateStr}
                 </div>
             </div>
-            <div class="flex flex-col gap-2">
-                <button class="btn-resolve bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-sm font-bold shadow-sm" data-id="${id}">
-                    ✓ Resolver
+            <div class="flex flex-row sm:flex-col gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                <button class="btn-resolve flex-1 sm:flex-none justify-center bg-green-600 text-white px-4 py-2 sm:py-1 rounded hover:bg-green-700 text-sm font-bold shadow-sm flex items-center gap-1" data-id="${id}">
+                   <span>✓</span> <span>Resolver</span>
                 </button>
-                <button class="btn-downgrade bg-gray-200 text-gray-700 px-3 py-1 rounded hover:bg-gray-300 text-sm" data-id="${id}">
-                    ⬇ Bajar Prioridad
+                <button class="btn-downgrade flex-1 sm:flex-none justify-center bg-gray-200 text-gray-700 px-4 py-2 sm:py-1 rounded hover:bg-gray-300 text-sm" data-id="${id}">
+                    ⬇ Bajar
                 </button>
             </div>
         `;

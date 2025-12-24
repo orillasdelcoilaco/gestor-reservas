@@ -14,6 +14,7 @@ async function getBot(db) {
         console.warn('[NotificationService] No bot token found in settings or ENV.');
         return null;
     }
+    console.log(`[NotificationService] Bot Token found. Length: ${token.length}, Prefix: ${token.substring(0, 5)}...`);
 
     // Clean quotes just in case
     token = token.replace(/^"|"$/g, '').trim();
@@ -24,7 +25,16 @@ async function getBot(db) {
 
     // Nueva instancia
     // polling: false porque solo enviamos mensajes (webhook o push only)
-    botInstance = new TelegramBot(token, { polling: false });
+    // Fix EFATAL: AggregateError by forcing IPv4 (Node 17+ issue)
+    botInstance = new TelegramBot(token, {
+        polling: false,
+        request: {
+            agentOptions: {
+                keepAlive: true,
+                family: 4
+            }
+        }
+    });
     currentToken = token;
     return botInstance;
 }
@@ -153,19 +163,22 @@ async function sendDirectMessage(db, chatId, message, options = {}) {
     try {
         const bot = await getBot(db);
         if (!bot) {
-            console.error('[NotificationService] Bot not initialized. Token missing?');
+            console.error('[NotificationService] Bot not initialized. Token missing? Check settings.botToken or ENV.');
             return { sent: false, reason: 'no_bot' };
         }
-        console.log(`[NotificationService] Sending to ${chatId}. Token present.`);
+        console.log(`[NotificationService] Sending to ${chatId}. Bot ready.`);
 
-        // Merge default parse_mode with custom options (like buttons)
+        // Merge default parse_mode with custom options
         const opts = { parse_mode: 'Markdown', ...options };
 
         await bot.sendMessage(chatId, message, opts);
         return { sent: true };
     } catch (error) {
         console.error('Error sending direct Telegram message:', error);
-        return { sent: false, error: error.message };
+        if (error.code === 'EFATAL') { // Common in telegram connection errors
+            console.error('EFATAL Details:', error);
+        }
+        return { sent: false, error: error.message || 'Unknown Telegram Error' };
     }
 }
 

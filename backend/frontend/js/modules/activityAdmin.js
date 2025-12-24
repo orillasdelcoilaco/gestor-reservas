@@ -25,6 +25,7 @@ export function initActivityAdmin() {
     modal = document.getElementById('admin-activities-modal');
     btnOpen = document.getElementById('btn-workflow-actividades');
     btnClose = document.getElementById('close-admin-activities');
+    const btnCloseMobile = document.getElementById('close-admin-activities-mobile');
 
     // Calendar Header
     elTitle = document.getElementById('act-title');
@@ -47,6 +48,11 @@ export function initActivityAdmin() {
 
     if (btnOpen) btnOpen.addEventListener('click', openModal);
     if (btnClose) btnClose.addEventListener('click', closeModal);
+    if (btnOpen) btnOpen.addEventListener('click', openModal);
+    if (btnClose) btnClose.addEventListener('click', closeModal);
+    // btnCloseMobile declared above
+    if (btnCloseMobile) btnCloseMobile.addEventListener('click', closeModal);
+
     if (btnPrevMonth) btnPrevMonth.addEventListener('click', () => changeMonth(-1));
     if (btnNextMonth) btnNextMonth.addEventListener('click', () => changeMonth(1));
     if (btnBack) btnBack.addEventListener('click', goBack);

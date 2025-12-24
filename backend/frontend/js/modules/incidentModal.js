@@ -162,23 +162,5 @@ export async function initIncidentModal() {
 }
 
 // Initialize on load
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject Cabin Selector if not present (Wait, we want to fetch it dynamically inside init)
-    // Actually, looking at previous logic, it injected the HTML.
-    // Let's ensure the HTML structure exists for `initIncidentModal` to find it.
-
-    const spaceDiv = selectSpace.parentElement;
-    if (!document.getElementById('incident-cabana')) {
-        const div = document.createElement('div');
-        div.className = 'mb-4';
-        div.innerHTML = `
-            <label class="block text-sm font-medium text-gray-700 mb-2">Cabaña</label>
-            <select id="incident-cabana" class="w-full rounded-lg border-gray-300 p-3 bg-gray-50 text-lg" required>
-                <option value="">Cargando...</option>
-            </select>
-        `;
-        form.insertBefore(div, spaceDiv);
-    }
-
-    initIncidentModal();
-});
+// Auto-init removed. Called by portalLogic.js after auth.
+// document.addEventListener('DOMContentLoaded', ... );

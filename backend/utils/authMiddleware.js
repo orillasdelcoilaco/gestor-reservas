@@ -33,8 +33,11 @@ const checkFirebaseToken = async (req, res, next) => {
     console.log(`[AuthMiddleware] Token válido para el usuario: ${decodedToken.email}`);
     next();
   } catch (error) {
-    console.error('[AuthMiddleware] Error al verificar el token de Firebase:', error);
-    res.status(401).json({ error: 'Acceso no autorizado: Token inválido o expirado.' });
+    console.error(`[AuthMiddleware] Error al verificar el token de Firebase:`, {
+      code: error.code,
+      message: error.message
+    });
+    res.status(401).json({ error: 'Acceso no autorizado: Token inválido o expirado.', details: error.message });
   }
 };
 

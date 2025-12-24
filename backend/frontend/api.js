@@ -48,6 +48,18 @@ export async function fetchAPI(endpoint, options = {}) {
     }
 }
 
+// export function checkSession() {
+//     const token = localStorage.getItem('firebaseIdToken');
+//     const userEmail = sessionStorage.getItem('userEmail');
+
+//     if (!token || !userEmail) {
+//         console.warn("CheckSession failed - PREVENTING REDIRECT for debug");
+//         // window.location.href = 'index.html';
+//         return null;
+//     }
+//     return { token, userEmail };
+// }
+
 export function checkSession() {
     const token = localStorage.getItem('firebaseIdToken');
     const userEmail = sessionStorage.getItem('userEmail');

@@ -53,8 +53,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 1. Check for Magic Token
     const params = new URLSearchParams(window.location.search);
     const magicToken = params.get('token');
+    let isMagicLoginInProgress = false;
 
     if (magicToken) {
+        isMagicLoginInProgress = true;
         // Attempt Magic Login
         try {
             console.log('🔮 Magic Link detected. Authenticating...');
@@ -73,9 +75,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.log('✅ Magic Login Success. Welcome ' + data.worker.nombre);
                 currentWorkerId = data.worker.id;
 
-                // Clean URL (Security)
-                window.history.replaceState({}, document.title, window.location.pathname);
+                // Do NOT clean URL here immediately to prevent race condition with onAuthStateChanged redirect logic
             } else {
+                isMagicLoginInProgress = false;
                 // FALLBACK: ERROR VISUAL
                 document.body.innerHTML = `
                     <div style="padding: 20px; color: red; font-family: sans-serif;">
@@ -88,6 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
         } catch (error) {
+            isMagicLoginInProgress = false;
             console.error('Magic Login Error:', error);
             // FALLBACK: ERROR VISUAL
             document.body.innerHTML = `
@@ -108,15 +111,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             // User is signed in.
             currentWorkerId = user.uid; // Since we set uid to workerId in createCustomToken
             console.log('Logged in as:', currentWorkerId);
-            initPortal();
+
+            // SYNC TOKEN & EMAIL TO STORAGE BEFORE INIT
+            user.getIdToken().then(token => {
+                localStorage.setItem('firebaseIdToken', token);
+                sessionStorage.setItem('userEmail', user.email || 'worker@system');
+
+                // Safe to clean URL now if magic login was in progress
+                if (isMagicLoginInProgress) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    isMagicLoginInProgress = false;
+                }
+
+                // NOW init portal and modal (after storage is ready)
+                initPortal();
+                import('./incidentModal.js?v=3.5').then(module => {
+                    if (module.initIncidentModal) module.initIncidentModal();
+                });
+            }).catch(e => console.error("Token sync error:", e));
         } else {
             // Check if we are currently processing a magic token
+            if (isMagicLoginInProgress) {
+                console.log('⏳ Waiting for Magic Login to complete...');
+                return; // Do not redirect yet
+            }
+
             const params = new URLSearchParams(window.location.search);
             if (!params.get('token')) {
-                console.warn('No active session and no token. Redirecting...');
+                // No session and no magic token -> Redirect to Login
                 window.location.href = 'index.html';
             } else {
-                console.log('⏳ Waiting for Magic Login...');
+                console.log('⏳ Found token in URL, waiting...');
             }
         }
     });
@@ -245,8 +270,8 @@ function openSOP(task) {
         const row = document.createElement('div');
         row.className = 'sop-item flex items-center';
         row.innerHTML = `
-            <input type="checkbox" id="sop-${index}" class="sop-checkbox form-checkbox h-6 w-6 text-indigo-600 rounded">
-            <label for="sop-${index}" class="flex-1 text-gray-800 text-lg ml-3 cursor-pointer select-none">${item}</label>
+            <input type="checkbox" id="sop-${index}" class="sop-checkbox form-checkbox h-8 w-8 text-indigo-600 rounded">
+            <label for="sop-${index}" class="flex-1 text-gray-800 text-lg ml-4 py-2 cursor-pointer select-none leading-relaxed">${item}</label>
         `;
         sopContent.appendChild(row);
 

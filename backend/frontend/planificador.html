@@ -356,6 +356,10 @@
                         class="hidden w-full py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
                         Cancelar Edición
                     </button>
+                    <button type="button" id="btn-reset-token" onclick="resetWorkerToken()"
+                        class="hidden w-full py-2 px-4 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">
+                        🔄 Invalidar y Generar Nuevo Link
+                    </button>
                 </form>
             </div>
 
@@ -598,7 +602,11 @@
         }
 
         async function sendWorkerSummary(id) {
-            if (!confirm('¿Enviar resumen de tareas por Telegram?')) return;
+            console.log('sendWorkerSummary called for:', id);
+            if (!confirm('¿Enviar resumen de tareas por Telegram?')) {
+                console.log('User cancelled');
+                return;
+            }
 
             try {
                 const response = await fetchAPI('/api/planificador/send-summary', {
@@ -1438,9 +1446,15 @@
         window.deleteTaskFromDayCard = deleteTaskFromDayCard;
         window.deleteWorkerHandler = deleteWorkerHandler;
         window.sendWorkerSummaryHandler = async function (e, id) {
+            console.log('Global handler triggered for:', id);
             e.preventDefault();
             e.stopPropagation();
-            await sendWorkerSummary(id);
+            try {
+                await sendWorkerSummary(id);
+            } catch (err) {
+                console.error('Error in global handler:', err);
+                alert('JS Error: ' + err.message);
+            }
         };
     </script>
 </body>

@@ -74,9 +74,9 @@
             document.getElementById('loader').style.display = 'none';
             document.getElementById('app-content').classList.remove('hidden');
             document.getElementById('auth-info').innerHTML = `
-            <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
-            <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
-        `;
+                <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+                <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+            `;
             document.getElementById('logout-btn').addEventListener('click', logout);
 
             const calendarioEl = document.getElementById('calendario');
@@ -138,21 +138,18 @@
                                 return date.toLocaleDateString('es-CL');
                             };
 
-                            // Ajuste: Restar 1 día a la fecha fin (FullCalendar usa fin exclusivo)
+                            // Ajuste: Restar 1 día a la fecha fin para visualización (FullCalendar usa fin exclusivo)
                             const endDate = new Date(info.event.end);
                             endDate.setDate(endDate.getDate() - 1);
 
                             const tooltipText = `
-                            Cliente: ${info.event.title}
-                            Llegada: ${formatDate(info.event.start)}
-                            Salida: ${formatDate(endDate)}
-                            Canal: ${info.event.extendedProps.canal}
-                            Reserva ID: ${info.event.extendedProps.reservaIdOriginal}
-                            `.replace(/^\s+/gm, '');
-                            info.el.setAttribute('title', tooltipText.trim());
-                        }
-                            `.replace(/^\s+/gm, ''); // Trim leading spaces
-                            info.el.setAttribute('title', tooltipText.trim());
+                                Cliente: ${info.event.title}
+                                Llegada: ${formatDate(info.event.start)}
+                                Salida: ${formatDate(endDate)}
+                                Canal: ${info.event.extendedProps.canal}
+                                Reserva ID: ${info.event.extendedProps.reservaIdOriginal}
+                            `.replace(/^\s+/gm, '').trim();
+                            info.el.setAttribute('title', tooltipText);
                         }
                     });
 
@@ -160,7 +157,7 @@
                     updateMonthLabel();
 
                 } catch (error) {
-                    calendarioEl.innerHTML = `< p class= "text-red-500 text-center p-4" > Error al inicializar el calendario: ${ error.message }</p >`;
+                    calendarioEl.innerHTML = `<p class="text-red-500 text-center p-4">Error al inicializar el calendario: ${error.message}</p>`;
                 }
             }
 

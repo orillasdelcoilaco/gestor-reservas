@@ -6,5 +6,6 @@ const reportController = require('../controllers/reportController');
 module.exports = (db) => {
     router.get('/reportes/descargar', (req, res) => reportController.downloadReport(req, res, db));
     router.post('/reportes/enviar', (req, res) => reportController.sendReportToAdmin(req, res, db));
+    router.get('/reportes/choques', (req, res) => reportController.getOverlaps(req, res, db));
     return router;
 };

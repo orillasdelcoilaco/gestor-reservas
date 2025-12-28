@@ -44,3 +44,19 @@ module.exports = {
     downloadReport,
     sendReportToAdmin
 };
+
+async function getOverlaps(req, res, db) {
+    try {
+        const conflicts = await reportService.findReservationOverlaps(db);
+        res.json(conflicts);
+    } catch (error) {
+        console.error('Error buscando choques:', error);
+        res.status(500).json({ error: error.message });
+    }
+}
+
+module.exports = {
+    downloadReport,
+    sendReportToAdmin,
+    getOverlaps
+};

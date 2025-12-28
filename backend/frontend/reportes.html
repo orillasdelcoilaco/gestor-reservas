@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,10 +8,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .report-box { white-space: pre-wrap; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .report-box {
+            white-space: pre-wrap;
+        }
     </style>
 </head>
+
 <body class="bg-gray-100">
     <div id="loader" class="text-center p-8">
         <p class="text-gray-500">Verificando sesión...</p>
@@ -31,14 +38,19 @@
                     <h2 class="text-xl font-semibold text-gray-900 mb-4">Reporte de Actividad Diaria</h2>
                     <div class="flex items-end space-x-4">
                         <div class="flex-grow">
-                            <label for="fecha-diaria" class="block text-sm font-medium text-gray-700">Selecciona una fecha</label>
-                            <input type="date" id="fecha-diaria" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <label for="fecha-diaria" class="block text-sm font-medium text-gray-700">Selecciona una
+                                fecha</label>
+                            <input type="date" id="fecha-diaria"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                         </div>
-                        <button id="btn-generar-diario" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Generar</button>
+                        <button id="btn-generar-diario"
+                            class="bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Generar</button>
                     </div>
                     <div id="reporte-diario-container" class="mt-6 hidden">
                         <div id="reporte-diario-box" class="report-box p-4 bg-gray-50 border rounded-md text-sm"></div>
-                        <button id="btn-copiar-diario" class="mt-3 bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar Reporte</button>
+                        <button id="btn-copiar-diario"
+                            class="mt-3 bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar
+                            Reporte</button>
                     </div>
                 </div>
 
@@ -46,126 +58,200 @@
                     <h2 class="text-xl font-semibold text-gray-900 mb-4">Reporte de Disponibilidad</h2>
                     <div class="flex items-end space-x-4">
                         <div class="flex-grow">
-                            <label for="fecha-disponibilidad-inicio" class="block text-sm font-medium text-gray-700">Desde</label>
-                            <input type="date" id="fecha-disponibilidad-inicio" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                            <label for="fecha-disponibilidad-inicio"
+                                class="block text-sm font-medium text-gray-700">Desde</label>
+                            <input type="date" id="fecha-disponibilidad-inicio"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                         </div>
-                         <div class="flex-grow">
-                            <label for="fecha-disponibilidad-fin" class="block text-sm font-medium text-gray-700">Hasta</label>
-                            <input type="date" id="fecha-disponibilidad-fin" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                        <div class="flex-grow">
+                            <label for="fecha-disponibilidad-fin"
+                                class="block text-sm font-medium text-gray-700">Hasta</label>
+                            <input type="date" id="fecha-disponibilidad-fin"
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                         </div>
-                        <button id="btn-generar-disponibilidad" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Generar</button>
+                        <button id="btn-generar-disponibilidad"
+                            class="bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Generar</button>
                     </div>
-                     <div id="reporte-disponibilidad-container" class="mt-6 hidden">
-                        <div id="reporte-disponibilidad-box" class="report-box p-4 bg-gray-50 border rounded-md text-sm"></div>
-                        <button id="btn-copiar-disponibilidad" class="mt-3 bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar Reporte</button>
+                    <div id="reporte-disponibilidad-container" class="mt-6 hidden">
+                        <div id="reporte-disponibilidad-box"
+                            class="report-box p-4 bg-gray-50 border rounded-md text-sm"></div>
+                        <button id="btn-copiar-disponibilidad"
+                            class="mt-3 bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar
+                            Reporte</button>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 md:p-8 rounded-lg shadow">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Reporte de Choque de Reservas</h2>
+                    <p class="text-sm text-gray-600 mb-4">Detecta cabañas con más de una reserva activa en las mismas
+                        fechas simulaneas (Overlap).</p>
+                    <div class="flex items-end space-x-4">
+                        <div class="flex-grow">
+                            <label class="block text-sm font-medium text-gray-700">Desde</label>
+                            <div class="mt-1 block w-full text-gray-800 font-bold">HOY en adelante</div>
+                        </div>
+                        <button id="btn-generar-choques"
+                            class="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700">Buscar
+                            Choques</button>
+                    </div>
+                    <div id="reporte-choques-container" class="mt-6 hidden">
+                        <div id="reporte-choques-box"
+                            class="report-box p-4 bg-gray-50 border rounded-md text-sm text-red-800"></div>
+                        <button id="btn-copiar-choques"
+                            class="mt-3 bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar
+                            Reporte</button>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-<script type="module">
-    import { checkSession, logout, fetchAPI } from './api.js';
+    <script type="module">
+        import { checkSession, logout, fetchAPI } from './api.js';
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const session = checkSession();
-        if (!session) return;
-        
-        document.getElementById('loader').style.display = 'none';
-        document.getElementById('app-content').classList.remove('hidden');
-        document.getElementById('auth-info').innerHTML = `
+        document.addEventListener('DOMContentLoaded', () => {
+            const session = checkSession();
+            if (!session) return;
+
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('auth-info').innerHTML = `
             <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
             <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
         `;
-        document.getElementById('logout-btn').addEventListener('click', logout);
+            document.getElementById('logout-btn').addEventListener('click', logout);
 
-        const formatDate = (dateStr) => dateStr.split('-').reverse().join('-');
-        
-        // --- Lógica para Reporte Diario ---
-        const btnGenerarDiario = document.getElementById('btn-generar-diario');
-        const containerDiario = document.getElementById('reporte-diario-container');
-        const boxDiario = document.getElementById('reporte-diario-box');
+            const formatDate = (dateStr) => dateStr.split('-').reverse().join('-');
 
-        btnGenerarDiario.addEventListener('click', async () => {
-            const fecha = document.getElementById('fecha-diaria').value;
-            if (!fecha) { alert('Por favor, selecciona una fecha.'); return; }
-            
-            boxDiario.textContent = 'Generando...';
-            containerDiario.classList.remove('hidden');
+            // --- Lógica para Reporte Diario ---
+            const btnGenerarDiario = document.getElementById('btn-generar-diario');
+            const containerDiario = document.getElementById('reporte-diario-container');
+            const boxDiario = document.getElementById('reporte-diario-box');
 
-            try {
-                const data = await fetchAPI(`/api/reportes/actividad-diaria?fecha=${fecha}`);
-                let reporteTexto = `🟢 Reservas activas hoy (${formatDate(fecha)})\n\n`;
-                data.forEach(item => {
-                    reporteTexto += `🏡 Cabaña ${item.cabana}\n`;
-                    if (item.salida) {
-                        reporteTexto += `👋 Se retira hoy: ${item.salida.cliente}\nFechas: ${item.salida.fechas.replace(/\//g, '-')}\nReserva: ${item.salida.reservaId}\n`;
-                    }
-                    if (item.llegada) {
-                         reporteTexto += `🧑‍🤝‍🧑 Llega hoy: ${item.llegada.cliente}\nFechas: ${item.llegada.fechas.replace(/\//g, '-')}\nReserva: ${item.llegada.reservaId}\nCanal: ${item.llegada.canal}\n`;
-                    } else if (item.estadia) {
-                        reporteTexto += `💤 En estadía: ${item.estadia.cliente}\nReserva: ${item.estadia.reservaId}\nFechas: ${item.estadia.fechas.replace(/\//g, '-')}\n`;
-                    } else if (item.proxima) {
-                         reporteTexto += `🔜 Próxima reserva: ${formatDate(item.proxima.fecha)}\n(Faltan ${item.proxima.diasFaltantes} días)\nLlega: ${item.proxima.cliente}\n`;
-                    } else if (!item.salida) {
-                        reporteTexto += `❌ Sin reserva hoy\n`;
-                    }
-                    reporteTexto += `\n`;
-                });
-                boxDiario.textContent = reporteTexto;
-            } catch (error) {
-                boxDiario.textContent = `Error al generar el reporte: ${error.message}`;
-            }
-        });
+            btnGenerarDiario.addEventListener('click', async () => {
+                const fecha = document.getElementById('fecha-diaria').value;
+                if (!fecha) { alert('Por favor, selecciona una fecha.'); return; }
 
-        document.getElementById('btn-copiar-diario').addEventListener('click', () => {
-            navigator.clipboard.writeText(boxDiario.textContent);
-        });
+                boxDiario.textContent = 'Generando...';
+                containerDiario.classList.remove('hidden');
 
-        // --- Lógica para Reporte de Disponibilidad ---
-        const btnGenerarDisponibilidad = document.getElementById('btn-generar-disponibilidad');
-        const containerDisponibilidad = document.getElementById('reporte-disponibilidad-container');
-        const boxDisponibilidad = document.getElementById('reporte-disponibilidad-box');
-
-        btnGenerarDisponibilidad.addEventListener('click', async () => {
-            const fechaInicio = document.getElementById('fecha-disponibilidad-inicio').value;
-            const fechaFin = document.getElementById('fecha-disponibilidad-fin').value;
-            if (!fechaInicio || !fechaFin) { alert('Por favor, selecciona ambas fechas.'); return; }
-
-            boxDisponibilidad.textContent = 'Generando...';
-            containerDisponibilidad.classList.remove('hidden');
-
-            try {
-                const data = await fetchAPI(`/api/reportes/disponibilidad-periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
-                let reporteTexto = `👋 Hola, esta es nuestra disponibilidad desde ${formatDate(fechaInicio)} hasta ${formatDate(fechaFin)}:\n\n`;
-                
-                data.forEach(item => {
-                    if (item.periodos.length > 0) {
-                        reporteTexto += `🏡 Cabaña ${item.cabana}:\n${item.link}\nValor: $${item.valor.toLocaleString('es-CL')}\nCapacidad: ${item.capacidad} personas\n`;
-                        item.periodos.forEach(p => {
-                            if (p.fin) {
-                                const finDate = new Date(p.fin + 'T00:00:00Z');
-                                finDate.setUTCDate(finDate.getUTCDate() - 1);
-                                if(p.inicio <= finDate.toISOString().split('T')[0]) {
-                                   reporteTexto += `👍 Del ${formatDate(p.inicio)} al ${formatDate(finDate.toISOString().split('T')[0])}\n`;
-                                }
-                            } else {
-                                reporteTexto += `👍 Del ${formatDate(p.inicio)} en adelante\n`;
-                            }
-                        });
+                try {
+                    const data = await fetchAPI(`/api/reportes/actividad-diaria?fecha=${fecha}`);
+                    let reporteTexto = `🟢 Reservas activas hoy (${formatDate(fecha)})\n\n`;
+                    data.forEach(item => {
+                        reporteTexto += `🏡 Cabaña ${item.cabana}\n`;
+                        if (item.salida) {
+                            reporteTexto += `👋 Se retira hoy: ${item.salida.cliente}\nFechas: ${item.salida.fechas.replace(/\//g, '-')}\nReserva: ${item.salida.reservaId}\n`;
+                        }
+                        if (item.llegada) {
+                            reporteTexto += `🧑‍🤝‍🧑 Llega hoy: ${item.llegada.cliente}\nFechas: ${item.llegada.fechas.replace(/\//g, '-')}\nReserva: ${item.llegada.reservaId}\nCanal: ${item.llegada.canal}\n`;
+                        } else if (item.estadia) {
+                            reporteTexto += `💤 En estadía: ${item.estadia.cliente}\nReserva: ${item.estadia.reservaId}\nFechas: ${item.estadia.fechas.replace(/\//g, '-')}\n`;
+                        } else if (item.proxima) {
+                            reporteTexto += `🔜 Próxima reserva: ${formatDate(item.proxima.fecha)}\n(Faltan ${item.proxima.diasFaltantes} días)\nLlega: ${item.proxima.cliente}\n`;
+                        } else if (!item.salida) {
+                            reporteTexto += `❌ Sin reserva hoy\n`;
+                        }
                         reporteTexto += `\n`;
-                    }
-                });
-                boxDisponibilidad.textContent = reporteTexto;
-            } catch (error) {
-                boxDisponibilidad.textContent = `Error al generar el reporte: ${error.message}`;
-            }
-        });
+                    });
+                    boxDiario.textContent = reporteTexto;
+                } catch (error) {
+                    boxDiario.textContent = `Error al generar el reporte: ${error.message}`;
+                }
+            });
 
-        document.getElementById('btn-copiar-disponibilidad').addEventListener('click', () => {
-            navigator.clipboard.writeText(boxDisponibilidad.textContent);
+            document.getElementById('btn-copiar-diario').addEventListener('click', () => {
+                navigator.clipboard.writeText(boxDiario.textContent);
+            });
+
+            // --- Lógica para Reporte de Disponibilidad ---
+            const btnGenerarDisponibilidad = document.getElementById('btn-generar-disponibilidad');
+            const containerDisponibilidad = document.getElementById('reporte-disponibilidad-container');
+            const boxDisponibilidad = document.getElementById('reporte-disponibilidad-box');
+
+            btnGenerarDisponibilidad.addEventListener('click', async () => {
+                const fechaInicio = document.getElementById('fecha-disponibilidad-inicio').value;
+                const fechaFin = document.getElementById('fecha-disponibilidad-fin').value;
+                if (!fechaInicio || !fechaFin) { alert('Por favor, selecciona ambas fechas.'); return; }
+
+                boxDisponibilidad.textContent = 'Generando...';
+                containerDisponibilidad.classList.remove('hidden');
+
+                try {
+                    const data = await fetchAPI(`/api/reportes/disponibilidad-periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
+                    let reporteTexto = `👋 Hola, esta es nuestra disponibilidad desde ${formatDate(fechaInicio)} hasta ${formatDate(fechaFin)}:\n\n`;
+
+                    data.forEach(item => {
+                        if (item.periodos.length > 0) {
+                            reporteTexto += `🏡 Cabaña ${item.cabana}:\n${item.link}\nValor: $${item.valor.toLocaleString('es-CL')}\nCapacidad: ${item.capacidad} personas\n`;
+                            item.periodos.forEach(p => {
+                                if (p.fin) {
+                                    const finDate = new Date(p.fin + 'T00:00:00Z');
+                                    finDate.setUTCDate(finDate.getUTCDate() - 1);
+                                    if (p.inicio <= finDate.toISOString().split('T')[0]) {
+                                        reporteTexto += `👍 Del ${formatDate(p.inicio)} al ${formatDate(finDate.toISOString().split('T')[0])}\n`;
+                                    }
+                                } else {
+                                    reporteTexto += `👍 Del ${formatDate(p.inicio)} en adelante\n`;
+                                }
+                            });
+                            reporteTexto += `\n`;
+                        }
+                    });
+                    boxDisponibilidad.textContent = reporteTexto;
+                } catch (error) {
+                    boxDisponibilidad.textContent = `Error al generar el reporte: ${error.message}`;
+                }
+            });
+
+            document.getElementById('btn-copiar-disponibilidad').addEventListener('click', () => {
+                navigator.clipboard.writeText(boxDisponibilidad.textContent);
+            });
+
+            // --- Lógica para Reporte de Choques ---
+            const btnGenerarChoques = document.getElementById('btn-generar-choques');
+            const containerChoques = document.getElementById('reporte-choques-container');
+            const boxChoques = document.getElementById('reporte-choques-box');
+
+            btnGenerarChoques.addEventListener('click', async () => {
+                boxChoques.textContent = 'Buscando conflictos...';
+                containerChoques.classList.remove('hidden');
+
+                try {
+                    const data = await fetchAPI(`/api/reportes/choques`);
+                    if (data.length === 0) {
+                        boxChoques.textContent = '✅ No se encontraron choques de reservas activos.';
+                    } else {
+                        let reporteTexto = `🚨 REPORTE DE CHOQUES DE RESERVAS (${formatDate(new Date().toISOString().split('T')[0])})\n\n`;
+                        data.forEach(c => {
+                            reporteTexto += `🔥 CONFLICTO EN ${c.cabana.toUpperCase()}\n`;
+                            reporteTexto += `   Fechas en conflicto: ${c.diasChoque}\n`;
+                            reporteTexto += `   ----------------------------------------\n`;
+
+                            const printRes = (r, label) => {
+                                const abonoStr = r.abono ? `$${r.abono.toLocaleString('es-CL')}` : '$0';
+                                const creadaStr = r.creada ? new Date(r.creada).toLocaleDateString('es-CL') : 'N/A';
+                                return `   ${label} ${r.cliente} (${formatDate(r.desde.split('T')[0])} - ${formatDate(r.hasta.split('T')[0])})\n` +
+                                    `      💰 Abono: ${abonoStr} | 📅 Creada: ${creadaStr} | 🛒 Canal: ${r.canal}\n` +
+                                    `      🆔 ID: ${r.codigo} | 👥 Pers: ${r.personas} | 📞 ${r.telefono}\n`;
+                            };
+
+                            reporteTexto += printRes(c.reservaA, '🟢');
+                            reporteTexto += printRes(c.reservaB, '🔴');
+                            reporteTexto += `   ----------------------------------------\n\n`;
+                        });
+                        boxChoques.textContent = reporteTexto;
+                    }
+                } catch (error) {
+                    boxChoques.textContent = `Error al buscar choques: ${error.message}`;
+                }
+            });
+
+            document.getElementById('btn-copiar-choques').addEventListener('click', () => {
+                navigator.clipboard.writeText(boxChoques.textContent);
+            });
         });
-    });
-</script>
+    </script>
 </body>
+
 </html>

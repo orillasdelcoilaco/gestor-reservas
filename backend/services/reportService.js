@@ -3,6 +3,7 @@ const PDFDocument = require('pdfkit');
 const historyService = require('./historyService');
 const notificationService = require('./notificationService');
 const { getSettings } = require('./settingsService');
+const admin = require('firebase-admin');
 
 /**
  * Genera un reporte PDF basado en filtros.
@@ -197,7 +198,112 @@ async function generateAndSendReport(db, filters) {
     });
 }
 
+/**
+ * Busca choques de reservas desde una fecha dada.
+ * @param {Object} db - Firestore
+ * @param {string} startDateStr - 'YYYY-MM-DD'
+ */
+async function findReservationOverlaps(db, startDateStr) {
+    const start = new Date(startDateStr || new Date().toISOString().split('T')[0]);
+    // Get ALL active reservations from now on.
+    const snapshot = await db.collection('reservas')
+        .where('fechaSalida', '>=', admin.firestore.Timestamp.fromDate(start))
+        .get();
+
+    const reservas = [];
+    snapshot.forEach(doc => {
+        const d = doc.data();
+        // STRICT FILTER: Solo Confirmadas
+        if (d.estado && d.estado.trim() === 'Confirmada') {
+            // Fallback for Cabin Name if missing
+            let cabanaName = d.alojamiento;
+            if (!cabanaName && (d.reservaId || doc.id).includes('_')) {
+                const parts = (d.reservaId || doc.id).split('_');
+                cabanaName = parts[parts.length - 1]; // Assuming format ..._Cabaña1
+            }
+
+            // CLEANING LOGIC (1,2,3,7,8,9,10)
+            if (cabanaName) {
+                const match = cabanaName.match(/(\d+)/);
+                if (match) {
+                    let num = parseInt(match[1]);
+                    // User Rule: 1,2,3,7,8,9,10 are valid.
+                    // If > 10, clean it. (e.g. 71 -> 7, 81 -> 8).
+                    if (num !== 10 && num > 9) {
+                        // Take the first digit if it's 7,8,9? Or just assume typo?
+                        // "71" -> "7". "12" -> "1"? (Cabaña 1 exists).
+                        // User mentioned "7 1, 8 1".
+                        num = parseInt(match[1].toString()[0]);
+                    }
+                    cabanaName = `Cabaña ${num}`;
+                }
+            }
+
+            reservas.push({
+                id: d.reservaId || doc.id,
+                cabana: cabanaName || '??',
+                cliente: d.clienteNombre || d.cliente || 'Desconocido',
+                desde: d.fechaLlegada.toDate(),
+                hasta: d.fechaSalida.toDate(),
+                canal: d.canal || 'Directo',
+                personas: d.invitados || d.personas || 0,
+                telefono: d.telefono || 'Sin datos',
+                creada: d.fechaReserva ? d.fechaReserva.toDate() : (d.fechaCreacion ? d.fechaCreacion.toDate() : null), // Prefer fechaReserva for Booking
+                codigo: d.reservaIdOriginal || d.reservaId || doc.id,
+                abono: d.abono || 0 // New field
+            });
+        }
+    });
+
+    // Group by Cabin
+    const byCabana = {};
+    reservas.forEach(r => {
+        if (!byCabana[r.cabana]) byCabana[r.cabana] = [];
+        byCabana[r.cabana].push(r);
+    });
+
+    const conflicts = [];
+
+    // Check overlaps
+    for (const [cab, list] of Object.entries(byCabana)) {
+        // Sort by start date
+        list.sort((a, b) => a.desde - b.desde);
+
+        for (let i = 0; i < list.length; i++) {
+            for (let j = i + 1; j < list.length; j++) {
+                const r1 = list[i];
+                const r2 = list[j];
+
+                // Check overlap
+                // Overlap if (StartA < EndB) and (EndA > StartB)
+                // Note: If StartB == EndA, that's commonly allowed (Checkout/Checkin same day).
+                // So strict inequality for partial overlap.
+                // However, user said "Choque".
+                // Usually [Start, End) intervals.
+                // Let's assume strict overlap of *staying nights*.
+                // If r1.hasta (checkout) > r2.desde (checkin), AND r1.desde < r2.hasta.
+                // If r1.hasta == r2.desde, it's a "Cambio", not a clash generally.
+                // But let's detect strict overlaps where dates conflict.
+                // Only flag if r1.hasta > r2.desde. (Since sorted, r2.desde >= r1.desde).
+
+                if (r1.hasta > r2.desde) {
+                    // CONFLICT FOUND
+                    conflicts.push({
+                        cabana: cab,
+                        reservaA: r1,
+                        reservaB: r2,
+                        diasChoque: `${r2.desde.toISOString().split('T')[0]} a ${r1.hasta < r2.hasta ? r1.hasta.toISOString().split('T')[0] : r2.hasta.toISOString().split('T')[0]}`
+                    });
+                }
+            }
+        }
+    }
+
+    return conflicts;
+}
+
 module.exports = {
     generateDailyReport,
-    generateAndSendReport
+    generateAndSendReport,
+    findReservationOverlaps
 };

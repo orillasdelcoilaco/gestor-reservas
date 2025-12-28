@@ -1,36 +1,640 @@
-[2025-12-24T01:07:40.797Z] 
+[2025-12-24T14:39:26.849Z] 
 === GENERACIÓN DE PLAN (Algoritmo Secuencial Simple) ===
-[2025-12-24T01:07:40.798Z] Rango: 2025-12-24 a 2025-12-24
-[2025-12-24T01:07:40.958Z]   Plan persisted successfully.
-[2025-12-24T01:07:40.961Z] 
+[2025-12-24T14:39:26.853Z] Rango: 2025-12-27 a 2026-02-27
+[2025-12-24T14:39:28.282Z] 
+>>> Día 2025-12-27 (día normal)
+[2025-12-24T14:39:28.386Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:28.390Z]     Cabaña 10: Salida (Generada Automáticamente)
+[2025-12-24T14:39:28.395Z]     Cabaña 3: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:28.397Z]   Esfuerzo: 2.0, rellenando con Inventarios hasta 3.0...
+[2025-12-24T14:39:28.398Z]     Cabaña 2: Inventario - Esfuerzo: 2.3
+[2025-12-24T14:39:28.399Z]     Cabaña 8: Inventario - Esfuerzo: 2.6
+[2025-12-24T14:39:28.400Z]     Cabaña 9: Inventario - Esfuerzo: 2.9
+[2025-12-24T14:39:28.401Z]   Límite alcanzado (2.9 + 0.3 > 3.0). Deteniendo relleno.
+[2025-12-24T14:39:28.405Z]   Persisting generated plan to DB (5 tasks)...
+[2025-12-24T14:39:28.632Z]   Plan persisted successfully.
+[2025-12-24T14:39:28.634Z] 
+>>> Día 2025-12-28 (día normal)
+[2025-12-24T14:39:28.749Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:28.760Z]     Cabaña 3: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:28.761Z]     Cabaña 10: Limpieza Profunda - Esfuerzo: 2.0
+[2025-12-24T14:39:28.762Z]   Esfuerzo: 2.0, rellenando con Inventarios hasta 3.0...
+[2025-12-24T14:39:28.763Z]     Cabaña 2: Inventario - Esfuerzo: 2.3
+[2025-12-24T14:39:28.764Z]     Cabaña 8: Inventario - Esfuerzo: 2.6
+[2025-12-24T14:39:28.765Z]     Cabaña 9: Inventario - Esfuerzo: 2.9
+[2025-12-24T14:39:28.766Z]   Límite alcanzado (2.9 + 0.3 > 3.0). Deteniendo relleno.
+[2025-12-24T14:39:28.771Z]   Persisting generated plan to DB (5 tasks)...
+[2025-12-24T14:39:29.021Z]   Plan persisted successfully.
+[2025-12-24T14:39:29.022Z] 
+>>> Día 2025-12-29 (LUNES)
+[2025-12-24T14:39:29.151Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:29.162Z]   Persisting generated plan to DB (0 tasks)...
+[2025-12-24T14:39:29.386Z]   Plan persisted successfully.
+[2025-12-24T14:39:29.388Z] 
 >>> Día 2025-12-30 (día normal)
-[2025-12-24T01:07:41.086Z]   Cargando plan existente (3 tareas) desde BD...
-[2025-12-24T01:07:41.096Z]   Generación automática (rellenando huecos)...
-[2025-12-24T01:07:41.105Z]   Persisting generated plan to DB (3 tasks)...
-[2025-12-24T01:07:41.371Z]   Plan persisted successfully.
-[2025-12-24T01:07:41.373Z] 
+[2025-12-24T14:39:29.513Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:29.516Z]     Cabaña 2: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:29.518Z]     Cabaña 10: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:29.525Z]     Cabaña 3: Salida (Generada Automáticamente)
+[2025-12-24T14:39:29.531Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:29.776Z]   Plan persisted successfully.
+[2025-12-24T14:39:29.777Z] 
+>>> Día 2025-12-31 (día normal)
+[2025-12-24T14:39:29.899Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:29.903Z]     Cabaña 8: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:29.905Z]     Cabaña 9: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:29.908Z]     Cabaña 3: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:29.909Z]     Cabaña 1: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:29.910Z]     Cabaña 7: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:29.912Z]     Cabaña 2: Ocupada, pero sin cupo para Mantención (5 + 1 > 3)
+[2025-12-24T14:39:29.913Z]     Cabaña 10: Ocupada, pero sin cupo para Mantención (5 + 1 > 3)
+[2025-12-24T14:39:29.919Z]   Persisting generated plan to DB (5 tasks)...
+[2025-12-24T14:39:30.168Z]   Plan persisted successfully.
+[2025-12-24T14:39:30.170Z] 
+>>> Día 2026-01-01 (día normal)
+[2025-12-24T14:39:30.297Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:30.303Z]     Cabaña 3: Cambio (Salida+Llegada)
+[2025-12-24T14:39:30.307Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:30.308Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:30.309Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:30.310Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:30.311Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:30.312Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:30.315Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:30.531Z]   Plan persisted successfully.
+[2025-12-24T14:39:30.533Z] 
+>>> Día 2026-01-02 (día normal)
+[2025-12-24T14:39:30.651Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:30.655Z]     Cabaña 8: Salida (Generada Automáticamente)
+[2025-12-24T14:39:30.657Z]     Cabaña 9: Cambio (Salida+Llegada)
+[2025-12-24T14:39:30.661Z]     Cabaña 1: Salida (Generada Automáticamente)
+[2025-12-24T14:39:30.662Z]     Cabaña 7: Salida (Generada Automáticamente)
+[2025-12-24T14:39:30.664Z]     Cabaña 2: Ocupada, pero sin cupo para Mantención (4 + 1 > 3)
+[2025-12-24T14:39:30.665Z]     Cabaña 10: Ocupada, pero sin cupo para Mantención (4 + 1 > 3)
+[2025-12-24T14:39:30.666Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (4 + 1 > 3)
+[2025-12-24T14:39:30.669Z]   Persisting generated plan to DB (4 tasks)...
+[2025-12-24T14:39:30.896Z]   Plan persisted successfully.
+[2025-12-24T14:39:30.898Z] 
+>>> Día 2026-01-03 (día normal)
+[2025-12-24T14:39:31.027Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:31.032Z]     Cabaña 8: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:31.038Z]     Cabaña 7: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:31.040Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:31.042Z]     Cabaña 10: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:31.043Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:31.044Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:31.048Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:31.292Z]   Plan persisted successfully.
+[2025-12-24T14:39:31.294Z] 
+>>> Día 2026-01-04 (día normal)
+[2025-12-24T14:39:31.420Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:31.423Z]     Cabaña 2: Salida (Generada Automáticamente)
+[2025-12-24T14:39:31.425Z]     Cabaña 10: Salida (Generada Automáticamente)
+[2025-12-24T14:39:31.427Z]     Cabaña 9: Salida (Generada Automáticamente)
+[2025-12-24T14:39:31.429Z]     Cabaña 3: Salida (Generada Automáticamente)
+[2025-12-24T14:39:31.433Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (4 + 1 > 3)
+[2025-12-24T14:39:31.435Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (4 + 1 > 3)
+[2025-12-24T14:39:31.440Z]   Persisting generated plan to DB (4 tasks)...
+[2025-12-24T14:39:31.680Z]   Plan persisted successfully.
+[2025-12-24T14:39:31.681Z] 
+>>> Día 2026-01-05 (LUNES)
+[2025-12-24T14:39:31.810Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:31.817Z]     Cabaña 3: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:31.819Z]     Cabaña 1: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:31.822Z]   Persisting generated plan to DB (2 tasks)...
+[2025-12-24T14:39:32.037Z]   Plan persisted successfully.
+[2025-12-24T14:39:32.042Z] 
+>>> Día 2026-01-06 (día normal)
+[2025-12-24T14:39:32.170Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:32.178Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:32.180Z]     Cabaña 3: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:32.182Z]     Cabaña 1: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:32.183Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:32.185Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:32.400Z]   Plan persisted successfully.
+[2025-12-24T14:39:32.401Z] 
+>>> Día 2026-01-07 (día normal)
+[2025-12-24T14:39:32.519Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:32.521Z]     Cabaña 2: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:32.523Z]     Cabaña 10: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:32.525Z]     Cabaña 9: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:32.526Z]     Cabaña 3: Salida (Generada Automáticamente)
+[2025-12-24T14:39:32.528Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (4 + 1 > 3)
+[2025-12-24T14:39:32.530Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (4 + 1 > 3)
+[2025-12-24T14:39:32.530Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (4 + 1 > 3)
+[2025-12-24T14:39:32.534Z]   Persisting generated plan to DB (4 tasks)...
+[2025-12-24T14:39:32.784Z]   Plan persisted successfully.
+[2025-12-24T14:39:32.786Z] 
+>>> Día 2026-01-08 (día normal)
+[2025-12-24T14:39:32.912Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:32.919Z]     Cabaña 8: Salida (Generada Automáticamente)
+[2025-12-24T14:39:32.922Z]     Cabaña 3: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:32.925Z]     Cabaña 7: Salida (Generada Automáticamente)
+[2025-12-24T14:39:32.929Z]     Cabaña 2: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:32.930Z]     Cabaña 10: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:32.931Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:32.932Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:32.933Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:33.169Z]   Plan persisted successfully.
+[2025-12-24T14:39:33.171Z] 
+>>> Día 2026-01-09 (día normal)
+[2025-12-24T14:39:33.291Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:33.300Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:33.302Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:33.302Z]     Cabaña 9: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:33.303Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:33.304Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:33.307Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:33.532Z]   Plan persisted successfully.
+[2025-12-24T14:39:33.534Z] 
+>>> Día 2026-01-10 (día normal)
+[2025-12-24T14:39:33.656Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:33.664Z]     Cabaña 3: Salida (Generada Automáticamente)
+[2025-12-24T14:39:33.668Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:33.670Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:33.671Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:33.673Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:33.676Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:33.909Z]   Plan persisted successfully.
+[2025-12-24T14:39:33.910Z] 
+>>> Día 2026-01-11 (día normal)
+[2025-12-24T14:39:34.029Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:34.031Z]     Cabaña 2: Salida (Generada Automáticamente)
+[2025-12-24T14:39:34.033Z]     Cabaña 10: Salida (Generada Automáticamente)
+[2025-12-24T14:39:34.036Z]     Cabaña 9: Salida (Generada Automáticamente)
+[2025-12-24T14:39:34.038Z]     Cabaña 3: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:34.040Z]     Cabaña 1: Salida (Generada Automáticamente)
+[2025-12-24T14:39:34.045Z]   Persisting generated plan to DB (5 tasks)...
+[2025-12-24T14:39:34.289Z]   Plan persisted successfully.
+[2025-12-24T14:39:34.290Z] 
+>>> Día 2026-01-12 (LUNES)
+[2025-12-24T14:39:34.410Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:34.412Z]     Cabaña 2: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:34.416Z]     Cabaña 10: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:34.417Z]     Cabaña 9: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:34.421Z]     Cabaña 1: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:34.423Z]     Cabaña 7: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:34.428Z]   Persisting generated plan to DB (5 tasks)...
+[2025-12-24T14:39:34.668Z]   Plan persisted successfully.
+[2025-12-24T14:39:34.669Z] 
+>>> Día 2026-01-13 (día normal)
+[2025-12-24T14:39:34.805Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:34.808Z]     Cabaña 8: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:34.815Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:34.817Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:34.818Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:34.819Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:34.820Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:34.821Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:34.824Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:35.061Z]   Plan persisted successfully.
+[2025-12-24T14:39:35.063Z] 
+>>> Día 2026-01-14 (día normal)
+[2025-12-24T14:39:35.174Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:35.181Z]     Cabaña 3: Cambio (Salida+Llegada)
+[2025-12-24T14:39:35.184Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:35.186Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:35.189Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.190Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.191Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.193Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.196Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:35.436Z]   Plan persisted successfully.
+[2025-12-24T14:39:35.437Z] 
+>>> Día 2026-01-15 (día normal)
+[2025-12-24T14:39:35.571Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:35.574Z]     Cabaña 2: Salida (Generada Automáticamente)
+[2025-12-24T14:39:35.583Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:35.585Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:35.586Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.587Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.588Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.589Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.592Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:35.828Z]   Plan persisted successfully.
+[2025-12-24T14:39:35.830Z] 
+>>> Día 2026-01-16 (día normal)
+[2025-12-24T14:39:35.951Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:35.954Z]     Cabaña 2: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:35.958Z]     Cabaña 9: Salida (Generada Automáticamente)
+[2025-12-24T14:39:35.962Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:35.964Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.965Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.966Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.967Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:35.971Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:36.192Z]   Plan persisted successfully.
+[2025-12-24T14:39:36.193Z] 
+>>> Día 2026-01-17 (día normal)
+[2025-12-24T14:39:36.322Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:36.328Z]     Cabaña 9: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:36.333Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:36.334Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:36.336Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:36.337Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:36.337Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:36.340Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:36.344Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:36.576Z]   Plan persisted successfully.
+[2025-12-24T14:39:36.577Z] 
+>>> Día 2026-01-18 (día normal)
+[2025-12-24T14:39:36.702Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:36.704Z]     Cabaña 2: Salida (Generada Automáticamente)
+[2025-12-24T14:39:36.709Z]     Cabaña 3: Cambio (Salida+Llegada)
+[2025-12-24T14:39:36.712Z]     Cabaña 1: Salida (Generada Automáticamente)
+[2025-12-24T14:39:36.713Z]     Cabaña 10: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:36.715Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:36.716Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:36.717Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:36.720Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:36.947Z]   Plan persisted successfully.
+[2025-12-24T14:39:36.948Z] 
+>>> Día 2026-01-19 (LUNES)
+[2025-12-24T14:39:37.079Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:37.084Z]     Cabaña 9: Salida (Generada Automáticamente)
+[2025-12-24T14:39:37.088Z]     Cabaña 1: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:37.090Z]     Cabaña 7: Salida (Generada Automáticamente)
+[2025-12-24T14:39:37.094Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:37.320Z]   Plan persisted successfully.
+[2025-12-24T14:39:37.321Z] 
+>>> Día 2026-01-20 (día normal)
+[2025-12-24T14:39:37.444Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:37.455Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:37.457Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:37.458Z]     Cabaña 3: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:37.461Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:37.464Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:37.692Z]   Plan persisted successfully.
+[2025-12-24T14:39:37.693Z] 
+>>> Día 2026-01-21 (día normal)
+[2025-12-24T14:39:37.820Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:37.828Z]     Cabaña 3: Salida (Generada Automáticamente)
+[2025-12-24T14:39:37.832Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:37.834Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:37.835Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:37.838Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:38.056Z]   Plan persisted successfully.
+[2025-12-24T14:39:38.057Z] 
+>>> Día 2026-01-22 (día normal)
+[2025-12-24T14:39:38.183Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:38.185Z]     Cabaña 2: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:38.192Z]     Cabaña 1: Salida (Generada Automáticamente)
+[2025-12-24T14:39:38.194Z]     Cabaña 7: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:38.196Z]     Cabaña 10: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:38.197Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:38.201Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:38.438Z]   Plan persisted successfully.
+[2025-12-24T14:39:38.439Z] 
+>>> Día 2026-01-23 (día normal)
+[2025-12-24T14:39:38.573Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:38.578Z]     Cabaña 8: Cambio (Salida+Llegada)
+[2025-12-24T14:39:38.583Z]     Cabaña 1: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:38.586Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:38.588Z]     Cabaña 10: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:38.589Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:38.592Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:38.826Z]   Plan persisted successfully.
+[2025-12-24T14:39:38.828Z] 
+>>> Día 2026-01-24 (día normal)
+[2025-12-24T14:39:38.948Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:38.957Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:38.959Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:38.961Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:38.963Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:38.964Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:38.969Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:39.190Z]   Plan persisted successfully.
+[2025-12-24T14:39:39.192Z] 
+>>> Día 2026-01-25 (día normal)
+[2025-12-24T14:39:39.309Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:39.314Z]     Cabaña 8: Salida (Generada Automáticamente)
+[2025-12-24T14:39:39.321Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:39.323Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:39.324Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:39.326Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:39.331Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:39.554Z]   Plan persisted successfully.
+[2025-12-24T14:39:39.555Z] 
+>>> Día 2026-01-26 (LUNES)
+[2025-12-24T14:39:39.672Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:39.682Z]   Persisting generated plan to DB (0 tasks)...
+[2025-12-24T14:39:39.885Z]   Plan persisted successfully.
+[2025-12-24T14:39:39.887Z] 
+>>> Día 2026-01-27 (día normal)
+[2025-12-24T14:39:40.010Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:40.015Z]     Cabaña 10: Salida (Generada Automáticamente)
+[2025-12-24T14:39:40.021Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:40.023Z]     Cabaña 1: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:40.024Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:40.027Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:40.261Z]   Plan persisted successfully.
+[2025-12-24T14:39:40.264Z] 
+>>> Día 2026-01-28 (día normal)
+[2025-12-24T14:39:40.381Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:40.384Z]     Cabaña 2: Salida (Generada Automáticamente)
+[2025-12-24T14:39:40.386Z]     Cabaña 8: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:40.391Z]     Cabaña 1: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:40.393Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:40.397Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:40.633Z]   Plan persisted successfully.
+[2025-12-24T14:39:40.634Z] 
+>>> Día 2026-01-29 (día normal)
+[2025-12-24T14:39:40.759Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:40.768Z]     Cabaña 1: Salida (Generada Automáticamente)
+[2025-12-24T14:39:40.770Z]     Cabaña 7: Salida (Generada Automáticamente)
+[2025-12-24T14:39:40.772Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:40.775Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:41.014Z]   Plan persisted successfully.
+[2025-12-24T14:39:41.016Z] 
+>>> Día 2026-01-30 (día normal)
+[2025-12-24T14:39:41.139Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:41.147Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:41.149Z]     Cabaña 2: Limpieza Profunda - Esfuerzo: 2.0
+[2025-12-24T14:39:41.150Z]     Cabaña 10: Limpieza Profunda - Esfuerzo: 3.0
+[2025-12-24T14:39:41.153Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:41.372Z]   Plan persisted successfully.
+[2025-12-24T14:39:41.373Z] 
+>>> Día 2026-01-31 (día normal)
+[2025-12-24T14:39:41.492Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:41.494Z]     Cabaña 2: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:41.498Z]     Cabaña 9: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:41.503Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:41.507Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:41.792Z]   Plan persisted successfully.
+[2025-12-24T14:39:41.794Z] 
+>>> Día 2026-02-01 (día normal)
+[2025-12-24T14:39:41.923Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:41.931Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:41.933Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:41.934Z]     Cabaña 9: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:41.937Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:42.171Z]   Plan persisted successfully.
+[2025-12-24T14:39:42.172Z] 
+>>> Día 2026-02-02 (LUNES)
+[2025-12-24T14:39:42.317Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:42.321Z]     Cabaña 10: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:42.324Z]     Cabaña 3: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:42.327Z]   Persisting generated plan to DB (2 tasks)...
+[2025-12-24T14:39:42.556Z]   Plan persisted successfully.
+[2025-12-24T14:39:42.558Z] 
+>>> Día 2026-02-03 (día normal)
+[2025-12-24T14:39:42.676Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:42.685Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:42.687Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:42.688Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:42.690Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:42.691Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:42.694Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:42.936Z]   Plan persisted successfully.
+[2025-12-24T14:39:42.937Z] 
+>>> Día 2026-02-04 (día normal)
+[2025-12-24T14:39:43.066Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:43.067Z]     Cabaña 2: Cambio (Salida+Llegada)
+[2025-12-24T14:39:43.070Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:43.071Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:43.071Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:43.072Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:43.073Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:43.293Z]   Plan persisted successfully.
+[2025-12-24T14:39:43.320Z] 
+>>> Día 2026-02-05 (día normal)
+[2025-12-24T14:39:43.444Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:43.445Z]     Cabaña 9: Salida (Generada Automáticamente)
+[2025-12-24T14:39:43.447Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:43.448Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:43.448Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:43.449Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:43.450Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:43.682Z]   Plan persisted successfully.
+[2025-12-24T14:39:43.683Z] 
+>>> Día 2026-02-06 (día normal)
+[2025-12-24T14:39:43.792Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:43.794Z]     Cabaña 10: Salida (Generada Automáticamente)
+[2025-12-24T14:39:43.795Z]     Cabaña 8: Salida (Generada Automáticamente)
+[2025-12-24T14:39:43.797Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:43.797Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:43.798Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:43.800Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:44.026Z]   Plan persisted successfully.
+[2025-12-24T14:39:44.027Z] 
+>>> Día 2026-02-07 (día normal)
+[2025-12-24T14:39:44.146Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:44.147Z]     Cabaña 10: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:44.148Z]     Cabaña 8: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:44.150Z]     Cabaña 7: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:44.151Z]     Cabaña 2: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:44.153Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:44.153Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:44.155Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:44.398Z]   Plan persisted successfully.
+[2025-12-24T14:39:44.400Z] 
+>>> Día 2026-02-08 (día normal)
+[2025-12-24T14:39:44.531Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:44.533Z]     Cabaña 9: Salida (Generada Automáticamente)
+[2025-12-24T14:39:44.533Z]     Cabaña 3: Salida (Generada Automáticamente)
+[2025-12-24T14:39:44.535Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:44.535Z]     Cabaña 10: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:44.535Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:44.536Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:44.537Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:44.767Z]   Plan persisted successfully.
+[2025-12-24T14:39:44.769Z] 
+>>> Día 2026-02-09 (LUNES)
+[2025-12-24T14:39:44.886Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:44.887Z]     Cabaña 2: Cambio (Salida+Llegada)
+[2025-12-24T14:39:44.888Z]     Cabaña 8: Cambio (Salida+Llegada)
+[2025-12-24T14:39:44.889Z]     Cabaña 9: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:44.890Z]     Cabaña 3: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:44.890Z]     Cabaña 1: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:44.892Z]   Persisting generated plan to DB (5 tasks)...
+[2025-12-24T14:39:45.139Z]   Plan persisted successfully.
+[2025-12-24T14:39:45.140Z] 
+>>> Día 2026-02-10 (día normal)
+[2025-12-24T14:39:45.237Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:45.240Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:45.241Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:45.242Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:45.242Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.242Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.243Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.243Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.244Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:45.469Z]   Plan persisted successfully.
+[2025-12-24T14:39:45.470Z] 
+>>> Día 2026-02-11 (día normal)
+[2025-12-24T14:39:45.593Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:45.594Z]     Cabaña 9: Salida (Generada Automáticamente)
+[2025-12-24T14:39:45.595Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:45.596Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:45.596Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.596Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.597Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.597Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.598Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:45.839Z]   Plan persisted successfully.
+[2025-12-24T14:39:45.840Z] 
+>>> Día 2026-02-12 (día normal)
+[2025-12-24T14:39:45.983Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:45.988Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:45.990Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:45.991Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:45.992Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.993Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.993Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:45.995Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:46.219Z]   Plan persisted successfully.
+[2025-12-24T14:39:46.220Z] 
+>>> Día 2026-02-13 (día normal)
+[2025-12-24T14:39:46.330Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:46.333Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:46.333Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:46.334Z]     Cabaña 8: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:46.334Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:46.335Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:46.335Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:46.336Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:46.573Z]   Plan persisted successfully.
+[2025-12-24T14:39:46.574Z] 
+>>> Día 2026-02-14 (día normal)
+[2025-12-24T14:39:46.694Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:46.696Z]     Cabaña 9: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:46.698Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:46.699Z]     Cabaña 10: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:46.700Z]     Cabaña 8: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:46.700Z]     Cabaña 3: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:46.701Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:46.701Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:46.702Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:46.920Z]   Plan persisted successfully.
+[2025-12-24T14:39:46.921Z] 
+>>> Día 2026-02-15 (día normal)
+[2025-12-24T14:39:47.024Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:47.025Z]     Cabaña 8: Salida (Generada Automáticamente)
+[2025-12-24T14:39:47.026Z]     Cabaña 3: Salida (Generada Automáticamente)
+[2025-12-24T14:39:47.027Z]     Cabaña 1: Salida (Generada Automáticamente)
+[2025-12-24T14:39:47.027Z]     Cabaña 2: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:47.027Z]     Cabaña 10: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:47.027Z]     Cabaña 9: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:47.028Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:47.028Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:47.269Z]   Plan persisted successfully.
+[2025-12-24T14:39:47.269Z] 
+>>> Día 2026-02-16 (LUNES)
+[2025-12-24T14:39:47.383Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:47.389Z]     Cabaña 1: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:47.392Z]   Persisting generated plan to DB (1 tasks)...
+[2025-12-24T14:39:47.623Z]   Plan persisted successfully.
+[2025-12-24T14:39:47.624Z] 
+>>> Día 2026-02-17 (día normal)
+[2025-12-24T14:39:47.756Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:47.758Z]     Cabaña 10: Salida (Generada Automáticamente)
+[2025-12-24T14:39:47.762Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:47.763Z]     Cabaña 9: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:47.764Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:47.765Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:47.767Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:47.997Z]   Plan persisted successfully.
+[2025-12-24T14:39:47.997Z] 
+>>> Día 2026-02-18 (día normal)
+[2025-12-24T14:39:48.109Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:48.114Z]     Cabaña 2: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:48.115Z]     Cabaña 9: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:48.116Z]     Cabaña 1: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:48.117Z]     Cabaña 7: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:48.119Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:48.339Z]   Plan persisted successfully.
+[2025-12-24T14:39:48.340Z] 
+>>> Día 2026-02-19 (día normal)
+[2025-12-24T14:39:48.461Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:48.462Z]     Cabaña 2: Salida (Generada Automáticamente)
+[2025-12-24T14:39:48.465Z]     Cabaña 7: Salida (Generada Automáticamente)
+[2025-12-24T14:39:48.465Z]     Cabaña 9: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:48.466Z]     Cabaña 1: Ocupada, pero sin cupo para Mantención (3 + 1 > 3)
+[2025-12-24T14:39:48.467Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:48.698Z]   Plan persisted successfully.
+[2025-12-24T14:39:48.699Z] 
+>>> Día 2026-02-20 (día normal)
+[2025-12-24T14:39:48.814Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:48.818Z]     Cabaña 9: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:48.818Z]     Cabaña 1: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:48.819Z]     Cabaña 2: Limpieza Profunda - Esfuerzo: 3.0
+[2025-12-24T14:39:48.820Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:49.056Z]   Plan persisted successfully.
+[2025-12-24T14:39:49.057Z] 
+>>> Día 2026-02-21 (día normal)
+[2025-12-24T14:39:49.180Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:49.182Z]     Cabaña 9: Salida (Generada Automáticamente)
+[2025-12-24T14:39:49.183Z]     Cabaña 1: Salida (Generada Automáticamente)
+[2025-12-24T14:39:49.184Z]     Cabaña 10: Limpieza Profunda - Esfuerzo: 3.0
+[2025-12-24T14:39:49.185Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:49.426Z]   Plan persisted successfully.
+[2025-12-24T14:39:49.427Z] 
+>>> Día 2026-02-22 (día normal)
+[2025-12-24T14:39:49.560Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:49.562Z]     Cabaña 8: Limpieza Profunda - Esfuerzo: 1.0
+[2025-12-24T14:39:49.562Z]     Cabaña 9: Limpieza Profunda - Esfuerzo: 2.0
+[2025-12-24T14:39:49.562Z]     Cabaña 3: Limpieza Profunda - Esfuerzo: 3.0
+[2025-12-24T14:39:49.564Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:49.833Z]   Plan persisted successfully.
+[2025-12-24T14:39:49.856Z] 
+>>> Día 2026-02-23 (LUNES)
+[2025-12-24T14:39:50.025Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:50.032Z]     Cabaña 3: Cambio EMERGENCIA (llegada a sucia)
+[2025-12-24T14:39:50.033Z]   Persisting generated plan to DB (1 tasks)...
+[2025-12-24T14:39:50.264Z]   Plan persisted successfully.
+[2025-12-24T14:39:50.265Z] 
+>>> Día 2026-02-24 (día normal)
+[2025-12-24T14:39:50.378Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:50.381Z]     Cabaña 3: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:50.382Z]     Cabaña 1: Limpieza Profunda - Esfuerzo: 2.0
+[2025-12-24T14:39:50.382Z]     Cabaña 7: Limpieza Profunda - Esfuerzo: 3.0
+[2025-12-24T14:39:50.383Z]   Persisting generated plan to DB (3 tasks)...
+[2025-12-24T14:39:50.614Z]   Plan persisted successfully.
+[2025-12-24T14:39:50.615Z] 
+>>> Día 2026-02-25 (día normal)
+[2025-12-24T14:39:50.733Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:50.736Z]     Cabaña 3: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:50.736Z]   Esfuerzo: 1.0, rellenando con Inventarios hasta 3.0...
+[2025-12-24T14:39:50.737Z]     Cabaña 2: Inventario - Esfuerzo: 1.3
+[2025-12-24T14:39:50.737Z]     Cabaña 10: Inventario - Esfuerzo: 1.6
+[2025-12-24T14:39:50.738Z]     Cabaña 8: Inventario - Esfuerzo: 1.9
+[2025-12-24T14:39:50.739Z]     Cabaña 9: Inventario - Esfuerzo: 2.2
+[2025-12-24T14:39:50.739Z]     Cabaña 1: Inventario - Esfuerzo: 2.5
+[2025-12-24T14:39:50.740Z]     Cabaña 7: Inventario - Esfuerzo: 2.8
+[2025-12-24T14:39:50.741Z]   Persisting generated plan to DB (7 tasks)...
+[2025-12-24T14:39:50.971Z]   Plan persisted successfully.
+[2025-12-24T14:39:50.973Z] 
+>>> Día 2026-02-26 (día normal)
+[2025-12-24T14:39:51.100Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:51.107Z]     Cabaña 3: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:51.107Z]   Esfuerzo: 1.0, rellenando con Inventarios hasta 3.0...
+[2025-12-24T14:39:51.109Z]     Cabaña 2: Inventario - Esfuerzo: 1.3
+[2025-12-24T14:39:51.110Z]     Cabaña 10: Inventario - Esfuerzo: 1.6
+[2025-12-24T14:39:51.111Z]     Cabaña 8: Inventario - Esfuerzo: 1.9
+[2025-12-24T14:39:51.112Z]     Cabaña 9: Inventario - Esfuerzo: 2.2
+[2025-12-24T14:39:51.112Z]     Cabaña 1: Inventario - Esfuerzo: 2.5
+[2025-12-24T14:39:51.113Z]     Cabaña 7: Inventario - Esfuerzo: 2.8
+[2025-12-24T14:39:51.117Z]   Persisting generated plan to DB (7 tasks)...
+[2025-12-24T14:39:51.396Z]   Plan persisted successfully.
+[2025-12-24T14:39:51.397Z] 
+>>> Día 2026-02-27 (día normal)
+[2025-12-24T14:39:51.516Z]   Generación automática (rellenando huecos)...
+[2025-12-24T14:39:51.522Z]     Cabaña 3: Mantención (Relleno Ocupada) - peso 1
+[2025-12-24T14:39:51.523Z]   Esfuerzo: 1.0, rellenando con Inventarios hasta 3.0...
+[2025-12-24T14:39:51.523Z]     Cabaña 2: Inventario - Esfuerzo: 1.3
+[2025-12-24T14:39:51.524Z]     Cabaña 10: Inventario - Esfuerzo: 1.6
+[2025-12-24T14:39:51.524Z]     Cabaña 8: Inventario - Esfuerzo: 1.9
+[2025-12-24T14:39:51.524Z]     Cabaña 9: Inventario - Esfuerzo: 2.2
+[2025-12-24T14:39:51.525Z]     Cabaña 1: Inventario - Esfuerzo: 2.5
+[2025-12-24T14:39:51.525Z]     Cabaña 7: Inventario - Esfuerzo: 2.8
+[2025-12-24T14:39:51.528Z]   Persisting generated plan to DB (7 tasks)...
+[2025-12-24T14:39:51.779Z]   Plan persisted successfully.
+[2025-12-24T14:39:51.780Z] 
 === TOTALES FINALES ===
-[2025-12-24T01:07:41.374Z] Total Tareas: 30
-[2025-12-24T01:07:41.375Z] Total Cambios: 4
-[2025-12-24T01:07:41.376Z] Total Salidas: 0
-[2025-12-24T01:07:41.378Z] Días Críticos: 0
-[2025-12-24T01:07:41.379Z] 
-=== FIN GENERACIÓN ===
-
-[2025-12-24T01:07:42.238Z] 
->>> Día 2025-12-24 (día normal)
-[2025-12-24T01:07:42.347Z]   Cargando plan existente (5 tareas) desde BD...
-[2025-12-24T01:07:42.356Z]   Generación automática (rellenando huecos)...
-[2025-12-24T01:07:42.359Z]   Esfuerzo: 2.9, rellenando con Inventarios hasta 3.0...
-[2025-12-24T01:07:42.360Z]   Límite alcanzado (2.9 + 0.3 > 3.0). Deteniendo relleno.
-[2025-12-24T01:07:42.367Z]   Persisting generated plan to DB (5 tasks)...
-[2025-12-24T01:07:42.677Z]   Plan persisted successfully.
-[2025-12-24T01:07:42.681Z] 
-=== TOTALES FINALES ===
-[2025-12-24T01:07:42.682Z] Total Tareas: 5
-[2025-12-24T01:07:42.688Z] Total Cambios: 1
-[2025-12-24T01:07:42.690Z] Total Salidas: 0
-[2025-12-24T01:07:42.693Z] Días Críticos: 0
-[2025-12-24T01:07:42.699Z] 
+[2025-12-24T14:39:51.780Z] Total Tareas: 204
+[2025-12-24T14:39:51.781Z] Total Cambios: 50
+[2025-12-24T14:39:51.781Z] Total Salidas: 44
+[2025-12-24T14:39:51.782Z] Días Críticos: 7
+[2025-12-24T14:39:51.782Z] 
 === FIN GENERACIÓN ===
 

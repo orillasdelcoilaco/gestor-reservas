@@ -201,7 +201,7 @@ async function generarPropuestaRango(db, fechaInicioStr, fechaFinStr) {
                 case 'Cambio': return PESO_PESADO;
                 case 'Limpieza Profunda': return PESO_PESADO;
                 case 'Salida': return PESO_PESADO;
-                case 'Repaso': return PESO_LEVE;
+                case 'Llegada': return PESO_LEVE; // Renamed from Repaso
                 case 'Inventario': return PESO_INVENTARIO;
                 case 'Limpieza': return 0.5;
                 default:
@@ -348,13 +348,26 @@ async function generarPropuestaRango(db, fechaInicioStr, fechaFinStr) {
 
                     if (isMonday) conflictMonday = true;
                 } else if (isLeaving) {
-                    estadosTemporales[cab.nombre] = 'SUCIA';
-                    log(`    ${cab.nombre}: Salida → SUCIA`);
+                    // FIX: Salida is a MANDATORY TASK, not just a state change.
+                    dailyTasksMap.set(cab.nombre, {
+                        cabanaId: cab.nombre,
+                        tipoAseo: 'Salida',
+                        priority: 2, // High priority, just below Cambio
+                        weight: getWeight('Salida'),
+                        horarioInicio: '',
+                        horarioFin: '',
+                        origen: 'auto',
+                        trabajadorId: trabajadorPrincipalId
+                    });
+                    estadosTemporales[cab.nombre] = 'SUCIA'; // It becomes dirty until done, effectively "LISTA" after task
+                    currentEffort += getWeight('Salida');
+                    log(`    ${cab.nombre}: Salida (Generada Automáticamente)`);
                 } else if (isArriving) {
                     if (estadosTemporales[cab.nombre] === 'LISTA') {
+                        // RENAMED: Repaso -> Llegada
                         dailyTasksMap.set(cab.nombre, {
                             cabanaId: cab.nombre,
-                            tipoAseo: 'Repaso', // Repaso LIGERO
+                            tipoAseo: 'Llegada', // Previously 'Repaso'
                             priority: 2,
                             weight: PESO_LEVE,
                             horarioInicio: '',
@@ -364,7 +377,7 @@ async function generarPropuestaRango(db, fechaInicioStr, fechaFinStr) {
                         });
                         estadosTemporales[cab.nombre] = 'OCUPADA';
                         currentEffort += PESO_LEVE;
-                        log(`    ${cab.nombre}: Repaso`);
+                        log(`    ${cab.nombre}: Llegada (Inicio Reserva)`);
                     } else {
                         // EMERGENCIA
                         dailyTasksMap.set(cab.nombre, {
@@ -488,7 +501,10 @@ async function generarPropuestaRango(db, fechaInicioStr, fechaFinStr) {
 
             // --- CALCULATE TOTALS FOR ALERTS ---
             // Fix: Variables were undefined
+            // --- CALCULATE TOTALS FOR ALERTS ---
+            // Fix: Variables were undefined
             const totalTareasDia = dailyTasks.length;
+            const totalLlegadasDia = dailyTasks.filter(t => t.tipoAseo === 'Llegada').length;
             const totalCambiosDia = dailyTasks.filter(t => t.tipoAseo === 'Cambio').length;
             const totalSalidasDia = dailyTasks.filter(t => t.tipoAseo === 'Salida').length;
             const effortSum = dailyTasks.reduce((sum, t) => sum + (t.weight || 0), 0);
@@ -546,16 +562,6 @@ async function generarPropuestaRango(db, fechaInicioStr, fechaFinStr) {
 
             dailyTasks.forEach(t => {
                 const ref = db.collection('planAseo').doc();
-                // Save task WITH calculated schedule
-                // Exclude full context if it's too heavy? No, user might want it.
-                // But Firestore limit is 1MB. Context is small.
-                // However, context relies on dynamic reservation data. If we save it, it might become stale.
-                // UI usually recalculates context on load?
-                // `dailyTasks` right now has `t.context`.
-                // If we save it, we save space.
-                // Let's remove context for persistence to keep DB clean and rely on live generation for context.
-                // BUT `activePlan` returned needs context.
-                // So let's clone for save.
                 const taskToSave = { ...t };
                 delete taskToSave.context;
 
@@ -577,6 +583,7 @@ async function generarPropuestaRango(db, fechaInicioStr, fechaFinStr) {
                     requiereRefuerzo,
                     esLunes: isMonday,
                     conflictoLunes: conflictMonday,
+                    totalLlegadas: totalLlegadasDia,
                     totalCambios: totalCambiosDia,
                     totalSalidas: totalSalidasDia,
                     totalTareas: totalTareasDia,
@@ -589,17 +596,20 @@ async function generarPropuestaRango(db, fechaInicioStr, fechaFinStr) {
         // Calculate final totals
         log('\n=== TOTALES FINALES ===');
         let finalTotalTareas = 0;
+        let finalTotalLlegadas = 0;
         let finalTotalCambios = 0;
         let finalTotalSalidas = 0;
         let finalDiasCriticos = 0;
         diasResult.forEach(dia => {
             finalTotalTareas += dia.alertas.totalTareas;
+            finalTotalLlegadas += dia.alertas.totalLlegadas;
             finalTotalCambios += dia.alertas.totalCambios;
             finalTotalSalidas += dia.alertas.totalSalidas;
             if (dia.alertas.requiereRefuerzo) finalDiasCriticos++;
         });
 
         log(`Total Tareas: ${finalTotalTareas}`);
+        log(`Total Llegadas: ${finalTotalLlegadas}`);
         log(`Total Cambios: ${finalTotalCambios}`);
         log(`Total Salidas: ${finalTotalSalidas}`);
         log(`Días Críticos: ${finalDiasCriticos}`);
@@ -609,6 +619,7 @@ async function generarPropuestaRango(db, fechaInicioStr, fechaFinStr) {
             dias: diasResult,
             totales: {
                 totalTareas: finalTotalTareas,
+                totalLlegadas: finalTotalLlegadas,
                 totalCambios: finalTotalCambios,
                 totalSalidas: finalTotalSalidas,
                 diasCriticos: finalDiasCriticos

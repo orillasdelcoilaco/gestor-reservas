@@ -162,14 +162,20 @@
             }
 
             prevMonthBtn.addEventListener('click', () => {
+                // Fix: Set to 1st of current month to avoid day overflow (e.g. Jan 31 -> Feb)
+                currentDate.setDate(1);
                 currentDate.setMonth(currentDate.getMonth() - 1);
-                calendar.prev();
+
+                calendar.prev(); // FullCalendar handles its own view, but we sync our currentDate for labelling/fetching
                 updateMonthLabel();
                 loadEventsForMonth(currentDate.getFullYear(), currentDate.getMonth() + 1);
             });
 
             nextMonthBtn.addEventListener('click', () => {
+                // Fix: Set to 1st of current month to avoid day overflow
+                currentDate.setDate(1);
                 currentDate.setMonth(currentDate.getMonth() + 1);
+
                 calendar.next();
                 updateMonthLabel();
                 loadEventsForMonth(currentDate.getFullYear(), currentDate.getMonth() + 1);

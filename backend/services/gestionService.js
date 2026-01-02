@@ -151,8 +151,9 @@ async function getReservasPendientes(db) {
     const priorityOrder = {
         'Pendiente Pago': 1,
         'Pendiente Boleta': 2,
-        'Pendiente Cobro': 3,
-        'Pendiente Bienvenida': 4
+        'Pendiente Salida': 3, // Se ajusta el orden para que aparezca después de Boleta
+        'Pendiente Cobro': 4,
+        'Pendiente Bienvenida': 5
     };
 
     reservas.sort((a, b) => {

@@ -103,6 +103,20 @@
                                         WhatsApp</button>
                                 </div>
                             </div>
+                            <div>
+                                <h3 class="text-lg font-medium text-gray-900">Mensaje de Salida</h3>
+                                <textarea id="mensaje-salida" rows="15"
+                                    class="mt-2 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"></textarea>
+                                <div class="mt-2 flex space-x-2">
+                                    <button id="btn-generar-salida"
+                                        class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700">Generar</button>
+                                    <button id="btn-copiar-salida"
+                                        class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-300">Copiar</button>
+                                    <button id="btn-whatsapp-salida"
+                                        class="bg-green-500 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-green-600">Abrir
+                                        WhatsApp</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -144,6 +158,10 @@
                 const btnGenerarBienvenida = document.getElementById('btn-generar-bienvenida');
                 const btnCopiarBienvenida = document.getElementById('btn-copiar-bienvenida');
                 const btnWhatsappBienvenida = document.getElementById('btn-whatsapp-bienvenida');
+                const mensajeSalidaText = document.getElementById('mensaje-salida');
+                const btnGenerarSalida = document.getElementById('btn-generar-salida');
+                const btnCopiarSalida = document.getElementById('btn-copiar-salida');
+                const btnWhatsappSalida = document.getElementById('btn-whatsapp-salida');
                 let reservaSeleccionada = null;
                 let reservaIdOriginalFromUrl = null;
                 let accionFromUrl = null;
@@ -184,6 +202,8 @@
                                 generarMensajeBienvenida();
                             } else if (accionFromUrl === 'marcar_cobro_enviado') {
                                 generarMensajeCobro();
+                            } else if (accionFromUrl === 'marcar_salida_enviada') {
+                                generarMensajeSalida();
                             }
                         }
                     } catch (error) {
@@ -455,6 +475,21 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
                     mensajeBienvenidaText.value = mensaje;
                 }
 
+                function generarMensajeSalida() {
+                    if (!reservaSeleccionada) return;
+                    const { info } = reservaSeleccionada;
+                    const nombreCliente = info.nombre.split(' ')[0];
+
+                    const mensaje = `*Hola ${nombreCliente},*
+A Cabañas Orillas del Coilaco le encantaría recibir tus comentarios.
+
+Publica una opinión en nuestro perfil:
+https://g.page/r/CYOWPolKfufgEBE/review
+
+¡Esperamos verte pronto nuevamente! 👋`;
+                    mensajeSalidaText.value = mensaje;
+                }
+
                 function copiarTexto(textarea, button) {
                     if (!textarea.value) return;
                     navigator.clipboard.writeText(textarea.value).then(() => {
@@ -525,7 +560,11 @@ No los ataca, pero *no garantizamos que no haya incidentes si la mascota anda su
                 // --- INICIO DE LA MODIFICACIÓN: Se asigna la nueva función a los botones ---
                 btnWhatsappCobro.addEventListener('click', () => abrirWhatsApp(mensajeCobroText));
                 btnWhatsappBienvenida.addEventListener('click', () => abrirWhatsApp(mensajeBienvenidaText));
+                btnWhatsappSalida.addEventListener('click', () => abrirWhatsApp(mensajeSalidaText));
                 // --- FIN DE LA MODIFICACIÓN ---
+
+                btnGenerarSalida.addEventListener('click', generarMensajeSalida);
+                btnCopiarSalida.addEventListener('click', () => copiarTexto(mensajeSalidaText, btnCopiarSalida));
 
                 abonoInput.addEventListener('input', () => {
                     if (mensajeCobroText.value) {

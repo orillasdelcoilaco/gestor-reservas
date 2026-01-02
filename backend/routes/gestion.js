@@ -95,12 +95,18 @@ module.exports = (db) => {
                         break;
                     case 'marcar_boleta_enviada':
                         const boletaUpdate = {
-                            estadoGestion: 'Facturado',
+                            estadoGestion: 'Pendiente Salida', // CAMBIO: Ahora pasa a Pendiente Salida, no Facturado
                             fechaBoletaEnviada: admin.firestore.FieldValue.serverTimestamp(),
                             boleta: true
                         };
                         if (publicUrl) boletaUpdate['documentos.enlaceBoleta'] = publicUrl;
                         batch.update(reservaRef, boletaUpdate);
+                        break;
+                    case 'marcar_salida_enviada':
+                        batch.update(reservaRef, {
+                            estadoGestion: 'Facturado', // FINAL: Aquí sale de la gestión diaria
+                            fechaSalidaEnviada: admin.firestore.FieldValue.serverTimestamp()
+                        });
                         break;
                     case 'gestionar_reserva':
                         if (publicUrl) {

@@ -72,6 +72,7 @@
                             <option value="Pendiente Cobro">Pendiente Cobro</option>
                             <option value="Pendiente Pago">Pendiente Pago</option>
                             <option value="Pendiente Boleta">Pendiente Boleta</option>
+                            <option value="Pendiente Salida">Pendiente Salida</option>
                         </select>
 
                         <div class="flex items-center bg-gray-50 px-3 border rounded shadow-sm">
@@ -174,6 +175,7 @@
                 case 'Pendiente Cobro': return { level: 2, text: 'PENDIENTE COBRO', color: 'bg-orange-500' };
                 case 'Pendiente Pago': return { level: 3, text: 'PENDIENTE PAGO', color: 'bg-red-600' };
                 case 'Pendiente Boleta': return { level: 4, text: 'PENDIENTE BOLETA', color: 'bg-purple-600' };
+                case 'Pendiente Salida': return { level: 5, text: 'PENDIENTE SALIDA', color: 'bg-green-600' };
                 default: return { level: 99, text: status ? status.toUpperCase() : 'DESCONOCIDO', color: 'bg-gray-400' };
             }
         }
@@ -196,6 +198,7 @@
             let accionParaMarcar = null;
             if (grupo.estadoGestion === 'Pendiente Bienvenida') accionParaMarcar = 'marcar_bienvenida_enviada';
             else if (grupo.estadoGestion === 'Pendiente Cobro') accionParaMarcar = 'marcar_cobro_enviado';
+            else if (grupo.estadoGestion === 'Pendiente Salida') accionParaMarcar = 'marcar_salida_enviada';
 
             let statusHtml;
             if (accionParaMarcar) {
@@ -454,7 +457,8 @@
                 { value: 'Pendiente Bienvenida', text: 'Pendiente Bienvenida' },
                 { value: 'Pendiente Cobro', text: 'Pendiente Cobro' },
                 { value: 'Pendiente Pago', text: 'Pendiente Pago' },
-                { value: 'Pendiente Boleta', text: 'Pendiente Boleta' }
+                { value: 'Pendiente Boleta', text: 'Pendiente Boleta' },
+                { value: 'Pendiente Salida', text: 'Pendiente Salida' }
             ];
 
             const estadoActualInfo = getStatusInfo(grupo.estadoGestion);

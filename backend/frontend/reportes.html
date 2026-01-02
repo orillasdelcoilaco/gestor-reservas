@@ -187,9 +187,9 @@
                             item.periodos.forEach(p => {
                                 if (p.fin) {
                                     const finDate = new Date(p.fin + 'T00:00:00Z');
-                                    finDate.setUTCDate(finDate.getUTCDate() - 1);
-                                    if (p.inicio <= finDate.toISOString().split('T')[0]) {
-                                        reporteTexto += `👍 Del ${formatDate(p.inicio)} al ${formatDate(finDate.toISOString().split('T')[0])}\n`;
+                                    // Removed date subtraction to show actual checkout date
+                                    if (p.inicio < finDate.toISOString().split('T')[0]) {
+                                        reporteTexto += `👍 Del ${formatDate(p.inicio)} Saliendo el ${formatDate(finDate.toISOString().split('T')[0])}\n`;
                                     }
                                 } else {
                                     reporteTexto += `👍 Del ${formatDate(p.inicio)} en adelante\n`;

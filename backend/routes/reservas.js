@@ -370,6 +370,7 @@ module.exports = (db) => {
                         id: data.reservaIdOriginal,
                         fechaReserva: data.fechaReserva.toDate().toLocaleDateString('es-CL'),
                         fechaLlegada: data.fechaLlegada.toDate().toLocaleDateString('es-CL'),
+                        fechaSalida: data.fechaSalida.toDate().toLocaleDateString('es-CL'),
                         valorTotal: 0,
                         cabañas: []
                     };

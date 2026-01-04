@@ -368,9 +368,9 @@ module.exports = (db) => {
                     propuestasAgrupadas[data.reservaIdOriginal] = {
                         ...data,
                         id: data.reservaIdOriginal,
-                        fechaReserva: data.fechaReserva.toDate().toLocaleDateString('es-CL'),
-                        fechaLlegada: data.fechaLlegada.toDate().toLocaleDateString('es-CL'),
-                        fechaSalida: data.fechaSalida.toDate().toLocaleDateString('es-CL'),
+                        fechaReserva: data.fechaReserva.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }),
+                        fechaLlegada: data.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }),
+                        fechaSalida: data.fechaSalida.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }),
                         valorTotal: 0,
                         cabañas: []
                     };

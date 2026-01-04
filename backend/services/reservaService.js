@@ -35,8 +35,8 @@ async function createManualReservation(db, data) {
 
         const valorPotencialUSD = isBooking ? (reserva.valorPotencialUSD || reserva.valorPotencial || 0) : null;
         const valorFinalUSD = isBooking ? (reserva.valorFinalUSD || reserva.valorFinal || 0) : null;
-        const valorPotencialCLP = isBooking ? Math.round((valorPotencialUSD || 0) * valorDolarDia * 1.19) : reserva.valorPotencial;
-        const valorFinalCLP = isBooking ? Math.round((valorFinalUSD || 0) * valorDolarDia * 1.19) : reserva.valorFinal;
+        const valorPotencialCLP = isBooking ? Math.round((valorPotencialUSD || 0) * valorDolarDia) : reserva.valorPotencial;
+        const valorFinalCLP = isBooking ? Math.round((valorFinalUSD || 0) * valorDolarDia) : reserva.valorFinal;
 
         const idCompuesto = `${canal.toUpperCase()}_${reservaIdOriginal}_${reserva.alojamiento.replace(/\s+/g, '')}`;
         const reservaRef = db.collection('reservas').doc(idCompuesto);
@@ -59,6 +59,8 @@ async function createManualReservation(db, data) {
             valorFinalUSD: isBooking ? valorFinalUSD : null,
             valorDolarDia: valorDolarDia,
             monedaOriginal: isBooking ? 'USD' : 'CLP',
+            valorOriginal: isBooking ? (valorFinalUSD || valorPotencialUSD || 0) : (reserva.valorFinal || 0),
+            precioIncluyeIva: true, // Manual reservations already include IVA
             descuento: propuesta.descuento || null,
             telefono: cliente.telefono,
             correo: cliente.email,

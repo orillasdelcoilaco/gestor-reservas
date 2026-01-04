@@ -559,7 +559,7 @@
                         precioFinalUSD = precioListaUSD - descuentoUSD;
                     }
 
-                    precioFinalCLP = Math.round(precioFinalUSD * dolar * 1.19);
+                    precioFinalCLP = Math.round(precioFinalUSD * dolar);
                     descuentoCLP = precioListaCLP - precioFinalCLP;
                 } else {
                     if (valorFinalManual > 0) {
@@ -694,8 +694,8 @@
                             alojamiento: detail.nombre,
                             fechaLlegada: detail.fechaInicio,
                             fechaSalida: detail.fechaTermino,
-                            valorPotencial: isBookingChannel ? Math.round((valorPotencialUSD || 0) * dolar * 1.19) : detail.precioTotal,
-                            valorFinal: isBookingChannel ? Math.round((valorFinalUSD || 0) * dolar * 1.19) : (parseFloat(input.value) || 0),
+                            valorPotencial: isBookingChannel ? Math.round((valorPotencialUSD || 0) * dolar) : detail.precioTotal,
+                            valorFinal: isBookingChannel ? Math.round((valorFinalUSD || 0) * dolar) : (parseFloat(input.value) || 0),
                             valorPotencialUSD: isBookingChannel ? valorPotencialUSD : undefined,
                             valorFinalUSD: isBookingChannel ? valorFinalUSD : undefined
                         };
@@ -707,13 +707,13 @@
                         const valorPotencialUSD = isBookingChannel ? (detail.precioTotal / dolar / 1.19) : null;
                         const valorFinalUSD = isBookingChannel ? (precioFinalUSD || 0) * proporcion : null;
                         const valorFinalCabanaCLP = isBookingChannel
-                            ? Math.round((valorFinalUSD || 0) * dolar * 1.19)
+                            ? Math.round((valorFinalUSD || 0) * dolar)
                             : (precioListaCLP > 0 ? (detail.precioTotal / precioListaCLP) * precioFinalCLP : 0);
                         return {
                             alojamiento: sel.nombre,
                             fechaLlegada: document.getElementById('fecha-llegada').value,
                             fechaSalida: document.getElementById('fecha-salida').value,
-                            valorPotencial: isBookingChannel ? Math.round((valorPotencialUSD || 0) * dolar * 1.19) : detail.precioTotal,
+                            valorPotencial: isBookingChannel ? Math.round((valorPotencialUSD || 0) * dolar) : detail.precioTotal,
                             valorFinal: valorFinalCabanaCLP,
                             valorPotencialUSD: isBookingChannel ? valorPotencialUSD : undefined,
                             valorFinalUSD: isBookingChannel ? valorFinalUSD : undefined

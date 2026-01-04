@@ -110,6 +110,15 @@ module.exports = (db) => {
       // Simple diff in days
       const totalNochesGlobal = Math.round((startOfSalida - startOfLlegada) / (1000 * 60 * 60 * 24));
 
+      const baseUSD = (primeraReserva.valorOriginal || primeraReserva.valorFinalUSD || primeraReserva.valorPotencialUSD || 0);
+      let factorUSD = 1.19; // Default Import
+
+      if (primeraReserva.precioIncluyeIva) {
+        factorUSD = 1.0; // Manual Explicit
+      } else if (!primeraReserva.valorOriginal && (primeraReserva.valorFinalUSD || primeraReserva.valorPotencialUSD)) {
+        factorUSD = 1.0; // Manual Legacy
+      }
+
       const infoGeneral = {
         reservaIdOriginal: primeraReserva.reservaIdOriginal,
         nombre: primeraReserva.clienteNombre,
@@ -120,7 +129,7 @@ module.exports = (db) => {
         totalCLP: cabanas.reduce((sum, c) => sum + c.valorCLP, 0),
         totalAbonado: totalAbonado, // <-- Se añade el total calculado
         canal: primeraReserva.canal,
-        valorOriginalUSD: primeraReserva.monedaOriginal === 'USD' ? (primeraReserva.valorOriginal * cabanas.length) * 1.19 : null,
+        valorOriginalUSD: primeraReserva.monedaOriginal === 'USD' ? (baseUSD * cabanas.length * factorUSD) : null,
         valorDolarDia: primeraReserva.valorDolarDia || null
       };
 

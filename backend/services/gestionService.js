@@ -65,11 +65,16 @@ async function getReservasPendientes(db) {
                 }
             }
 
-            const baseUSD = data.valorFinalUSD || data.valorOriginal || data.valorPotencialUSD || 0;
+
+
+            // Fallback for missing valorOriginal
+            const baseUSD = data.valorOriginal || data.valorFinalUSD || data.valorPotencialUSD || 0;
+
             // Solo actualizar si el valor del dólar difiere
             if (baseUSD > 0 && data.valorDolarDia !== targetDolar) {
-                const nuevoValorCLP = Math.round(baseUSD * targetDolar * 1.19);
-                const nuevoValorPotencialCLP = data.valorPotencialUSD ? Math.round(data.valorPotencialUSD * targetDolar * 1.19) : (data.valorPotencialCLP || nuevoValorCLP);
+                const factor = data.precioIncluyeIva ? 1.0 : 1.19;
+                const nuevoValorCLP = Math.round(baseUSD * targetDolar * factor);
+                const nuevoValorPotencialCLP = data.valorPotencialUSD ? Math.round(data.valorPotencialUSD * targetDolar * factor) : (data.valorPotencialCLP || nuevoValorCLP);
 
                 batch.update(db.collection('reservas').doc(doc.id), {
                     valorDolarDia: targetDolar,
@@ -137,7 +142,17 @@ async function getReservasPendientes(db) {
         if (data.canal === 'Booking' && data.monedaOriginal === 'USD') {
             grupo.esBookingUSD = true;
             grupo.valorDolarDia = data.valorDolarDia;
-            grupo.valorTotalUSD += (data.valorOriginal || 0);
+            // Fallback for accumulation
+            const baseVal = data.valorOriginal || data.valorFinalUSD || data.valorPotencialUSD || 0;
+            let factor = 1.19; // Default for Imports (Net Value)
+
+            if (data.precioIncluyeIva) {
+                factor = 1.0; // New Manuals (Explicit Gross)
+            } else if (!data.valorOriginal && (data.valorFinalUSD || data.valorPotencialUSD)) {
+                factor = 1.0; // Old Manuals (Implicit Gross - fallback case)
+            }
+
+            grupo.valorTotalUSD += baseVal * factor;
         }
     }
 

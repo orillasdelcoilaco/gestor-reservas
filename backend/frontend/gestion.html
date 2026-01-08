@@ -82,6 +82,13 @@
                                 Cancelación</label>
                         </div>
 
+                        <div class="flex items-center bg-gray-50 px-3 border rounded shadow-sm">
+                            <input type="checkbox" id="filter-sin-abono"
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label for="filter-sin-abono" class="ml-2 block text-sm text-gray-900">Sin
+                                Abono</label>
+                        </div>
+
                         <input type="text" id="search-input" placeholder="Buscar..."
                             class="w-full md:w-48 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                     </div>
@@ -994,6 +1001,7 @@
             const canalFilter = document.getElementById('filter-canal').value;
             const estadoGestionFilter = document.getElementById('filter-estado-gestion').value;
             const procesoFilter = document.getElementById('filter-proceso-cancelacion').checked;
+            const sinAbonoFilter = document.getElementById('filter-sin-abono').checked;
 
             const filteredGrupos = allGrupos.filter(g => {
                 // 1. Search Term
@@ -1011,7 +1019,10 @@
                 // 4. Proceso Cancelacion Filter
                 const matchesProceso = !procesoFilter || g.enProcesoCancelacion === true;
 
-                return matchesSearch && matchesCanal && matchesEstadoGestion && matchesProceso;
+                // 5. Sin Abono Filter
+                const matchesSinAbono = !sinAbonoFilter || (!g.abono || g.abono === 0);
+
+                return matchesSearch && matchesCanal && matchesEstadoGestion && matchesProceso && matchesSinAbono;
             });
 
             hoyList.innerHTML = ''; proximasList.innerHTML = '';
@@ -1044,6 +1055,7 @@
         document.getElementById('filter-canal').addEventListener('change', updateFilteredView);
         document.getElementById('filter-estado-gestion').addEventListener('change', updateFilteredView);
         document.getElementById('filter-proceso-cancelacion').addEventListener('change', updateFilteredView);
+        document.getElementById('filter-sin-abono').addEventListener('change', updateFilteredView);
         searchInput.addEventListener('input', updateFilteredView);
 
         async function loadGestion() {

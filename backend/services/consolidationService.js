@@ -14,7 +14,7 @@ function extractCabanaNameFromAirbnb(anuncio) {
     if (anuncioLower.includes('cabaña para 8 personas')) return 'Cabaña 10';
     if (anuncioLower.includes('cabañas 1')) return 'Cabaña 1';
     if (anuncioLower.includes('hermosa cabaña rústica')) return 'Cabaña 2';
-    
+
     const match = anuncio.match(/Cabaña\s*\d+/i);
     return match ? match[0] : anuncio;
 }
@@ -22,7 +22,7 @@ function extractCabanaNameFromAirbnb(anuncio) {
 async function processChannel(db, channel) {
     const rawCollectionName = `reportes_${channel.toLowerCase()}_raw`;
     const rawDocsSnapshot = await db.collection(rawCollectionName).get();
-    
+
     if (rawDocsSnapshot.empty) {
         return { reportesEncontrados: 0, clientesNuevos: 0, reservasCreadas: 0, reservasActualizadas: 0, mensaje: `No hay nuevos reportes de ${channel} para procesar.` };
     }
@@ -87,7 +87,7 @@ async function processChannel(db, channel) {
                 const status = String(statusValue || '').toLowerCase();
                 if (status === 'ok') return 'Confirmada';
                 if (status === 'cancelled' || status === 'cancelada' || status === 'cancelled_by_guest') return 'Cancelada';
-                return 'Cancelada'; 
+                return 'Cancelada';
             };
 
             reservaData = {
@@ -111,18 +111,22 @@ async function processChannel(db, channel) {
         const existingGroup = reservationsByOriginalId.get(lookupKey);
 
         if (existingGroup) {
-            const firstExisting = existingGroup[0].data;
-            if (firstExisting.estado !== reservaData.estado && !firstExisting.valorManual && firstExisting.estadoGestion !== 'Facturado') {
-                existingGroup.forEach(res => {
-                    const reservaRef = db.collection('reservas').doc(res.id);
-                    batch.update(reservaRef, { estado: reservaData.estado });
+            // MODIFICACIÓN CRÍTICA: No sobrescribir estado interno.
+            // Solo actualizamos 'estadoReporte' para fines informativos de discrepancia.
+            existingGroup.forEach(res => {
+                const reservaRef = db.collection('reservas').doc(res.id);
+                // Siempre actualizamos lo que dice el reporte
+                batch.update(reservaRef, {
+                    estadoReporte: reservaData.estado,
+                    fechaUltimoReporte: admin.firestore.FieldValue.serverTimestamp()
                 });
-                reservasActualizadas++;
-                console.log(`Actualizando estado del grupo ${lookupKey} a ${reservaData.estado}`);
-            }
+            });
+            // Ya no contamos como "reserva actualizada" de estado, pero sí de reporte.
+            // Podemos dejar el contador o comentarlo si solo nos interesa cambio de estado real.
+            // reservasActualizadas++; 
         } else {
             reservasCreadas++;
-            
+
             let clienteId;
             if (reservaData.telefono !== genericPhone && existingClientsByPhone.has(reservaData.telefono)) {
                 clienteId = existingClientsByPhone.get(reservaData.telefono);
@@ -180,7 +184,9 @@ async function processChannel(db, channel) {
                     abono: 0,
                     pagado: false,
                     boleta: false,
-                    estadoGestion: 'Pendiente Bienvenida'
+                    estadoGestion: 'Pendiente Bienvenida',
+                    estadoReporte: reservaData.estado, // Guardamos también el estado inicial del reporte
+                    fechaUltimoReporte: admin.firestore.FieldValue.serverTimestamp()
                 };
                 batch.set(reservaRef, dataToSave, { merge: true });
             }
@@ -191,7 +197,7 @@ async function processChannel(db, channel) {
     if (clientesNuevos > 0 || reservasCreadas > 0 || reservasActualizadas > 0) {
         await batch.commit();
     }
-    
+
     return {
         reportesEncontrados: rawDocsSnapshot.size,
         clientesNuevos,

@@ -203,6 +203,11 @@ async function generateAndSendReport(db, filters) {
  * @param {Object} db - Firestore
  * @param {string} startDateStr - 'YYYY-MM-DD'
  */
+/**
+ * Busca choques de reservas y discrepancias de estado.
+ * @param {Object} db - Firestore
+ * @param {string} startDateStr - 'YYYY-MM-DD'
+ */
 async function findReservationOverlaps(db, startDateStr) {
     const start = new Date(startDateStr || new Date().toISOString().split('T')[0]);
     // Get ALL active reservations from now on.
@@ -211,9 +216,35 @@ async function findReservationOverlaps(db, startDateStr) {
         .get();
 
     const reservas = [];
+    const mismatches = []; // Discrepancias de estado
+
     snapshot.forEach(doc => {
         const d = doc.data();
-        // STRICT FILTER: Solo Confirmadas
+
+        // 1. Detección de Mismatch (Estado Interno vs Estado Reporte)
+        // Ignoramos si estadoReporte no existe (reservas antiguas manuales)
+        if (d.estadoReporte && d.estado && d.estado.toUpperCase() !== d.estadoReporte.toUpperCase()) {
+            // Excepción: Si interno es 'Confirmada' y reporte es 'OK' (son lo mismo)
+            const interno = d.estado.toUpperCase();
+            const reporte = d.estadoReporte.toUpperCase();
+
+            // Mapeo simple de equivalencias
+            const isEquivalent = (interno === 'CONFIRMADA' && reporte === 'OK') ||
+                (interno === 'CANCELADA' && (reporte === 'CANCELLED' || reporte === 'CANCELADA'));
+
+            if (!isEquivalent) {
+                mismatches.push({
+                    id: d.reservaIdOriginal || doc.id,
+                    cliente: d.clienteNombre || 'Desconocido',
+                    canal: d.canal,
+                    estadoInterno: d.estado,
+                    estadoReporte: d.estadoReporte,
+                    cabana: d.alojamiento
+                });
+            }
+        }
+
+        // 2. Filtro para Overlaps: Solo Confirmadas
         if (d.estado && d.estado.trim() === 'Confirmada') {
             // Fallback for Cabin Name if missing
             let cabanaName = d.alojamiento;
@@ -230,9 +261,6 @@ async function findReservationOverlaps(db, startDateStr) {
                     // User Rule: 1,2,3,7,8,9,10 are valid.
                     // If > 10, clean it. (e.g. 71 -> 7, 81 -> 8).
                     if (num !== 10 && num > 9) {
-                        // Take the first digit if it's 7,8,9? Or just assume typo?
-                        // "71" -> "7". "12" -> "1"? (Cabaña 1 exists).
-                        // User mentioned "7 1, 8 1".
                         num = parseInt(match[1].toString()[0]);
                     }
                     cabanaName = `Cabaña ${num}`;
@@ -274,21 +302,10 @@ async function findReservationOverlaps(db, startDateStr) {
                 const r1 = list[i];
                 const r2 = list[j];
 
-                // Check overlap
-                // Overlap if (StartA < EndB) and (EndA > StartB)
-                // Note: If StartB == EndA, that's commonly allowed (Checkout/Checkin same day).
-                // So strict inequality for partial overlap.
-                // However, user said "Choque".
-                // Usually [Start, End) intervals.
-                // Let's assume strict overlap of *staying nights*.
-                // If r1.hasta (checkout) > r2.desde (checkin), AND r1.desde < r2.hasta.
-                // If r1.hasta == r2.desde, it's a "Cambio", not a clash generally.
-                // But let's detect strict overlaps where dates conflict.
-                // Only flag if r1.hasta > r2.desde. (Since sorted, r2.desde >= r1.desde).
-
                 if (r1.hasta > r2.desde) {
                     // CONFLICT FOUND
                     conflicts.push({
+                        type: 'OVERLAP',
                         cabana: cab,
                         reservaA: r1,
                         reservaB: r2,
@@ -298,6 +315,15 @@ async function findReservationOverlaps(db, startDateStr) {
             }
         }
     }
+
+    // Combine conflicts and mismatches
+    // We return a mixed array, frontend will handle types
+    mismatches.forEach(m => {
+        conflicts.push({
+            type: 'MISMATCH',
+            ...m
+        });
+    });
 
     return conflicts;
 }

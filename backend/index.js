@@ -31,6 +31,8 @@ const incidentsRoutes = require('./routes/incidentsRoutes');
 const historyRoutes = require('./routes/historyRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const taskRoutes = require('./routes/taskRoutes');
+const bookingReconciliationRoutes = require('./routes/bookingReconciliationRoutes');
+
 const { initTelegramBot } = require('./services/notificationService');
 
 // Lista de dominios permitidos
@@ -114,6 +116,7 @@ privateRouter.use(incidentsRoutes(db));
 privateRouter.use(historyRoutes(db));
 privateRouter.use(reportRoutes(db));
 privateRouter.use('/task-types', taskRoutes(db));
+privateRouter.use('/reconciliacion', bookingReconciliationRoutes(db));
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter);

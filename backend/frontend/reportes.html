@@ -224,21 +224,28 @@
                     } else {
                         let reporteTexto = `🚨 REPORTE DE CHOQUES DE RESERVAS (${formatDate(new Date().toISOString().split('T')[0])})\n\n`;
                         data.forEach(c => {
-                            reporteTexto += `🔥 CONFLICTO EN ${c.cabana.toUpperCase()}\n`;
-                            reporteTexto += `   Fechas en conflicto: ${c.diasChoque}\n`;
-                            reporteTexto += `   ----------------------------------------\n`;
+                            if (c.type === 'MISMATCH') {
+                                reporteTexto += `⚠️ DESCUADRE DE ESTADO en ${c.cabana || '?'}\n`;
+                                reporteTexto += `   Cliente: ${c.cliente} | ID: ${c.id}\n`;
+                                reporteTexto += `   Sistema: ${c.estadoInterno} vs Reporte: ${c.estadoReporte}\n`;
+                                reporteTexto += `   ----------------------------------------\n\n`;
+                            } else {
+                                reporteTexto += `🔥 CONFLICTO EN ${c.cabana.toUpperCase()}\n`;
+                                reporteTexto += `   Fechas en conflicto: ${c.diasChoque}\n`;
+                                reporteTexto += `   ----------------------------------------\n`;
 
-                            const printRes = (r, label) => {
-                                const abonoStr = r.abono ? `$${r.abono.toLocaleString('es-CL')}` : '$0';
-                                const creadaStr = r.creada ? new Date(r.creada).toLocaleDateString('es-CL') : 'N/A';
-                                return `   ${label} ${r.cliente} (${formatDate(r.desde.split('T')[0])} - ${formatDate(r.hasta.split('T')[0])})\n` +
-                                    `      💰 Abono: ${abonoStr} | 📅 Creada: ${creadaStr} | 🛒 Canal: ${r.canal}\n` +
-                                    `      🆔 ID: ${r.codigo} | 👥 Pers: ${r.personas} | 📞 ${r.telefono}\n`;
-                            };
+                                const printRes = (r, label) => {
+                                    const abonoStr = r.abono ? `$${r.abono.toLocaleString('es-CL')}` : '$0';
+                                    const creadaStr = r.creada ? new Date(r.creada).toLocaleDateString('es-CL') : 'N/A';
+                                    return `   ${label} ${r.cliente} (${formatDate(r.desde.split('T')[0])} - ${formatDate(r.hasta.split('T')[0])})\n` +
+                                        `      💰 Abono: ${abonoStr} | 📅 Creada: ${creadaStr} | 🛒 Canal: ${r.canal}\n` +
+                                        `      🆔 ID: ${r.codigo} | 👥 Pers: ${r.personas} | 📞 ${r.telefono}\n`;
+                                };
 
-                            reporteTexto += printRes(c.reservaA, '🟢');
-                            reporteTexto += printRes(c.reservaB, '🔴');
-                            reporteTexto += `   ----------------------------------------\n\n`;
+                                reporteTexto += printRes(c.reservaA, '🟢');
+                                reporteTexto += printRes(c.reservaB, '🔴');
+                                reporteTexto += `   ----------------------------------------\n\n`;
+                            }
                         });
                         boxChoques.textContent = reporteTexto;
                     }

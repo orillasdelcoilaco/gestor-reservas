@@ -148,6 +148,29 @@
         const loader = document.getElementById('loader');
         const appContent = document.getElementById('app-content');
         const authInfo = document.getElementById('auth-info');
+        // ... (rest of vars)
+
+        // --- FETCH DOLLAR VALUE ---
+        async function updateDolarHeader() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const data = await fetchAPI(`/api/dolar/valor?fecha=${today}`);
+                if (data && data.valor) {
+                    const dolarSpan = document.createElement('span');
+                    dolarSpan.className = 'text-green-600 font-bold bg-green-50 px-2 py-1 rounded border border-green-200 text-sm hidden sm:inline-block';
+                    dolarSpan.innerHTML = `💵 USD: $${data.valor}`;
+                    // Insert before the user email or as first child
+                    if (authInfo.firstChild) {
+                        authInfo.insertBefore(dolarSpan, authInfo.firstChild);
+                    } else {
+                        authInfo.appendChild(dolarSpan);
+                    }
+                }
+            } catch (err) {
+                console.warn('Could not fetch dollar value for header:', err);
+            }
+        }
+
         const loadingState = document.getElementById('loading-state');
         const searchInput = document.getElementById('search-input');
         const hoyContainer = document.getElementById('hoy-container');
@@ -1084,6 +1107,7 @@
                 bitacoraCancelBtn.addEventListener('click', () => bitacoraModal.classList.add('hidden'));
                 bitacoraSaveBtn.addEventListener('click', saveNote);
 
+                updateDolarHeader();
                 loadGestion();
             }
         });

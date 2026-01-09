@@ -3,7 +3,13 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const path = require('path');
 const { getReservasPendientes } = require('../services/gestionService');
+const { getValorDolar } = require('../services/dolarService');
 const storageService = require('../services/storageService');
+
+function getTodayUTC() {
+    const today = new Date();
+    return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+}
 
 const jsonParser = express.json();
 const upload = require('multer')({ storage: require('multer').memoryStorage() });
@@ -62,7 +68,41 @@ module.exports = (db) => {
                         batch.update(reservaRef, { estadoGestion: 'Pendiente Cobro' });
                         break;
                     case 'marcar_cobro_enviado':
-                        batch.update(reservaRef, { estadoGestion: 'Pendiente Pago' });
+                        // LOGICA DE CONGELAMIENTO DE DÓLAR
+                        // Al enviar el cobro, recalculamos una última vez con el valor del día y lo congelamos.
+                        const cobroReservaDoc = await reservaRef.get();
+                        const cobroData = cobroReservaDoc.data();
+
+                        const updateData = { estadoGestion: 'Pendiente Pago' };
+
+                        if (cobroData.canal === 'Booking' && cobroData.monedaOriginal === 'USD' && !cobroData.valorDolarFijo) {
+                            const todayUTC = getTodayUTC();
+                            // Usamos el valor de hoy para "cerrar" el trato, o el de la fecha de llegada si ya pasó.
+                            let targetDolar;
+                            const llegadaDate = cobroData.fechaLlegada.toDate();
+                            const llegadaUTC = new Date(Date.UTC(llegadaDate.getUTCFullYear(), llegadaDate.getUTCMonth(), llegadaDate.getUTCDate()));
+
+                            if (llegadaUTC.getTime() < todayUTC.getTime()) {
+                                targetDolar = await getValorDolar(db, llegadaUTC);
+                            } else {
+                                targetDolar = await getValorDolar(db, todayUTC);
+                            }
+
+                            const baseUSD = cobroData.valorOriginal || cobroData.valorFinalUSD || 0;
+                            if (baseUSD > 0) {
+                                const factor = cobroData.precioIncluyeIva ? 1.0 : 1.19;
+                                const nuevoValorCLP = Math.round(baseUSD * targetDolar * factor);
+
+                                updateData.valorDolarDia = targetDolar;
+                                updateData.valorCLP = nuevoValorCLP;
+                                updateData.valorConIva = nuevoValorCLP; // Asumiendo que valorCLP es el final
+                                updateData.valorDolarFijo = true; // BANDERA IMPORTANTE
+
+                                console.log(`[Congelamiento Dólar] Reserva ${cobroData.reservaIdOriginal}: Valor fijado a ${targetDolar} CLP/USD. Nuevo total: ${nuevoValorCLP}`);
+                            }
+                        }
+
+                        batch.update(reservaRef, updateData);
                         break;
                     case 'registrar_pago':
                         if (!detallesParseados || !detallesParseados.monto || !detallesParseados.medioDePago) {

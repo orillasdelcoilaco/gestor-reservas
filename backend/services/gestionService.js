@@ -55,7 +55,9 @@ async function getReservasPendientes(db) {
             let targetDolar = valorDolarHoy;
             // Si el check-in está en el pasado (ayer o antes), usar el dólar de esa fecha.
             // Si es hoy o futuro, usar el dólar de hoy.
-            if (llegadaUTC.getTime() < todayUTC.getTime()) {
+            if (data.valorDolarFijo) {
+                targetDolar = data.valorDolarDia; // Mantener el valor fijo
+            } else if (llegadaUTC.getTime() < todayUTC.getTime()) {
                 try {
                     targetDolar = await getValorDolar(db, llegadaUTC);
                 } catch (e) {

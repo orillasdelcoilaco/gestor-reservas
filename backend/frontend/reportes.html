@@ -69,6 +69,12 @@
                             <input type="date" id="fecha-disponibilidad-fin"
                                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
                         </div>
+                        <div class="flex items-center pb-2">
+                            <input type="checkbox" id="check-fechas-exactas"
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                            <label for="check-fechas-exactas" class="ml-2 block text-sm text-gray-900">Fechas
+                                Exactas</label>
+                        </div>
                         <button id="btn-generar-disponibilidad"
                             class="bg-blue-600 text-white font-bold py-2 px-4 rounded-md hover:bg-blue-700">Generar</button>
                     </div>
@@ -172,32 +178,51 @@
             btnGenerarDisponibilidad.addEventListener('click', async () => {
                 const fechaInicio = document.getElementById('fecha-disponibilidad-inicio').value;
                 const fechaFin = document.getElementById('fecha-disponibilidad-fin').value;
+                const exactas = document.getElementById('check-fechas-exactas').checked;
+
                 if (!fechaInicio || !fechaFin) { alert('Por favor, selecciona ambas fechas.'); return; }
 
                 boxDisponibilidad.textContent = 'Generando...';
                 containerDisponibilidad.classList.remove('hidden');
 
                 try {
-                    const data = await fetchAPI(`/api/reportes/disponibilidad-periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
+                    const data = await fetchAPI(`/api/reportes/disponibilidad-periodo?fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&exactas=${exactas}`);
+
+                    if (data.length === 0) {
+                        boxDisponibilidad.textContent = 'No hay cabañas disponibles para el período seleccionado.';
+                        return;
+                    }
+
                     let reporteTexto = `👋 Hola, esta es nuestra disponibilidad desde ${formatDate(fechaInicio)} hasta ${formatDate(fechaFin)}:\n\n`;
 
-                    data.forEach(item => {
-                        if (item.periodos.length > 0) {
-                            reporteTexto += `🏡 Cabaña ${item.cabana}:\n${item.link}\nValor: $${item.valor.toLocaleString('es-CL')}\nCapacidad: ${item.capacidad} personas\n`;
-                            item.periodos.forEach(p => {
-                                if (p.fin) {
-                                    const finDate = new Date(p.fin + 'T00:00:00Z');
-                                    // Removed date subtraction to show actual checkout date
-                                    if (p.inicio < finDate.toISOString().split('T')[0]) {
-                                        reporteTexto += `👍 Del ${formatDate(p.inicio)} Saliendo el ${formatDate(finDate.toISOString().split('T')[0])}\n`;
+                    if (exactas) {
+                        data.forEach(item => {
+                            if (item.disponibleExacto) {
+                                reporteTexto += `🏡 Cabaña ${item.cabana}:\n${item.link}\n`;
+                                reporteTexto += `Valor: $${item.valorDiario.toLocaleString('es-CL')} dia, total noches: ${item.noches}, Total reserva $${item.valorTotal.toLocaleString('es-CL')}\n`;
+                                reporteTexto += `Capacidad: ${item.capacidad} personas\n`;
+                                reporteTexto += `👍 Del ${formatDate(item.fechaInicioReal)} saliendo el ${formatDate(item.fechaFinReal)}\n\n`;
+                            }
+                        });
+                    } else {
+                        // Standard logic
+                        data.forEach(item => {
+                            if (item.periodos.length > 0) {
+                                reporteTexto += `🏡 Cabaña ${item.cabana}:\n${item.link}\nValor: $${item.valor.toLocaleString('es-CL')}\nCapacidad: ${item.capacidad} personas\n`;
+                                item.periodos.forEach(p => {
+                                    if (p.fin) {
+                                        const finDate = new Date(p.fin + 'T00:00:00Z');
+                                        if (p.inicio < finDate.toISOString().split('T')[0]) {
+                                            reporteTexto += `👍 Del ${formatDate(p.inicio)} saliendo el ${formatDate(finDate.toISOString().split('T')[0])}\n`;
+                                        }
+                                    } else {
+                                        reporteTexto += `👍 Del ${formatDate(p.inicio)} en adelante\n`;
                                     }
-                                } else {
-                                    reporteTexto += `👍 Del ${formatDate(p.inicio)} en adelante\n`;
-                                }
-                            });
-                            reporteTexto += `\n`;
-                        }
-                    });
+                                });
+                                reporteTexto += `\n`;
+                            }
+                        });
+                    }
                     boxDisponibilidad.textContent = reporteTexto;
                 } catch (error) {
                     boxDisponibilidad.textContent = `Error al generar el reporte: ${error.message}`;

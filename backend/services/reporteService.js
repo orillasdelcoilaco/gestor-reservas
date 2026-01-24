@@ -22,7 +22,7 @@ async function getActividadDiaria(db, fechaStr) {
         const llegadaHoy = reservasSnapshot.docs
             .map(d => d.data())
             .find(r => r.alojamiento === cabana.nombre && r.fechaLlegada.toDate().getTime() === fecha.getTime());
-        
+
         const salidaHoy = reservasSnapshot.docs
             .map(d => d.data())
             .find(r => r.alojamiento === cabana.nombre && r.fechaSalida.toDate().getTime() === fecha.getTime());
@@ -64,7 +64,7 @@ async function getActividadDiaria(db, fechaStr) {
                 .orderBy('fechaLlegada', 'asc')
                 .limit(1)
                 .get();
-            
+
             if (!proximaReservaSnapshot.empty) {
                 const proxima = proximaReservaSnapshot.docs[0].data();
                 const diasFaltantes = Math.ceil((proxima.fechaLlegada.toDate() - fecha) / (1000 * 60 * 60 * 24));
@@ -77,7 +77,7 @@ async function getActividadDiaria(db, fechaStr) {
                 cabanaInfo.estado = 'Libre sin próximas reservas';
             }
         }
-        
+
         reporte.push(cabanaInfo);
     }
 
@@ -92,7 +92,7 @@ async function getActividadDiaria(db, fechaStr) {
  * @param {string} fechaFinStr - Fecha de fin en formato YYYY-MM-DD.
  * @returns {Promise<Array>} Un array con la disponibilidad de cada cabaña.
  */
-async function getDisponibilidadPeriodo(db, fechaInicioStr, fechaFinStr) {
+async function getDisponibilidadPeriodo(db, fechaInicioStr, fechaFinStr, exactas = false) {
     const fechaInicio = new Date(fechaInicioStr + 'T00:00:00Z');
     const fechaFin = new Date(fechaFinStr + 'T23:59:59Z');
 
@@ -117,6 +117,8 @@ async function getDisponibilidadPeriodo(db, fechaInicioStr, fechaFinStr) {
             return null;
         }
 
+        const valorDiario = tarifa?.tarifasPorCanal?.SODC?.valor || 0;
+
         const reservasDeCabana = reservasSnapshot.docs
             .map(doc => doc.data())
             .filter(r => r.alojamiento === cabana.nombre && r.fechaLlegada.toDate() < fechaFin)
@@ -125,6 +127,7 @@ async function getDisponibilidadPeriodo(db, fechaInicioStr, fechaFinStr) {
         const periodosDisponibles = [];
         let cursorFecha = new Date(fechaInicio);
 
+        // Standard availability calculation
         reservasDeCabana.forEach(reserva => {
             const llegada = reserva.fechaLlegada.toDate();
             if (cursorFecha < llegada) {
@@ -136,18 +139,64 @@ async function getDisponibilidadPeriodo(db, fechaInicioStr, fechaFinStr) {
         if (cursorFecha < fechaFin) {
             periodosDisponibles.push({ inicio: new Date(cursorFecha), fin: null });
         }
-        
-        return {
+
+        const resultBase = {
             cabana: cabana.nombre,
             link: cabana.linkFotos || `https://orillasdelcoilaco.cl/wp/accommodation/${cabana.nombre.toLowerCase().replace(' ', '-')}/`,
-            valor: tarifa?.tarifasPorCanal?.SODC?.valor || 0,
+            valor: valorDiario,
             capacidad: cabana.capacidad,
-            periodos: periodosDisponibles.map(p => ({
-                inicio: p.inicio.toISOString().split('T')[0],
-                fin: p.fin ? p.fin.toISOString().split('T')[0] : null
-            }))
         };
-    }).filter(Boolean); // <-- Se añade .filter(Boolean) para eliminar los nulos.
+
+        if (exactas) {
+            // Logic for Exact Match
+            // We check if any available period fully covers the requested range [fechaInicio, fechaFin]
+            // Note: fechaFin in request usually implies checkout date. 
+            // The available period.fin is the start of the next reservation (checkout of prev). 
+            // If period.fin is null, it's open forever.
+
+            // requested end date (checkout)
+            const targetCheckout = new Date(fechaFinStr + 'T00:00:00Z');
+
+            const coversRange = periodosDisponibles.some(p => {
+                const pStart = p.inicio;
+                const pEnd = p.fin; // null means infinite
+
+                // Start condition: Period start <= Requested start
+                if (pStart > fechaInicio) return false;
+
+                // End condition: Period end >= Requested end (or null)
+                if (pEnd && pEnd < targetCheckout) return false;
+
+                return true;
+            });
+
+            if (coversRange) {
+                const noches = Math.ceil((targetCheckout - fechaInicio) / (1000 * 60 * 60 * 24));
+                return {
+                    ...resultBase,
+                    disponibleExacto: true,
+                    valorDiario: valorDiario,
+                    noches: noches,
+                    valorTotal: valorDiario * noches,
+                    fechaInicioReal: fechaInicioStr,
+                    fechaFinReal: fechaFinStr
+                };
+            } else {
+                return null; // Not available exactly
+            }
+
+        } else {
+            // Standard Logic return
+            return {
+                ...resultBase,
+                periodos: periodosDisponibles.map(p => ({
+                    inicio: p.inicio.toISOString().split('T')[0],
+                    fin: p.fin ? p.fin.toISOString().split('T')[0] : null
+                }))
+            };
+        }
+
+    }).filter(Boolean);
 
     return reporte;
 }

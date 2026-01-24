@@ -26,12 +26,12 @@ module.exports = (db) => {
      * Genera el reporte de disponibilidad para un rango de fechas.
      */
     router.get('/reportes/disponibilidad-periodo', async (req, res) => {
-        const { fechaInicio, fechaFin } = req.query;
+        const { fechaInicio, fechaFin, exactas } = req.query;
         if (!fechaInicio || !fechaFin) {
             return res.status(400).json({ error: 'Se requieren fecha de inicio y fin.' });
         }
         try {
-            const reporte = await getDisponibilidadPeriodo(db, fechaInicio, fechaFin);
+            const reporte = await getDisponibilidadPeriodo(db, fechaInicio, fechaFin, exactas === 'true');
             res.status(200).json(reporte);
         } catch (error) {
             console.error("Error al generar reporte de disponibilidad:", error);

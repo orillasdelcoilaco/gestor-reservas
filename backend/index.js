@@ -32,6 +32,7 @@ const historyRoutes = require('./routes/historyRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const bookingReconciliationRoutes = require('./routes/bookingReconciliationRoutes');
+const tinajasRoutes = require('./routes/tinajasRoutes');
 
 const { initTelegramBot } = require('./services/notificationService');
 
@@ -117,6 +118,7 @@ privateRouter.use(historyRoutes(db));
 privateRouter.use(reportRoutes(db));
 privateRouter.use('/task-types', taskRoutes(db));
 privateRouter.use('/reconciliacion', bookingReconciliationRoutes(db));
+privateRouter.use('/tinajas', tinajasRoutes(db));
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter);

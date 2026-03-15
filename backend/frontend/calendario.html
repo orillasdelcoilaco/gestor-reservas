@@ -18,6 +18,12 @@
         .fc-day-today {
             background-color: rgba(253, 224, 71, 0.3) !important;
         }
+        .event-bloqueada {
+            background-color: #6b7280 !important;
+            border-color: #4b5563 !important;
+            color: #fff !important;
+            font-style: italic;
+        }
     </style>
 </head>
 
@@ -125,6 +131,14 @@
                         resources: initialData.recursos,
                         events: initialData.eventos,
                         eventDataTransform: function (eventData) {
+                            if (eventData.extendedProps && eventData.extendedProps.isBloqueo) {
+                                return {
+                                    ...eventData,
+                                    backgroundColor: '#6b7280',
+                                    borderColor: '#4b5563',
+                                    classNames: ['event-bloqueada']
+                                };
+                            }
                             const canal = eventData.extendedProps.canal || 'Default';
                             return {
                                 ...eventData,
@@ -141,6 +155,12 @@
                             // Ajuste: Restar 1 día a la fecha fin para visualización (FullCalendar usa fin exclusivo)
                             const endDate = new Date(info.event.end);
                             endDate.setDate(endDate.getDate() - 1);
+
+                            if (info.event.extendedProps.isBloqueo) {
+                                const tooltipText = `Bloqueada\nCabaña: ${info.event.getResources()[0]?.title || ''}\nDesde: ${formatDate(info.event.start)}\nHasta: ${formatDate(endDate)}\nMotivo: ${info.event.extendedProps.motivo || 'Sin motivo'}`;
+                                info.el.setAttribute('title', tooltipText);
+                                return;
+                            }
 
                             const tooltipText = `
                                 Cliente: ${info.event.title}

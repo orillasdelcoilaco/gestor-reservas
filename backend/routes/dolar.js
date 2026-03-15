@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { processDolarCsv, getValorDolar } = require('../services/dolarService');
+const { processDolarCsv, getValorDolar, repairDolarValues } = require('../services/dolarService');
 
 // Configuración de Multer para guardar el archivo temporalmente en memoria
 const upload = multer({ storage: multer.memoryStorage() });
@@ -47,6 +47,31 @@ module.exports = (db) => {
     } catch (error) {
       console.error('Error al procesar el archivo CSV:', error);
       res.status(500).json({ error: 'Falló el procesamiento del archivo CSV.' });
+    }
+  });
+
+  /**
+   * POST /api/dolar/repair
+   * Repara los valores del dólar consultando la API externa para cada fecha en el rango.
+   * Body: { fromDate: 'YYYY-MM-DD', toDate?: 'YYYY-MM-DD' }
+   */
+  router.post('/dolar/repair', async (req, res) => {
+    const { fromDate, toDate } = req.body;
+    if (!fromDate || !/^\d{4}-\d{2}-\d{2}$/.test(fromDate)) {
+      return res.status(400).json({ error: 'fromDate es requerido en formato YYYY-MM-DD.' });
+    }
+    if (toDate && !/^\d{4}-\d{2}-\d{2}$/.test(toDate)) {
+      return res.status(400).json({ error: 'toDate debe ser formato YYYY-MM-DD.' });
+    }
+    try {
+      const result = await repairDolarValues(db, fromDate, toDate);
+      res.json({
+        message: `Reparación completada: ${result.fixed.length} fechas corregidas, ${result.failed.length} fallidas.`,
+        ...result,
+      });
+    } catch (error) {
+      console.error('Error en reparación de dólar:', error);
+      res.status(500).json({ error: error.message || 'Error interno durante la reparación.' });
     }
   });
 

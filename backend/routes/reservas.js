@@ -258,10 +258,15 @@ module.exports = (db) => {
             const startTimestamp = admin.firestore.Timestamp.fromDate(primerDia);
             const endTimestamp = admin.firestore.Timestamp.fromDate(ultimoDia);
 
-            const querySnapshot = await db.collection('reservas')
-                .where('fechaSalida', '>=', startTimestamp)
-                .where('fechaLlegada', '<=', endTimestamp)
-                .get();
+            const [querySnapshot, bloqueosSnapshot] = await Promise.all([
+                db.collection('reservas')
+                    .where('fechaSalida', '>=', startTimestamp)
+                    .where('fechaLlegada', '<=', endTimestamp)
+                    .get(),
+                db.collection('bloqueoCabanas')
+                    .where('fechaFin', '>=', startTimestamp)
+                    .get()
+            ]);
 
             const reservasDelMes = [];
             querySnapshot.forEach(doc => {
@@ -280,6 +285,28 @@ module.exports = (db) => {
                         extendedProps: {
                             canal: data.canal,
                             reservaIdOriginal: data.reservaIdOriginal
+                        }
+                    });
+                }
+            });
+
+            bloqueosSnapshot.forEach(doc => {
+                const b = doc.data();
+                const bloqInicio = b.fechaInicio.toDate();
+                const bloqFin = b.fechaFin.toDate();
+                if (bloqInicio <= ultimoDia) {
+                    const endDate = new Date(bloqFin);
+                    endDate.setDate(endDate.getDate() + 1);
+                    reservasDelMes.push({
+                        id: `bloqueo-${doc.id}`,
+                        title: `Bloqueada: ${b.motivo || 'Sin motivo'}`,
+                        start: bloqInicio.toISOString().split('T')[0],
+                        end: endDate.toISOString().split('T')[0],
+                        resourceId: b.cabana,
+                        extendedProps: {
+                            isBloqueo: true,
+                            motivo: b.motivo || '',
+                            canal: 'Bloqueada'
                         }
                     });
                 }

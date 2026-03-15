@@ -5,6 +5,7 @@ import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/fi
 
 let unsubscribeIncidencias = null;
 let unsubscribeActividades = null;
+const flujoCount = { incidencias: 0, actividades: 0 };
 
 export function initBadgeMonitor() {
     console.log('[BadgeMonitor] Esperando autenticación...');
@@ -28,7 +29,9 @@ function startListeners() {
     try {
         const qIncidencias = query(collection(db, "incidencias"), where("estado", "==", "PENDIENTE"));
         unsubscribeIncidencias = onSnapshot(qIncidencias, (snapshot) => {
+            flujoCount.incidencias = snapshot.size;
             updateBadge('badge-incidencias', snapshot.size);
+            updateBadgeFlujo();
         }, (error) => {
             if (error.code !== 'permission-denied') console.error("Error monitoring inc:", error);
         });
@@ -47,7 +50,9 @@ function startListeners() {
 
         unsubscribeActividades = onSnapshot(qActividades, (snapshot) => {
             const pending = snapshot.docs.filter(d => d.data().estado !== 'FINALIZADO').length;
+            flujoCount.actividades = pending;
             updateBadge('badge-actividades', pending);
+            updateBadgeFlujo();
         }, (error) => {
             if (error.code !== 'permission-denied') console.error("Error monitoring tasks:", error);
         });
@@ -65,4 +70,9 @@ function updateBadge(id, count) {
     el.textContent = count;
     if (count > 0) el.classList.remove('hidden');
     else el.classList.add('hidden');
+}
+
+function updateBadgeFlujo() {
+    const total = flujoCount.incidencias + flujoCount.actividades;
+    updateBadge('badge-flujo', total);
 }

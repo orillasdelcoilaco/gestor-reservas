@@ -24,11 +24,16 @@ module.exports = (db) => {
             const cabanasSnapshot = await db.collection('cabanas').orderBy('nombre', 'asc').get();
             const recursos = cabanasSnapshot.docs.map(doc => ({ id: doc.data().nombre, title: doc.data().nombre }));
 
-            // 2. Obtener las reservas (query optimizada)
-            const reservasSnapshot = await db.collection('reservas')
-                .where('fechaSalida', '>=', startTimestamp)
-                .where('fechaLlegada', '<=', endTimestamp)
-                .get();
+            // 2. Obtener las reservas y bloqueos (queries paralelas)
+            const [reservasSnapshot, bloqueosSnapshot] = await Promise.all([
+                db.collection('reservas')
+                    .where('fechaSalida', '>=', startTimestamp)
+                    .where('fechaLlegada', '<=', endTimestamp)
+                    .get(),
+                db.collection('bloqueoCabanas')
+                    .where('fechaFin', '>=', startTimestamp)
+                    .get()
+            ]);
 
             const eventos = [];
             reservasSnapshot.forEach(doc => {
@@ -47,6 +52,28 @@ module.exports = (db) => {
                         extendedProps: {
                             canal: data.canal,
                             reservaIdOriginal: data.reservaIdOriginal
+                        }
+                    });
+                }
+            });
+
+            bloqueosSnapshot.forEach(doc => {
+                const b = doc.data();
+                const bloqInicio = b.fechaInicio.toDate();
+                const bloqFin = b.fechaFin.toDate();
+                if (bloqInicio <= ultimoDia) {
+                    const endDate = new Date(bloqFin);
+                    endDate.setDate(endDate.getDate() + 1);
+                    eventos.push({
+                        id: `bloqueo-${doc.id}`,
+                        title: `Bloqueada: ${b.motivo || 'Sin motivo'}`,
+                        start: bloqInicio.toISOString().split('T')[0],
+                        end: endDate.toISOString().split('T')[0],
+                        resourceId: b.cabana,
+                        extendedProps: {
+                            isBloqueo: true,
+                            motivo: b.motivo || '',
+                            canal: 'Bloqueada'
                         }
                     });
                 }

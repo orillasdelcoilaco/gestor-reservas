@@ -11,13 +11,27 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     const startDate = getUTCDate(fechaInicio);
     const endDate = getUTCDate(fechaFin);
 
-    const [cabanasSnapshot, tarifasSnapshot, reservasSnapshot] = await Promise.all([
+    const [cabanasSnapshot, tarifasSnapshot, reservasSnapshot, bloqueosSnapshot] = await Promise.all([
         db.collection('cabanas').get(),
         db.collection('tarifas').get(),
         db.collection('reservas')
             .where('fechaLlegada', '<=', admin.firestore.Timestamp.fromDate(new Date(fechaFin + 'T23:59:59Z')))
+            .get(),
+        db.collection('bloqueoCabanas')
+            .where('fechaFin', '>=', admin.firestore.Timestamp.fromDate(startDate))
             .get()
     ]);
+
+    // Construir lista de bloqueos que solapan con el período
+    const bloqueos = [];
+    bloqueosSnapshot.forEach(doc => {
+        const b = doc.data();
+        bloqueos.push({
+            cabana: b.cabana,
+            inicio: b.fechaInicio.toDate(),
+            fin: b.fechaFin.toDate(),
+        });
+    });
 
     if (cabanasSnapshot.empty) {
         throw new Error("No se encontraron cabañas en la base de datos.");
@@ -28,8 +42,8 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     const allReservas = [];
     reservasSnapshot.forEach(doc => {
         const data = doc.data();
-        if (data.estado === 'Confirmada' && 
-            getUTCDate(data.fechaSalida.toDate()) > startDate && 
+        if (data.estado === 'Confirmada' &&
+            getUTCDate(data.fechaSalida.toDate()) > startDate &&
             getUTCDate(data.fechaLlegada.toDate()) <= endDate) {
             allReservas.push({ id: doc.id, ...data });
         }
@@ -61,7 +75,13 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
                 getUTCDate(t.fechaTermino.toDate()) >= currentDate
             );
 
-            if (tarifaDelDia) {
+            const isBlocked = bloqueos.some(b =>
+                b.cabana === cabañaNombre &&
+                b.inicio <= currentDate &&
+                b.fin >= currentDate
+            );
+
+            if (tarifaDelDia && !isBlocked) {
                 analisisPorCabaña[cabañaNombre].nochesDisponibles++;
                 totalNochesDisponiblesPeriodo++;
 
@@ -155,6 +175,68 @@ async function calculateKPIs(db, fechaInicio, fechaFin) {
     return { results, warningMessage };
 }
 
+async function getCabanaReservations(db, cabañaNombre, fechaInicio, fechaFin) {
+    const startDate = getUTCDate(fechaInicio);
+    const endDate = getUTCDate(fechaFin);
+
+    const snapshot = await db.collection('reservas')
+        .where('alojamiento', '==', cabañaNombre)
+        .where('fechaLlegada', '<=', admin.firestore.Timestamp.fromDate(new Date(fechaFin + 'T23:59:59Z')))
+        .get();
+
+    const reservas = [];
+    snapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.estado === 'Confirmada' &&
+            getUTCDate(data.fechaSalida.toDate()) > startDate) {
+
+            const fechaLlegada = data.fechaLlegada.toDate();
+            const fechaSalida = data.fechaSalida.toDate();
+            const llegadaUTC = getUTCDate(fechaLlegada);
+            const salidaUTC = getUTCDate(fechaSalida);
+
+            const nochesEnRango = Math.ceil(
+                (Math.min(salidaUTC, new Date(endDate.getTime() + 86400000)) -
+                 Math.max(startDate, llegadaUTC)) / (1000 * 60 * 60 * 24)
+            );
+
+            const totalNoches = data.totalNoches || 1;
+            const valorNocheReal = (data.valorCLP || 0) / totalNoches;
+            const ingresoEnRango = Math.round(valorNocheReal * nochesEnRango);
+
+            let descuentoEnRango = 0;
+            if (data.valorPotencialCLP && data.valorPotencialCLP > 0) {
+                const valorNochePotencial = data.valorPotencialCLP / totalNoches;
+                descuentoEnRango = Math.round((valorNochePotencial - valorNocheReal) * nochesEnRango);
+            }
+
+            reservas.push({
+                id: doc.id,
+                reservaIdOriginal: data.reservaIdOriginal || doc.id,
+                clienteNombre: data.clienteNombre || 'Sin nombre',
+                fechaLlegada: fechaLlegada.toISOString().split('T')[0],
+                fechaSalida: fechaSalida.toISOString().split('T')[0],
+                totalNoches,
+                nochesEnRango,
+                canal: data.canal || '—',
+                estadoGestion: data.estadoGestion || 'Sin estado',
+                valorCLP: data.valorCLP || 0,
+                valorPotencialCLP: data.valorPotencialCLP || 0,
+                ingresoEnRango,
+                descuentoEnRango,
+                monedaOriginal: data.monedaOriginal || 'CLP',
+                valorOriginal: data.valorOriginal || null,
+                valorDolarDia: data.valorDolarDia || null,
+                valorDolarFijo: data.valorDolarFijo || false,
+            });
+        }
+    });
+
+    reservas.sort((a, b) => new Date(a.fechaLlegada) - new Date(b.fechaLlegada));
+    return reservas;
+}
+
 module.exports = {
     calculateKPIs,
+    getCabanaReservations,
 };

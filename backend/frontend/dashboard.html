@@ -17,7 +17,7 @@
     <link href="css/dashboard.css" rel="stylesheet">
     <style>
         #detail-modal {
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.6);
         }
 
         tbody tr:hover {
@@ -110,53 +110,61 @@
                 </div>
             </div>
 
-            <!-- Workflow (Flujo Diario) -->
+            <!-- Proyección Anual -->
             <div class="bg-white p-8 rounded-lg shadow mb-8">
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Flujo de Trabajo Diario</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <button id="btn-workflow-incidencias"
-                        class="workflow-btn bg-white border-2 border-red-100 p-8 rounded-xl flex items-center justify-between hover:border-red-300 group">
-                        <div class="flex items-center">
-                            <div class="bg-red-100 p-4 rounded-full mr-6 group-hover:bg-red-200 transition">
-                                <span class="text-3xl">⚠️</span>
-                            </div>
-                            <div class="text-left">
-                                <h3 class="text-xl font-bold text-gray-900">Incidencias</h3>
-                                <p class="text-gray-500">Reportes de imprevistos</p>
-                            </div>
-                        </div>
-                        <div id="badge-incidencias" class="badge hidden">0</div>
-                    </button>
+                <h2 class="text-2xl font-semibold text-gray-900 mb-1">Proyección Anual por Cabaña</h2>
+                <p class="text-sm text-gray-500 mb-6">Distribución mensual proyectada basada en el comportamiento del año anterior. Las cabañas sin historial usan como referencia el patrón de Cabaña 2.</p>
 
-                    <button id="btn-workflow-actividades"
-                        class="workflow-btn bg-white border-2 border-blue-100 p-8 rounded-xl flex items-center justify-between hover:border-blue-300 group">
-                        <div class="flex items-center">
-                            <div class="bg-blue-100 p-4 rounded-full mr-6 group-hover:bg-blue-200 transition">
-                                <span class="text-3xl">📋</span>
-                            </div>
-                            <div class="text-left">
-                                <h3 class="text-xl font-bold text-gray-900">Control de Actividades</h3>
-                                <p class="text-gray-500">Avance del plan diario</p>
-                            </div>
-                        </div>
-                        <div id="badge-actividades" class="badge hidden">0</div>
-                    </button>
-
-                    <button id="btn-config-tasks"
-                        class="workflow-btn bg-white border-2 border-indigo-100 p-8 rounded-xl flex items-center justify-between hover:border-indigo-300 group md:col-span-2 lg:col-span-1">
-                        <div class="flex items-center">
-                            <div class="bg-indigo-100 p-4 rounded-full mr-6 group-hover:bg-indigo-200 transition">
-                                <span class="text-3xl">⚙️</span>
-                            </div>
-                            <div class="text-left">
-                                <h3 class="text-xl font-bold text-gray-900">Configurar Tareas</h3>
-                                <p class="text-gray-500">Protocolos, Tiempos y Checklists</p>
-                            </div>
-                        </div>
+                <div class="flex flex-wrap items-end gap-4 mb-6 pb-6 border-b">
+                    <div>
+                        <label for="proy-anio" class="block text-sm font-medium text-gray-700">Año a proyectar</label>
+                        <input type="number" id="proy-anio" value="2026" min="2020" max="2035"
+                            class="mt-1 block w-28 rounded-md border-gray-300 shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2 border"/>
+                    </div>
+                    <div>
+                        <label for="proy-meta" class="block text-sm font-medium text-gray-700">Meta anual por cabaña (CLP)</label>
+                        <input type="text" id="proy-meta" value="10.000.000"
+                            class="mt-1 block w-44 rounded-md border-gray-300 shadow-sm text-sm focus:ring-blue-500 focus:border-blue-500 px-3 py-2 border"
+                            placeholder="Ej: 10.000.000"/>
+                    </div>
+                    <button id="proy-calcular-btn"
+                        class="bg-blue-600 text-white font-bold py-2 px-6 rounded-md hover:bg-blue-700 text-sm">
+                        Calcular Proyección
                     </button>
                 </div>
-            </div>
 
+                <div id="proy-loading" class="hidden text-center text-gray-500 py-8">
+                    <p>Calculando proyección, esto puede tardar unos segundos...</p>
+                </div>
+
+                <div id="proy-results" class="hidden space-y-8">
+                    <!-- Tacómetros -->
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-800 mb-1">Avance de Meta Anual por Cabaña</h3>
+                        <p class="text-xs text-gray-400 mb-4">Ingresos confirmados vs meta anual definida.</p>
+                        <div id="proy-gauges" class="flex flex-wrap gap-3 justify-center"></div>
+                    </div>
+                    <!-- Tabla mensual -->
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-800 mb-1">
+                            Distribución Mensual Proyectada
+                            <span class="text-xs font-normal text-gray-400 ml-2">Histórico: <span id="proy-anio-hist-label"></span></span>
+                        </h3>
+                        <div class="flex flex-wrap gap-x-6 gap-y-1 mb-3 text-xs text-gray-400">
+                            <span><span class="font-semibold text-gray-500">P</span> = Proyectado (historial año anterior × meta)</span>
+                            <span><span class="font-semibold text-green-600">C</span> = Confirmado (reservas ya ingresadas)</span>
+                            <span>Barra y <b>%</b> = avance confirmado sobre proyectado</span>
+                            <span><span class="text-amber-400 font-bold">*</span> = sin historial propio, usa distribución promedio</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table id="proy-table" class="text-xs w-full border-collapse min-w-max"></table>
+                        </div>
+                        <p id="proy-nota-fallback" class="hidden text-xs text-amber-600 mt-2">
+                            ⚠ Cabañas sin historial usan la distribución de Cabaña 2 como referencia: <span id="proy-fallback-nombres"></span>
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             <!-- Historial Modal -->
 
@@ -248,6 +256,19 @@
                         <p>Conciliación Booking</p>
                     </a>
 
+                    <!-- Bloquear Cabañas Button -->
+                    <button id="abrir-bloqueos-btn"
+                        class="bg-red-700 text-white p-6 rounded-lg text-center font-semibold hover:bg-red-800 transition shadow flex items-center justify-center">
+                        <p>🔒 Bloquear Cabañas</p>
+                    </button>
+
+                    <!-- Flujo de Trabajo Diario Button -->
+                    <button id="abrir-flujo-btn"
+                        class="relative bg-indigo-600 text-white p-6 rounded-lg text-center font-semibold hover:bg-indigo-700 transition shadow flex items-center justify-center">
+                        <span id="badge-flujo" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center hidden">0</span>
+                        <p>📋 Flujo de Trabajo Diario</p>
+                    </button>
+
                 </div>
             </div>
 
@@ -286,13 +307,145 @@
         </div>
     </footer>
 
+    <!-- Modal Flujo de Trabajo Diario -->
+    <div id="flujo-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden" style="background-color: rgba(0,0,0,0.6);">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl mx-4">
+            <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">📋 Flujo de Trabajo Diario</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Gestión operativa del día a día.</p>
+                </div>
+                <button id="cerrar-flujo-modal" class="text-gray-400 hover:text-gray-600 ml-4">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-6 grid grid-cols-1 gap-4">
+                <button id="btn-workflow-incidencias"
+                    class="workflow-btn bg-white border-2 border-red-100 p-6 rounded-xl flex items-center justify-between hover:border-red-300 group">
+                    <div class="flex items-center">
+                        <div class="bg-red-100 p-3 rounded-full mr-4 group-hover:bg-red-200 transition">
+                            <span class="text-2xl">⚠️</span>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-base font-bold text-gray-900">Incidencias</h3>
+                            <p class="text-sm text-gray-500">Reportes de imprevistos</p>
+                        </div>
+                    </div>
+                    <div id="badge-incidencias" class="badge hidden">0</div>
+                </button>
+
+                <button id="btn-workflow-actividades"
+                    class="workflow-btn bg-white border-2 border-blue-100 p-6 rounded-xl flex items-center justify-between hover:border-blue-300 group">
+                    <div class="flex items-center">
+                        <div class="bg-blue-100 p-3 rounded-full mr-4 group-hover:bg-blue-200 transition">
+                            <span class="text-2xl">📋</span>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-base font-bold text-gray-900">Control de Actividades</h3>
+                            <p class="text-sm text-gray-500">Avance del plan diario</p>
+                        </div>
+                    </div>
+                    <div id="badge-actividades" class="badge hidden">0</div>
+                </button>
+
+                <button id="btn-config-tasks"
+                    class="workflow-btn bg-white border-2 border-indigo-100 p-6 rounded-xl flex items-center justify-between hover:border-indigo-300 group">
+                    <div class="flex items-center">
+                        <div class="bg-indigo-100 p-3 rounded-full mr-4 group-hover:bg-indigo-200 transition">
+                            <span class="text-2xl">⚙️</span>
+                        </div>
+                        <div class="text-left">
+                            <h3 class="text-base font-bold text-gray-900">Configurar Tareas</h3>
+                            <p class="text-sm text-gray-500">Protocolos, Tiempos y Checklists</p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Bloquear Cabañas -->
+    <div id="bloqueos-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden" style="background-color: rgba(0,0,0,0.6);">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4">
+            <div class="flex items-center justify-between p-6 border-b border-gray-200">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">🔒 Bloquear Cabañas</h3>
+                    <p class="text-sm text-gray-500 mt-0.5">Marca cabañas como no disponibles por mantenimiento u otro motivo.</p>
+                </div>
+                <button id="cerrar-bloqueos-modal" class="text-gray-400 hover:text-gray-600 ml-4">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <!-- Formulario -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="text-sm font-medium text-gray-700">Cabañas a bloquear</label>
+                            <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer hover:text-red-600">
+                                <input type="checkbox" id="bloqueo-select-all" class="rounded border-gray-400 text-red-600 focus:ring-red-500"/>
+                                Seleccionar todo
+                            </label>
+                        </div>
+                        <div id="bloqueo-cabanas-checkboxes" class="grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 border border-gray-300 rounded-md bg-gray-50 min-h-[72px] text-sm">
+                            <p class="text-gray-400 text-xs col-span-2">Cargando...</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label for="bloqueo-desde" class="block text-sm font-medium text-gray-700 mb-1">Desde</label>
+                        <input type="date" id="bloqueo-desde" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-red-500 focus:border-red-500"/>
+                    </div>
+                    <div>
+                        <label for="bloqueo-hasta" class="block text-sm font-medium text-gray-700 mb-1">Hasta</label>
+                        <input type="date" id="bloqueo-hasta" class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-red-500 focus:border-red-500"/>
+                    </div>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="text" id="bloqueo-motivo" placeholder="Motivo (ej: Mantención de techo, Limpieza profunda...)"
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-red-500 focus:border-red-500"/>
+                    <button id="bloqueo-crear-btn"
+                        class="inline-flex items-center justify-center px-6 py-2 border border-transparent text-sm font-semibold rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed whitespace-nowrap">
+                        🔒 Crear Bloqueo
+                    </button>
+                </div>
+                <div id="bloqueo-status" class="hidden text-sm p-3 rounded-md"></div>
+
+                <!-- Lista de bloqueos activos -->
+                <div class="border-t pt-4 mt-2">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-sm font-semibold text-gray-800">Bloqueos Activos y Futuros</h4>
+                        <button onclick="loadBloqueos()" class="text-xs text-indigo-500 hover:underline">Actualizar</button>
+                    </div>
+                    <div id="bloqueos-lista" class="space-y-2 max-h-52 overflow-y-auto">
+                        <p class="text-gray-400 text-sm">Cargando...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Detail Modal -->
-    <div id="detail-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg">
-            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4" id="detail-modal-title">Detalle por Canal</h3>
-            <div id="detail-modal-content"></div>
-            <button type="button" id="detail-modal-close-btn"
-                class="mt-4 w-full inline-flex justify-center rounded-md border border-gray-300 px-4 py-2 bg-white text-base font-medium text-gray-700 shadow-sm hover:bg-gray-50">Cerrar</button>
+    <div id="detail-modal" class="fixed inset-0 z-50 flex items-start justify-center hidden overflow-y-auto py-6 px-2">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl">
+            <!-- Header -->
+            <div class="flex items-start justify-between p-6 border-b border-gray-200">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900" id="detail-modal-title">Reservas de Cabaña</h3>
+                    <p class="text-sm text-gray-500 mt-0.5" id="detail-modal-subtitle"></p>
+                </div>
+                <button type="button" id="detail-modal-close-btn" class="text-gray-400 hover:text-gray-600 ml-4">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <!-- Summary cards -->
+            <div id="detail-modal-summary" class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-6 border-b border-gray-100 bg-gray-50"></div>
+            <!-- Loading -->
+            <div id="detail-modal-loading" class="p-12 text-center text-gray-400 hidden">
+                <svg class="animate-spin h-8 w-8 mx-auto mb-3 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                <p class="text-sm font-medium">Cargando reservas...</p>
+            </div>
+            <!-- Table -->
+            <div id="detail-modal-content" class="overflow-x-auto p-4"></div>
         </div>
     </div>
 
@@ -635,19 +788,115 @@
             });
         }
 
-        function showDetailModal(cabañaNombre) {
-            const cabañaData = fullKpiResults.rankingCabañas.find(c => c.nombre === cabañaNombre);
-            if (!cabañaData) return;
+        async function showDetailModal(cabañaNombre) {
             const modal = document.getElementById('detail-modal');
             const title = document.getElementById('detail-modal-title');
+            const subtitle = document.getElementById('detail-modal-subtitle');
+            const summary = document.getElementById('detail-modal-summary');
             const content = document.getElementById('detail-modal-content');
-            title.textContent = `Detalle por Canal - ${cabañaNombre}`;
-            let tableHtml = `<p class="text-sm text-center text-gray-500">No hay datos de descuentos por canal para esta cabaña.</p>`;
-            if (cabañaData.canales && Object.keys(cabañaData.canales).length > 0) {
-                tableHtml = `<table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Canal</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Noches con Descuento</th><th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Descuento Total</th></tr></thead><tbody class="bg-white divide-y divide-gray-200">${Object.entries(cabañaData.canales).map(([canal, data]) => `<tr><td class="px-4 py-2 text-sm font-medium">${canal}</td><td class="px-4 py-2 text-sm">${data.noches}</td><td class="px-4 py-2 text-sm text-red-600">${formatCurrency(data.descuento)}</td></tr>`).join('')}</tbody></table>`;
-            }
-            content.innerHTML = tableHtml;
+            const loading = document.getElementById('detail-modal-loading');
+
+            const fechaInicio = document.getElementById('kpi-fecha-inicio').value;
+            const fechaFin = document.getElementById('kpi-fecha-fin').value;
+
+            title.textContent = cabañaNombre;
+            subtitle.textContent = `Período: ${fechaInicio} al ${fechaFin}`;
+            summary.innerHTML = '';
+            content.innerHTML = '';
+            loading.classList.remove('hidden');
             modal.classList.remove('hidden');
+
+            try {
+                const encodedNombre = encodeURIComponent(cabañaNombre);
+                const data = await fetchAPI(`/api/kpi/cabana-detail?cabañaNombre=${encodedNombre}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}`);
+                const reservas = data.reservas || [];
+
+                loading.classList.add('hidden');
+
+                // Summary
+                const totalNoches = reservas.reduce((s, r) => s + r.nochesEnRango, 0);
+                const totalIngreso = reservas.reduce((s, r) => s + r.ingresoEnRango, 0);
+                const totalDescuento = reservas.reduce((s, r) => s + r.descuentoEnRango, 0);
+                const anomalias = reservas.filter(r => r.descuentoEnRango > r.ingresoEnRango && r.ingresoEnRango > 0).length;
+
+                summary.innerHTML = `
+                    <div class="bg-white rounded-lg p-4 text-center border border-gray-100">
+                        <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Reservas</div>
+                        <div class="text-2xl font-bold text-gray-900">${reservas.length}</div>
+                    </div>
+                    <div class="bg-white rounded-lg p-4 text-center border border-gray-100">
+                        <div class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Noches en Período</div>
+                        <div class="text-2xl font-bold text-gray-900">${totalNoches}</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4 text-center border border-green-100">
+                        <div class="text-xs text-green-600 font-medium uppercase tracking-wide mb-1">Ingreso Real</div>
+                        <div class="text-2xl font-bold text-green-700">${formatCurrency(totalIngreso)}</div>
+                    </div>
+                    <div class="bg-red-50 rounded-lg p-4 text-center border border-red-100">
+                        <div class="text-xs text-red-600 font-medium uppercase tracking-wide mb-1">Descuento Total</div>
+                        <div class="text-2xl font-bold text-red-700">${formatCurrency(totalDescuento)}</div>
+                        ${anomalias > 0 ? `<div class="text-xs text-orange-600 font-bold mt-1">⚠️ ${anomalias} reserva(s) con descuento anómalo</div>` : ''}
+                    </div>`;
+
+                if (reservas.length === 0) {
+                    content.innerHTML = `<p class="text-center text-gray-400 py-10 text-sm">No hay reservas para este período.</p>`;
+                    return;
+                }
+
+                const rows = reservas.map(r => {
+                    const esAnomalía = r.descuentoEnRango > r.ingresoEnRango && r.ingresoEnRango > 0;
+                    const rowClass = esAnomalía ? 'bg-orange-50' : '';
+                    const anomalyBadge = esAnomalía ? `<span class="ml-1 inline-block bg-orange-100 text-orange-700 text-[10px] font-bold px-1.5 py-0.5 rounded">⚠️ anómalo</span>` : '';
+                    const fijoBadge = r.valorDolarFijo ? `<span class="inline-block bg-green-100 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded">fijo</span>` : '';
+                    const dolarInfo = r.monedaOriginal === 'USD' && r.valorDolarDia
+                        ? `<div class="text-[10px] text-gray-400 mt-0.5">USD ${r.valorOriginal?.toLocaleString('es-CL') || '?'} × $${Math.round(r.valorDolarDia).toLocaleString('es-CL')} ${fijoBadge}</div>`
+                        : '';
+                    return `<tr class="${rowClass}">
+                        <td class="px-3 py-2.5 text-sm font-medium text-gray-900 whitespace-nowrap">${r.clienteNombre}</td>
+                        <td class="px-3 py-2.5 text-sm text-gray-600 whitespace-nowrap">${r.fechaLlegada}</td>
+                        <td class="px-3 py-2.5 text-sm text-gray-600 whitespace-nowrap">${r.fechaSalida}</td>
+                        <td class="px-3 py-2.5 text-sm text-center text-gray-600">${r.totalNoches}</td>
+                        <td class="px-3 py-2.5 text-sm text-center text-indigo-600 font-medium">${r.nochesEnRango}</td>
+                        <td class="px-3 py-2.5 text-sm text-gray-600 whitespace-nowrap">${r.canal}</td>
+                        <td class="px-3 py-2.5 whitespace-nowrap">
+                            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${r.estadoGestion === 'Facturado' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">${r.estadoGestion}</span>
+                        </td>
+                        <td class="px-3 py-2.5 text-sm text-gray-800 text-right whitespace-nowrap">
+                            ${formatCurrency(r.valorCLP)}
+                            ${dolarInfo}
+                        </td>
+                        <td class="px-3 py-2.5 text-sm text-gray-500 text-right whitespace-nowrap">${formatCurrency(r.valorPotencialCLP)}</td>
+                        <td class="px-3 py-2.5 text-sm text-right whitespace-nowrap">
+                            <span class="${esAnomalía ? 'text-orange-600 font-bold' : 'text-red-600'}">${formatCurrency(r.descuentoEnRango)}</span>
+                            ${anomalyBadge}
+                        </td>
+                    </tr>`;
+                }).join('');
+
+                content.innerHTML = `
+                    <table class="min-w-full divide-y divide-gray-200 text-xs">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Cliente</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Llegada</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Salida</th>
+                                <th class="px-3 py-2 text-center text-xs font-semibold text-gray-500 uppercase">Noches Total</th>
+                                <th class="px-3 py-2 text-center text-xs font-semibold text-indigo-500 uppercase">Noches Período</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Canal</th>
+                                <th class="px-3 py-2 text-left text-xs font-semibold text-gray-500 uppercase">Estado</th>
+                                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Valor CLP</th>
+                                <th class="px-3 py-2 text-right text-xs font-semibold text-gray-500 uppercase">Potencial CLP</th>
+                                <th class="px-3 py-2 text-right text-xs font-semibold text-red-500 uppercase">Descuento</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-100">${rows}</tbody>
+                    </table>
+                    <p class="text-xs text-gray-400 mt-3 px-2">Las filas en naranja tienen descuento mayor al ingreso real — revisar valorPotencialCLP en Firestore.</p>`;
+
+            } catch (err) {
+                loading.classList.add('hidden');
+                content.innerHTML = `<p class="text-center text-red-500 py-10 text-sm">Error al cargar reservas: ${err.message}</p>`;
+            }
         }
 
         // --- Main Init ---
@@ -681,6 +930,13 @@
 
             // Bind Events
             bindDashboardEvents();
+
+            // Bloqueos — se cargan al abrir el modal
+            document.getElementById('bloqueo-crear-btn').addEventListener('click', crearBloqueo);
+            document.getElementById('abrir-bloqueos-btn').addEventListener('click', () => {
+                loadCabanasForBloqueo();
+                loadBloqueos();
+            });
         });
 
         async function loadSettingsHeader() {
@@ -851,7 +1107,393 @@
             };
             bindModal('abrir-historial-btn', 'modal-historial', 'cerrar-historial-btn');
             bindModal('abrir-settings-btn', 'modal-settings', 'cerrar-settings-btn');
+            bindModal('abrir-bloqueos-btn', 'bloqueos-modal', 'cerrar-bloqueos-modal');
+            bindModal('abrir-flujo-btn', 'flujo-modal', 'cerrar-flujo-modal');
         }
+
+        // ── Bloqueo de Cabañas ──────────────────────────────────────
+        async function loadCabanasForBloqueo() {
+            const container = document.getElementById('bloqueo-cabanas-checkboxes');
+            try {
+                const data = await fetchAPI('/api/cabanas');
+                const cabanas = data.cabanas || data || [];
+                if (!cabanas.length) {
+                    container.innerHTML = '<p class="text-gray-400 text-xs col-span-2">Sin cabañas registradas.</p>';
+                    return;
+                }
+                container.innerHTML = cabanas.map(c =>
+                    `<label class="flex items-center gap-2 text-sm cursor-pointer hover:text-red-600">
+                        <input type="checkbox" value="${c.nombre}" class="bloqueo-cabana-cb rounded border-gray-400 text-red-600 focus:ring-red-500"/>
+                        ${c.nombre}
+                    </label>`
+                ).join('');
+
+                // Seleccionar todo
+                const selectAll = document.getElementById('bloqueo-select-all');
+                selectAll.addEventListener('change', () => {
+                    document.querySelectorAll('.bloqueo-cabana-cb').forEach(cb => cb.checked = selectAll.checked);
+                });
+                container.addEventListener('change', () => {
+                    const all = document.querySelectorAll('.bloqueo-cabana-cb');
+                    const checked = document.querySelectorAll('.bloqueo-cabana-cb:checked');
+                    selectAll.checked = all.length === checked.length;
+                    selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+                });
+            } catch (e) {
+                container.innerHTML = '<p class="text-red-500 text-xs col-span-2">Error cargando cabañas.</p>';
+            }
+        }
+
+        function renderBloqueoRow(b, isPast) {
+            return `
+                <div class="flex items-center justify-between ${isPast ? 'bg-gray-50 border border-gray-200 opacity-70' : 'bg-red-50 border border-red-100'} rounded-lg px-4 py-3">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+                        <span class="font-semibold text-gray-800 text-sm">${b.cabana}</span>
+                        <span class="text-sm text-gray-500">${b.fechaInicio} → ${b.fechaFin}</span>
+                        <span class="text-xs ${isPast ? 'bg-gray-200 text-gray-500' : 'bg-red-100 text-red-700'} px-2 py-0.5 rounded-full font-medium">${b.motivo}</span>
+                    </div>
+                    ${isPast ? '' : `<button onclick="deleteBloqueo('${b.id}')"
+                        class="ml-4 text-xs text-red-400 hover:text-red-700 font-semibold whitespace-nowrap shrink-0">
+                        Eliminar
+                    </button>`}
+                </div>`;
+        }
+
+        async function loadBloqueos(mostrarHistorial = false) {
+            const lista = document.getElementById('bloqueos-lista');
+            try {
+                const data = await fetchAPI('/api/bloqueos');
+                const bloqueos = data.bloqueos || [];
+                const today = new Date().toISOString().split('T')[0];
+
+                const activos = bloqueos.filter(b => b.fechaFin >= today);
+                const historicos = bloqueos.filter(b => b.fechaFin < today);
+
+                let html = '';
+
+                if (!activos.length) {
+                    html += '<p class="text-gray-400 text-sm">No hay bloqueos activos ni futuros.</p>';
+                } else {
+                    html += activos.map(b => renderBloqueoRow(b, false)).join('');
+                }
+
+                if (historicos.length) {
+                    if (mostrarHistorial) {
+                        html += `<div class="border-t pt-3 mt-3">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Historial</p>
+                                <button onclick="loadBloqueos(false)" class="text-xs text-gray-400 hover:text-gray-600 underline">Ocultar</button>
+                            </div>`;
+                        html += historicos.map(b => renderBloqueoRow(b, true)).join('');
+                        html += '</div>';
+                    } else {
+                        html += `<div class="mt-3 pt-3 border-t">
+                            <button onclick="loadBloqueos(true)" class="text-xs text-indigo-500 hover:underline">
+                                Ver historial (${historicos.length} bloqueo${historicos.length > 1 ? 's' : ''} pasado${historicos.length > 1 ? 's' : ''})
+                            </button>
+                        </div>`;
+                    }
+                }
+
+                lista.innerHTML = html;
+            } catch (e) {
+                lista.innerHTML = '<p class="text-red-500 text-sm">Error al cargar bloqueos.</p>';
+            }
+        }
+
+        async function deleteBloqueo(id) {
+            if (!confirm('¿Eliminar este bloqueo? La cabaña volverá a estar disponible para ese período.')) return;
+            try {
+                await fetchAPI(`/api/bloqueos/${id}`, { method: 'DELETE' });
+                loadBloqueos();
+            } catch (e) {
+                alert('Error al eliminar: ' + e.message);
+            }
+        }
+        window.deleteBloqueo = deleteBloqueo;
+        window.loadBloqueos = (mostrarHistorial) => loadBloqueos(mostrarHistorial === true);
+
+        // ── Proyección Anual ────────────────────────────────────────
+        document.getElementById('proy-calcular-btn').addEventListener('click', calcularProyeccion);
+
+        function parseMetaCLP(str) {
+            return parseFloat(String(str).replace(/\./g, '').replace(',', '.')) || 0;
+        }
+
+        function fmtCLP(n) {
+            if (!n) return '$0';
+            return '$' + Math.round(n).toLocaleString('es-CL');
+        }
+
+        // Formato compacto para la tabla de proyección (ahorra espacio)
+        function fmtCompact(n) {
+            if (!n || n === 0) return '$0';
+            if (n >= 1000000) return '$' + (n / 1000000).toFixed(2).replace('.', ',') + 'M';
+            if (n >= 1000)    return '$' + Math.round(n / 1000) + 'K';
+            return '$' + Math.round(n);
+        }
+
+        function drawGauge(canvas, pct) {
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+
+            const cx = W / 2, cy = H - 6;
+            const R = Math.min(W * 0.43, (H - 6) * 0.92);
+
+            const zones = [
+                { from: 0,  to: 40,  color: '#ef4444' },
+                { from: 40, to: 60,  color: '#f97316' },
+                { from: 60, to: 80,  color: '#eab308' },
+                { from: 80, to: 100, color: '#22c55e' },
+            ];
+            zones.forEach(z => {
+                ctx.beginPath();
+                ctx.arc(cx, cy, R, Math.PI + (z.from / 100) * Math.PI, Math.PI + (z.to / 100) * Math.PI);
+                ctx.lineWidth = 11;
+                ctx.strokeStyle = z.color;
+                ctx.stroke();
+            });
+
+            const pctClamped = Math.min(Math.max(pct, 0), 100);
+            const needleAngle = Math.PI + (pctClamped / 100) * Math.PI;
+
+            if (pctClamped < 100) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, R, needleAngle, Math.PI * 2);
+                ctx.lineWidth = 11;
+                ctx.strokeStyle = 'rgba(209,213,219,0.9)';
+                ctx.stroke();
+            }
+
+            // Aguja
+            const nLen = R - 5;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + nLen * Math.cos(needleAngle), cy + nLen * Math.sin(needleAngle));
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#111827';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+
+            // Centro
+            ctx.beginPath();
+            ctx.arc(cx, cy, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = '#111827';
+            ctx.fill();
+
+            // % en el centro del arco
+            ctx.font = `bold 13px Inter, sans-serif`;
+            ctx.fillStyle = '#111827';
+            ctx.textAlign = 'center';
+            ctx.fillText(pctClamped.toFixed(1) + '%', cx, cy - R * 0.28);
+        }
+
+        async function calcularProyeccion() {
+            const anio = document.getElementById('proy-anio').value;
+            const meta = parseMetaCLP(document.getElementById('proy-meta').value);
+            if (!anio || meta <= 0) {
+                alert('Ingresa un año válido y una meta mayor a $0.');
+                return;
+            }
+
+            document.getElementById('proy-loading').classList.remove('hidden');
+            document.getElementById('proy-results').classList.add('hidden');
+
+            try {
+                const data = await fetchAPI(`/api/kpi/proyeccion-anual?anioProyeccion=${anio}&metaAnual=${meta}`);
+                document.getElementById('proy-loading').classList.add('hidden');
+                document.getElementById('proy-results').classList.remove('hidden');
+                document.getElementById('proy-anio-hist-label').textContent = data.anioHistorico;
+                renderProyGauges(data);
+                renderProyTable(data);
+
+                const notaEl = document.getElementById('proy-nota-fallback');
+                if (data.fallbackCabanas && data.fallbackCabanas.length) {
+                    document.getElementById('proy-fallback-nombres').textContent = data.fallbackCabanas.join(', ');
+                    notaEl.classList.remove('hidden');
+                } else {
+                    notaEl.classList.add('hidden');
+                }
+            } catch (e) {
+                document.getElementById('proy-loading').classList.add('hidden');
+                alert('Error calculando proyección: ' + e.message);
+            }
+        }
+
+        function renderProyGauges(data) {
+            const container = document.getElementById('proy-gauges');
+            container.innerHTML = '';
+            container.className = 'flex flex-nowrap gap-2 overflow-x-auto pb-2';
+
+            data.cabanas.forEach(c => {
+                const g = data.gauges[c];
+
+                const wrap = document.createElement('div');
+                wrap.className = 'flex flex-col items-center flex-shrink-0 bg-gray-50 border border-gray-100 rounded-xl px-3 pt-3 pb-2';
+                wrap.style.minWidth = '120px';
+
+                // Canvas — solo el arco y aguja
+                const canvas = document.createElement('canvas');
+                canvas.width = 110;
+                canvas.height = 68;
+                wrap.appendChild(canvas);
+
+                // Nombre de la cabaña
+                const nameEl = document.createElement('div');
+                nameEl.className = 'text-xs font-bold text-gray-800 mt-1 text-center leading-tight';
+                nameEl.textContent = c;
+                wrap.appendChild(nameEl);
+
+                // Monto confirmado
+                const confEl = document.createElement('div');
+                const confColor = g.pct >= 80 ? 'text-green-600' : g.pct >= 40 ? 'text-yellow-600' : 'text-red-500';
+                confEl.className = `text-xs font-semibold text-center ${confColor}`;
+                confEl.textContent = fmtCLP(g.confMonto);
+                wrap.appendChild(confEl);
+
+                // De la meta
+                const metaEl = document.createElement('div');
+                metaEl.className = 'text-xs text-gray-400 text-center';
+                metaEl.textContent = 'de ' + fmtCLP(g.metaAnual);
+                wrap.appendChild(metaEl);
+
+                container.appendChild(wrap);
+                drawGauge(canvas, g.pct);
+            });
+        }
+
+        function renderProyTable(data) {
+            const table = document.getElementById('proy-table');
+            const { cabanas, meses } = data;
+
+            // Header
+            let html = '<thead class="bg-gray-50"><tr>';
+            html += '<th class="px-2 py-2 text-left text-xs font-semibold text-gray-500 uppercase sticky left-0 bg-gray-50 border border-gray-200 w-16">Mes</th>';
+            cabanas.forEach(c => {
+                html += `<th class="px-1 py-2 text-center text-xs font-semibold text-gray-500 uppercase border border-gray-200">${c}</th>`;
+            });
+            html += '<th class="px-1 py-2 text-center text-xs font-semibold text-gray-500 uppercase border border-gray-200 bg-blue-50">Total</th>';
+            html += '</tr></thead>';
+
+            // Body
+            html += '<tbody>';
+            let totalProyMonto = 0, totalConfMonto = 0, totalProyNoches = 0, totalConfNoches = 0;
+
+            meses.forEach(mes => {
+                let mesProyMonto = 0, mesConfMonto = 0, mesProyNoches = 0, mesConfNoches = 0;
+                cabanas.forEach(c => {
+                    mesProyMonto  += mes.cabanas[c].proyMonto;
+                    mesConfMonto  += mes.cabanas[c].confMonto;
+                    mesProyNoches += mes.cabanas[c].proyNoches;
+                    mesConfNoches += mes.cabanas[c].confNoches;
+                });
+                totalProyMonto  += mesProyMonto;
+                totalConfMonto  += mesConfMonto;
+                totalProyNoches += mesProyNoches;
+                totalConfNoches += mesConfNoches;
+
+                html += '<tr class="hover:bg-gray-50">';
+                html += `<td class="px-2 py-2 font-semibold text-gray-700 sticky left-0 bg-white border border-gray-200 text-xs whitespace-nowrap">${mes.mes}</td>`;
+
+                cabanas.forEach(c => {
+                    const d = mes.cabanas[c];
+                    const pct = d.proyMonto > 0 ? Math.min(100, Math.round(d.confMonto / d.proyMonto * 100)) : 0;
+                    const barColor = pct >= 80 ? 'bg-green-500' : pct >= 40 ? 'bg-yellow-400' : pct > 0 ? 'bg-red-400' : 'bg-gray-200';
+                    const confColor = d.confMonto > 0 ? (pct >= 80 ? 'text-green-700' : pct >= 40 ? 'text-yellow-700' : 'text-red-600') : 'text-gray-400';
+                    const fb = d.usingFallback ? '<span class="text-amber-400 ml-0.5" title="Distribución promedio">*</span>' : '';
+                    html += `<td class="px-1 py-1.5 border border-gray-100 align-top text-center">
+                        <div class="text-gray-400 text-xs leading-tight whitespace-nowrap">
+                            <span class="text-gray-300">P</span> ${d.proyNoches}n ${fmtCompact(d.proyMonto)}${fb}
+                        </div>
+                        <div class="${confColor} font-semibold text-xs leading-tight whitespace-nowrap">
+                            <span class="opacity-60">C</span> ${d.confNoches}n ${fmtCompact(d.confMonto)}
+                        </div>
+                        <div class="mt-1 bg-gray-100 rounded-full h-1.5 w-full">
+                            <div class="${barColor} h-1.5 rounded-full" style="width:${pct}%"></div>
+                        </div>
+                        <div class="text-right text-gray-400 text-xs mt-0.5">${pct}%</div>
+                    </td>`;
+                });
+
+                // Total cell
+                const pctTotal = mesProyMonto > 0 ? Math.min(100, Math.round(mesConfMonto / mesProyMonto * 100)) : 0;
+                const barT = pctTotal >= 80 ? 'bg-green-500' : pctTotal >= 40 ? 'bg-yellow-400' : pctTotal > 0 ? 'bg-red-400' : 'bg-gray-200';
+                const confT = mesConfMonto > 0 ? (pctTotal >= 80 ? 'text-green-700' : pctTotal >= 40 ? 'text-yellow-700' : 'text-red-600') : 'text-gray-400';
+                html += `<td class="px-1 py-1.5 border border-gray-200 bg-blue-50 align-top text-center">
+                    <div class="text-gray-500 text-xs leading-tight whitespace-nowrap"><span class="text-gray-400">P</span> ${mesProyNoches}n ${fmtCompact(mesProyMonto)}</div>
+                    <div class="${confT} font-semibold text-xs leading-tight whitespace-nowrap"><span class="opacity-60">C</span> ${mesConfNoches}n ${fmtCompact(mesConfMonto)}</div>
+                    <div class="mt-1 bg-gray-100 rounded-full h-1.5 w-full">
+                        <div class="${barT} h-1.5 rounded-full" style="width:${pctTotal}%"></div>
+                    </div>
+                    <div class="text-right text-gray-400 text-xs mt-0.5">${pctTotal}%</div>
+                </td>`;
+                html += '</tr>';
+            });
+
+            // Footer totals
+            html += '<tr class="bg-gray-100 font-bold">';
+            html += '<td class="px-2 py-2 sticky left-0 bg-gray-100 border border-gray-200 text-xs text-gray-700 whitespace-nowrap">ANUAL</td>';
+            cabanas.forEach(c => {
+                const cp  = data.meses.reduce((s, m) => s + m.cabanas[c].proyMonto,  0);
+                const cc  = data.meses.reduce((s, m) => s + m.cabanas[c].confMonto,  0);
+                const cpn = data.meses.reduce((s, m) => s + m.cabanas[c].proyNoches, 0);
+                const ccn = data.meses.reduce((s, m) => s + m.cabanas[c].confNoches, 0);
+                const pct = cp > 0 ? Math.min(100, Math.round(cc / cp * 100)) : 0;
+                html += `<td class="px-1 py-2 border border-gray-200 text-center">
+                    <div class="text-gray-500 text-xs whitespace-nowrap">${cpn}n ${fmtCompact(cp)}</div>
+                    <div class="text-gray-800 text-xs whitespace-nowrap">${ccn}n ${fmtCompact(cc)}</div>
+                    <div class="text-xs text-blue-600 font-bold">${pct}%</div>
+                </td>`;
+            });
+            const pctG = totalProyMonto > 0 ? Math.min(100, Math.round(totalConfMonto / totalProyMonto * 100)) : 0;
+            html += `<td class="px-1 py-2 border border-gray-200 bg-blue-100 text-center">
+                <div class="text-gray-600 text-xs whitespace-nowrap">${totalProyNoches}n ${fmtCompact(totalProyMonto)}</div>
+                <div class="text-gray-800 text-xs font-bold whitespace-nowrap">${totalConfNoches}n ${fmtCompact(totalConfMonto)}</div>
+                <div class="text-xs text-blue-700 font-bold">${pctG}%</div>
+            </td>`;
+            html += '</tr></tbody>';
+
+            table.innerHTML = html;
+        }
+
+        async function crearBloqueo() {
+            const checked = [...document.querySelectorAll('.bloqueo-cabana-cb:checked')].map(c => c.value);
+            const desde = document.getElementById('bloqueo-desde').value;
+            const hasta = document.getElementById('bloqueo-hasta').value;
+            const motivo = document.getElementById('bloqueo-motivo').value.trim();
+            const status = document.getElementById('bloqueo-status');
+            const btn = document.getElementById('bloqueo-crear-btn');
+
+            if (!checked.length) { alert('Selecciona al menos una cabaña.'); return; }
+            if (!desde || !hasta) { alert('Ingresa las fechas de inicio y fin.'); return; }
+            if (desde > hasta) { alert('La fecha de inicio debe ser anterior o igual a la fecha fin.'); return; }
+            if (!motivo) { alert('Ingresa un motivo para el bloqueo.'); return; }
+
+            btn.disabled = true;
+            btn.textContent = 'Creando...';
+            try {
+                const result = await fetchAPI('/api/bloqueos', {
+                    method: 'POST',
+                    body: { cabanas: checked, fechaInicio: desde, fechaFin: hasta, motivo },
+                });
+                status.className = 'mb-4 text-sm p-3 rounded-md bg-green-50 text-green-800 border border-green-200';
+                status.textContent = result.message;
+                status.classList.remove('hidden');
+                document.querySelectorAll('.bloqueo-cabana-cb').forEach(c => c.checked = false);
+                document.getElementById('bloqueo-motivo').value = '';
+                loadBloqueos();
+                setTimeout(() => status.classList.add('hidden'), 5000);
+            } catch (e) {
+                status.className = 'mb-4 text-sm p-3 rounded-md bg-red-50 text-red-800 border border-red-200';
+                status.innerHTML = '⚠️ ' + e.message;
+                status.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔒 Crear Bloqueo';
+            }
+        }
+        // ── Fin Bloqueo de Cabañas ───────────────────────────────────
     </script>
     <!-- Incidents Admin Modal -->
     <div id="admin-incidents-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title"

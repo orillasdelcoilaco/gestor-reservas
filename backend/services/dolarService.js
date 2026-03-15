@@ -167,15 +167,7 @@ async function getValorDolar(db, targetDate) {
             const ultimoValor = snapshot.docs[0].data().valor;
             const fechaEncontrada = snapshot.docs[0].id;
             console.log(`Usando el valor de respaldo de la fecha ${fechaEncontrada}: ${ultimoValor}`);
-
-            // --- NUEVO: Guardar el valor encontrado para la fecha que faltaba ---
-            console.log(`Actualizando la colección 'valorDolar' para la fecha ${dateStr} con el valor ${ultimoValor}.`);
-            await dolarRef.set({
-                valor: ultimoValor,
-                fecha: admin.firestore.Timestamp.fromDate(targetDateUTC)
-            });
-            // --- FIN DEL NUEVO CÓDIGO ---
-
+            // No guardamos el valor de respaldo para no propagar un valor incorrecto a fechas sin datos.
             return ultimoValor;
         }
 
@@ -190,8 +182,92 @@ async function getValorDolar(db, targetDate) {
     }
 }
 
+/**
+ * Obtiene el valor del dólar para una fecha específica desde la API externa.
+ * Intenta primero la URL con fecha exacta, luego el fallback de pages.dev.
+ * @returns {number|null} El valor CLP/USD o null si falla.
+ */
+async function fetchDolarFromAPI(dateStr) {
+    const urls = [
+        `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${dateStr}/v1/currencies/usd.json`,
+        `https://${dateStr}.currency-api.pages.dev/v1/currencies/usd.json`,
+    ];
+    for (const url of urls) {
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                const data = await response.json();
+                const valor = data?.usd?.clp;
+                if (valor) return valor;
+            }
+        } catch (e) {
+            // Intenta la siguiente URL
+        }
+    }
+    return null;
+}
+
+/**
+ * REPARACIÓN MASIVA DE VALORES
+ * Itera desde fromDateStr hasta toDateStr, consulta la API para cada fecha
+ * y sobreescribe el valor en Firestore. Corrige el bug de propagación del valor fijo.
+ * @param {object} db - Firestore instance
+ * @param {string} fromDateStr - Fecha de inicio 'YYYY-MM-DD'
+ * @param {string} toDateStr  - Fecha de fin 'YYYY-MM-DD' (por defecto hoy)
+ * @returns {{ fixed: string[], failed: string[], total: number }}
+ */
+async function repairDolarValues(db, fromDateStr, toDateStr) {
+    const from = new Date(fromDateStr + 'T00:00:00Z');
+    const todayUTC = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+    const to = toDateStr ? new Date(toDateStr + 'T00:00:00Z') : todayUTC;
+
+    if (isNaN(from) || isNaN(to) || from > to) {
+        throw new Error('Rango de fechas inválido.');
+    }
+
+    const fixed = [];
+    const failed = [];
+    const batch = db.batch();
+    let batchCount = 0;
+
+    const current = new Date(from);
+    while (current <= to) {
+        const dateStr = current.toISOString().split('T')[0];
+        const valor = await fetchDolarFromAPI(dateStr);
+
+        if (valor) {
+            const docRef = db.collection('valorDolar').doc(dateStr);
+            batch.set(docRef, {
+                valor,
+                fecha: admin.firestore.Timestamp.fromDate(new Date(dateStr + 'T00:00:00Z')),
+            });
+            batchCount++;
+            fixed.push({ date: dateStr, valor });
+
+            // Firestore batch máximo 500 ops
+            if (batchCount >= 450) {
+                await batch.commit();
+                batchCount = 0;
+            }
+        } else {
+            failed.push(dateStr);
+        }
+
+        current.setUTCDate(current.getUTCDate() + 1);
+        // Pequeña pausa para no saturar la API
+        await new Promise(r => setTimeout(r, 80));
+    }
+
+    if (batchCount > 0) {
+        await batch.commit();
+    }
+
+    return { fixed, failed, total: fixed.length + failed.length };
+}
+
 module.exports = {
     getValorDolar,
     processDolarCsv,
     updateTodaysDolarValue,
+    repairDolarValues,
 };

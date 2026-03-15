@@ -24,7 +24,8 @@
                 </div>
             </div>
         </nav>
-        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 space-y-6">
+            <!-- Sección CSV -->
             <div class="bg-white p-6 md:p-8 rounded-lg shadow">
                 <h2 class="text-2xl font-semibold text-gray-900 mb-2">Cargar Archivo CSV del Valor del Dólar</h2>
                 <p class="text-gray-600 mb-6">Selecciona un archivo CSV (ej: Dolar 2022.csv), ingresa el año correspondiente y presiona "Cargar". Repite el proceso para cada archivo.</p>
@@ -42,6 +43,36 @@
                     </button>
                 </form>
                 <div id="upload-status" class="mt-6 p-4 rounded-md hidden"></div>
+            </div>
+
+            <!-- Sección Reparación desde API -->
+            <div class="bg-white p-6 md:p-8 rounded-lg shadow border-l-4 border-amber-400">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-1">Reparar Valores desde API</h2>
+                <p class="text-gray-600 mb-6 text-sm">Consulta la API externa para cada fecha del rango y sobreescribe los valores almacenados. Úsalo para corregir el bug que dejó pegado un valor antiguo (ej: 913). <strong>No afecta reservas ya cobradas.</strong></p>
+                <div class="flex flex-col sm:flex-row gap-4 items-end">
+                    <div>
+                        <label for="repair-from" class="block text-sm font-medium text-gray-700">Desde</label>
+                        <input type="date" id="repair-from" class="mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500"/>
+                    </div>
+                    <div>
+                        <label for="repair-to" class="block text-sm font-medium text-gray-700">Hasta (opcional, por defecto hoy)</label>
+                        <input type="date" id="repair-to" class="mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:ring-amber-500 focus:border-amber-500"/>
+                    </div>
+                    <button id="repair-btn" class="inline-flex items-center px-6 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        Reparar
+                    </button>
+                </div>
+                <!-- Barra de estado -->
+                <div id="repair-status" class="mt-6 hidden">
+                    <div id="repair-progress" class="text-sm text-gray-600 mb-3 hidden">
+                        <div class="flex items-center gap-2 mb-2">
+                            <svg class="animate-spin h-4 w-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                            <span id="repair-progress-text">Procesando...</span>
+                        </div>
+                        <p class="text-xs text-gray-400">Esto puede tardar varios segundos dependiendo del rango de fechas. No cierres la página.</p>
+                    </div>
+                    <div id="repair-result" class="hidden"></div>
+                </div>
             </div>
         </main>
     </div>
@@ -74,6 +105,80 @@
                 uploadStatus.className = `mt-6 p-4 rounded-md text-sm ${isError ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`;
                 uploadStatus.classList.remove('hidden');
             }
+
+            // --- Reparación desde API ---
+            const repairBtn = document.getElementById('repair-btn');
+            const repairFrom = document.getElementById('repair-from');
+            const repairTo = document.getElementById('repair-to');
+            const repairStatus = document.getElementById('repair-status');
+            const repairProgress = document.getElementById('repair-progress');
+            const repairProgressText = document.getElementById('repair-progress-text');
+            const repairResult = document.getElementById('repair-result');
+
+            // Default: desde hace 18 meses
+            const defaultFrom = new Date();
+            defaultFrom.setMonth(defaultFrom.getMonth() - 18);
+            repairFrom.value = defaultFrom.toISOString().split('T')[0];
+            repairTo.value = new Date().toISOString().split('T')[0];
+
+            let lastFailedDates = [];
+
+            async function runRepair(fromDate, toDate) {
+                repairBtn.disabled = true;
+                repairStatus.classList.remove('hidden');
+                repairProgress.classList.remove('hidden');
+                repairResult.classList.add('hidden');
+                const days = Math.round((new Date(toDate) - new Date(fromDate)) / 86400000) + 1;
+                repairProgressText.textContent = `Procesando ${days} fechas desde ${fromDate} hasta ${toDate}...`;
+
+                try {
+                    const result = await fetchAPI('/api/dolar/repair', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ fromDate, toDate }),
+                    });
+                    lastFailedDates = result.failed || [];
+                    const hasFailed = lastFailedDates.length > 0;
+                    repairProgress.classList.add('hidden');
+                    repairResult.classList.remove('hidden');
+                    repairResult.innerHTML = `
+                        <div class="p-4 rounded-md ${hasFailed ? 'bg-yellow-50 border border-yellow-200' : 'bg-green-50 border border-green-200'}">
+                            <p class="font-semibold ${hasFailed ? 'text-yellow-800' : 'text-green-800'} mb-1">${result.message}</p>
+                            ${result.fixed?.length > 0 ? `<p class="text-xs text-green-700 mb-1">✓ Último valor corregido: ${result.fixed[result.fixed.length - 1].date} → $${Math.round(result.fixed[result.fixed.length - 1].valor).toLocaleString('es-CL')}</p>` : ''}
+                            ${hasFailed ? `
+                                <p class="text-xs text-yellow-700 mb-2">Fechas que fallaron: ${lastFailedDates.slice(0, 5).join(', ')}${lastFailedDates.length > 5 ? ` y ${lastFailedDates.length - 5} más...` : ''}</p>
+                                <button id="retry-btn" class="text-xs px-4 py-1.5 bg-yellow-500 text-white rounded-md hover:bg-yellow-600">
+                                    Reintentar ${lastFailedDates.length} fechas fallidas
+                                </button>
+                            ` : '<p class="text-xs text-green-700">Todos los valores fueron actualizados correctamente. La página de gestión recalculará las reservas pendientes automáticamente.</p>'}
+                        </div>
+                    `;
+                    if (hasFailed) {
+                        document.getElementById('retry-btn')?.addEventListener('click', async () => {
+                            // Reintentar solo las fechas fallidas (una por una en lotes)
+                            if (lastFailedDates.length === 0) return;
+                            await runRepair(lastFailedDates[0], lastFailedDates[lastFailedDates.length - 1]);
+                        });
+                    }
+                } catch (error) {
+                    repairProgress.classList.add('hidden');
+                    repairResult.classList.remove('hidden');
+                    repairResult.innerHTML = `<div class="p-4 rounded-md bg-red-50 border border-red-200"><p class="font-semibold text-red-800">Error: ${error.message}</p><p class="text-xs text-red-600 mt-1">Puedes intentarlo nuevamente con un rango más pequeño.</p></div>`;
+                } finally {
+                    repairBtn.disabled = false;
+                }
+            }
+
+            repairBtn.addEventListener('click', async () => {
+                const fromDate = repairFrom.value;
+                const toDate = repairTo.value || new Date().toISOString().split('T')[0];
+                if (!fromDate) {
+                    alert('Ingresa una fecha de inicio.');
+                    return;
+                }
+                await runRepair(fromDate, toDate);
+            });
+            // --- Fin Reparación ---
 
             uploadForm.addEventListener('submit', async (e) => {
                 e.preventDefault();

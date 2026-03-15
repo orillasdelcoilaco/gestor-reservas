@@ -1,10 +1,13 @@
 const admin = require('firebase-admin');
 
 async function getAvailabilityData(db, startDate, endDate) {
-    const [cabanasSnapshot, tarifasSnapshot, reservasSnapshot] = await Promise.all([
+    const [cabanasSnapshot, tarifasSnapshot, reservasSnapshot, bloqueosSnapshot] = await Promise.all([
         db.collection('cabanas').get(),
         db.collection('tarifas').get(),
-        db.collection('reservas').where('fechaLlegada', '<', admin.firestore.Timestamp.fromDate(endDate)).get()
+        db.collection('reservas').where('fechaLlegada', '<', admin.firestore.Timestamp.fromDate(endDate)).get(),
+        db.collection('bloqueoCabanas')
+            .where('fechaFin', '>=', admin.firestore.Timestamp.fromDate(startDate))
+            .get()
     ]);
 
     const allCabanas = cabanasSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -23,6 +26,23 @@ async function getAvailabilityData(db, startDate, endDate) {
         const reserva = doc.data();
         if (reserva.fechaSalida.toDate() > startDate && reserva.estado === 'Confirmada') {
             overlappingReservations.push(reserva);
+        }
+    });
+
+    // Agregar bloqueos como reservas virtuales para que findSegmentedCombination
+    // los trate igual que una cabaña ocupada (día a día).
+    bloqueosSnapshot.forEach(doc => {
+        const b = doc.data();
+        const bloqInicio = b.fechaInicio.toDate();
+        const bloqFin = b.fechaFin.toDate();
+        if (bloqFin > startDate && bloqInicio < endDate) {
+            overlappingReservations.push({
+                alojamiento: b.cabana,
+                fechaLlegada: b.fechaInicio, // Firestore Timestamp — tiene .toDate()
+                fechaSalida: b.fechaFin,     // Firestore Timestamp — tiene .toDate()
+                estado: 'Bloqueada',
+                isBloqueo: true,
+            });
         }
     });
 

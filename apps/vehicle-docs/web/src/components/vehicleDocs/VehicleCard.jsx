@@ -74,23 +74,23 @@ const VehicleCard = ({ vehicle, onContinue, onDelete, onClick }) => {
                 </div>
             </div>
 
-            <div className="flex-1 p-8 flex flex-col justify-between">
+            <div className="flex-1 p-4 md:p-8 flex flex-col justify-between">
                 <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="bg-indigo-600 text-white px-4 py-1.5 rounded-2xl font-black text-2xl uppercase shadow-lg shadow-indigo-100">
+                    <div className="flex items-center justify-between mb-1.5">
+                        <div className="bg-indigo-600 text-white px-3 py-1 md:px-4 md:py-1.5 rounded-2xl font-black text-xl md:text-2xl uppercase shadow-lg shadow-indigo-100">
                             {vehicle.patente}
                         </div>
                         <div className="flex items-center text-indigo-500 font-bold text-xs uppercase tracking-widest">
-                            Ver reporte <ChevronRight className="w-4 h-4 ml-1" />
+                            Ver <ChevronRight className="w-4 h-4 ml-0.5" />
                         </div>
                     </div>
-                    <h3 className="text-xl font-black text-gray-900 leading-tight uppercase tracking-tight mb-1">
+                    <h3 className="text-base md:text-xl font-black text-gray-900 leading-tight uppercase tracking-tight mb-0.5">
                         {vehicle.marca} <span className="text-gray-400 font-bold">{vehicle.modelo}</span>
                     </h3>
                     <p className="text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">{vehicle.vin || 'VIN Pendiente'}</p>
                 </div>
 
-                <div className="mt-8">
+                <div className="mt-4 md:mt-8">
                     <div className="flex gap-2">
                         {docTypes.map(dt => {
                             const { status, expiryLabel } = getDocInfo(dt.id)

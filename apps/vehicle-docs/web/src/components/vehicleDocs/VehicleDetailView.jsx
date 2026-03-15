@@ -99,17 +99,17 @@ const handleDocUpload = async (files, data) => {
     if (error || !vehicle) return <div className="p-20 text-center text-red-500 font-bold">{error || 'Vehículo no encontrado'}</div>
 
     return (
-        <div className="max-w-5xl mx-auto pb-20 px-4">
+        <div className="max-w-5xl mx-auto pb-16 px-3 md:px-4">
             {/* Header / Navigation */}
-            <div className="flex items-center justify-between mb-8 pt-6">
+            <div className="flex items-center justify-between mb-5 pt-4 md:mb-8 md:pt-6">
                 <button onClick={onBack} className="flex items-center text-gray-500 hover:text-indigo-600 font-black uppercase tracking-widest text-xs transition-all">
                     <ChevronRight className="w-4 h-4 mr-1 rotate-180" /> Volver al dashboard
                 </button>
             </div>
 
             {/* Vehículo Hero Section */}
-            <div className="bg-white rounded-[40px] shadow-2xl border border-gray-100 overflow-hidden mb-10 flex flex-col md:flex-row">
-                <div className="w-full md:w-[400px] h-[300px] md:h-auto bg-gray-100 relative group overflow-hidden">
+            <div className="bg-white rounded-3xl md:rounded-[40px] shadow-xl md:shadow-2xl border border-gray-100 overflow-hidden mb-6 md:mb-10 flex flex-col md:flex-row">
+                <div className="w-full md:w-[400px] h-[200px] md:h-auto bg-gray-100 relative group overflow-hidden">
                     {(vehicle.photoUrl || vehicle.photoURL) ? (
                         <img src={vehicle.photoUrl || vehicle.photoURL} alt={vehicle.patente} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                     ) : (
@@ -125,10 +125,10 @@ const handleDocUpload = async (files, data) => {
                     </div>
                 </div>
 
-                <div className="flex-1 p-10 flex flex-col justify-between">
+                <div className="flex-1 p-5 md:p-10 flex flex-col justify-between">
                     <div>
-                        <div className="flex items-center gap-3 mb-4">
-                            <span className="bg-indigo-600 text-white px-4 py-1.5 rounded-2xl font-black text-2xl shadow-lg shadow-indigo-100 uppercase">
+                        <div className="flex flex-wrap items-center gap-2 mb-3">
+                            <span className="bg-indigo-600 text-white px-3 py-1 md:px-4 md:py-1.5 rounded-2xl font-black text-xl md:text-2xl shadow-lg shadow-indigo-100 uppercase">
                                 {vehicle.patente}
                             </span>
                             <div className="px-3 py-1 bg-gray-100 rounded-lg text-[10px] font-black text-gray-400 uppercase tracking-widest">
@@ -136,30 +136,30 @@ const handleDocUpload = async (files, data) => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-8 mt-10">
+                        <div className="grid grid-cols-2 gap-3 md:gap-8 mt-4 md:mt-10">
                             <div>
-                                <span className="block text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1.5">Número de Chasis / VIN</span>
-                                <span className="text-xl font-bold text-gray-800 tracking-tight">{vehicle.vin || '—'}</span>
+                                <span className="block text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Chasis / VIN</span>
+                                <span className="text-sm md:text-xl font-bold text-gray-800 tracking-tight break-all">{vehicle.vin || '—'}</span>
                             </div>
                             <div>
-                                <span className="block text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1.5">Color</span>
-                                <span className="text-xl font-bold text-gray-800 tracking-tight">{vehicle.color || '—'}</span>
+                                <span className="block text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">Color</span>
+                                <span className="text-sm md:text-xl font-bold text-gray-800 tracking-tight">{vehicle.color || '—'}</span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex gap-4 mt-12 pt-8 border-t border-gray-50">
+                    <div className="flex gap-3 mt-6 pt-5 border-t border-gray-50 md:mt-12 md:pt-8 md:gap-4">
                         <button
                             onClick={() => onContinue(vehicle)}
-                            className="flex-1 bg-gray-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all shadow-xl shadow-gray-200"
+                            className="flex-1 bg-gray-900 text-white py-3 md:py-4 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-black transition-all shadow-xl shadow-gray-200"
                         >
                             Actualizar Documentos
                         </button>
                         <button
                             onClick={() => setShowDeleteConfirm(true)}
-                            className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                            className="w-12 h-12 md:w-14 md:h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shrink-0"
                         >
-                            <Trash2 className="w-6 h-6" />
+                            <Trash2 className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
                     </div>
                 </div>
@@ -190,16 +190,16 @@ const handleDocUpload = async (files, data) => {
             {uploadingDocType && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 overflow-y-auto">
                     <div className="bg-white rounded-[32px] w-full max-w-2xl shadow-2xl my-4">
-                        <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-gray-100">
+                        <div className="flex items-center justify-between px-5 pt-5 pb-3 md:px-8 md:pt-8 md:pb-4 border-b border-gray-100">
                             <div>
-                                <h3 className="text-xl font-black text-gray-900">{DOC_UPLOAD_META[uploadingDocType]?.title}</h3>
-                                <p className="text-xs text-gray-400 mt-1">{vehicle.patente} · {vehicle.marca} {vehicle.modelo}</p>
+                                <h3 className="text-base md:text-xl font-black text-gray-900">{DOC_UPLOAD_META[uploadingDocType]?.title}</h3>
+                                <p className="text-xs text-gray-400 mt-0.5">{vehicle.patente} · {vehicle.marca} {vehicle.modelo}</p>
                             </div>
-                            <button onClick={() => setUploadingDocType(null)} className="text-gray-300 hover:text-gray-600 transition-colors">
+                            <button onClick={() => setUploadingDocType(null)} className="text-gray-300 hover:text-gray-600 transition-colors ml-3">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
-                        <div className="p-8">
+                        <div className="p-4 md:p-8">
                             {uploadingDocType === 'PADRON' ? (
                                 <PadronDualUpload
                                     onVerified={handleDocUpload}

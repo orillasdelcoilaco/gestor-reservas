@@ -64,28 +64,30 @@ const Dashboard = ({ userProfile }) => {
     }
 
     return (
-        <div className="p-6 max-w-6xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
+        <div className="p-4 md:p-6 max-w-6xl mx-auto">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6 md:mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Mis Vehículos</h1>
-                    <p className="text-gray-500 mt-1">Gestiona la documentación de tu flota.</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Mis Vehículos</h1>
+                    <p className="text-gray-500 mt-0.5 text-sm">Gestiona la documentación de tu flota.</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     {userProfile?.isAdmin && (
                         <button
                             onClick={() => setViewMode('ADMIN')}
-                            className="flex items-center px-4 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm transition-all"
+                            className="flex items-center px-3 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm transition-all text-sm"
                         >
-                            <Settings className="w-4 h-4 mr-2 text-gray-500" />
-                            Administrar Flotas
+                            <Settings className="w-4 h-4 mr-1.5 text-gray-500" />
+                            <span className="hidden sm:inline">Administrar Flotas</span>
+                            <span className="sm:hidden">Flotas</span>
                         </button>
                     )}
                     <button
                         onClick={() => startWizard(null)}
-                        className="flex items-center px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition-all"
+                        className="flex items-center px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition-all text-sm"
                     >
-                        <Plus className="w-5 h-5 mr-2" />
-                        Nuevo Vehículo (Asistente IA)
+                        <Plus className="w-4 h-4 mr-1.5" />
+                        <span className="hidden sm:inline">Nuevo Vehículo (Asistente IA)</span>
+                        <span className="sm:hidden">Nuevo Vehículo</span>
                     </button>
                 </div>
             </div>

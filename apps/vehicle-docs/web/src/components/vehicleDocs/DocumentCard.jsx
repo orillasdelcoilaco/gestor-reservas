@@ -125,9 +125,25 @@ const DocumentCard = ({ type, doc, vehicleId, onUpload, onDeleted }) => {
     return (
         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
 
-            {/* Franja de imagen(s) arriba — igual para todos los tipos */}
+            {/* 1. Título y estado — siempre primero */}
+            <div className="px-4 pt-4 pb-2 md:px-6 md:pt-5 flex items-center gap-2 flex-wrap">
+                <h4 className="text-base md:text-xl font-black text-gray-900">{DOC_TITLES[type] || type}</h4>
+                {doc && status && (
+                    <div className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${STATUS_STYLES[status]}`}>
+                        {STATUS_LABELS[status]}
+                    </div>
+                )}
+                {processingVersion && processingVersion !== 'V1' && (
+                    <div className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-600 flex items-center gap-1">
+                        <Cpu className="w-2.5 h-2.5" />
+                        {processingVersion}
+                    </div>
+                )}
+            </div>
+
+            {/* 2. Franja de imagen(s) — debajo del título */}
             {doc && (frontSrc || backSrc) && (
-                <div className="w-full bg-gray-50 border-b border-gray-100 flex divide-x divide-gray-100 overflow-hidden" style={{ height: '140px' }}>
+                <div className="w-full bg-gray-50 border-y border-gray-100 flex divide-x divide-gray-100 overflow-hidden" style={{ height: '140px' }}>
                     {[
                         { src: frontSrc, label: type === 'PADRON' ? 'Frente' : null },
                         ...(type === 'PADRON' ? [{ src: backSrc, label: 'Reverso' }] : [])
@@ -160,31 +176,16 @@ const DocumentCard = ({ type, doc, vehicleId, onUpload, onDeleted }) => {
                 </div>
             )}
 
-            <div className="flex flex-col md:flex-row min-h-[180px]">
-                {/* Sin panel lateral de imagen — todas van arriba */}
+            {/* 3. Datos y acciones */}
+            <div className="flex flex-col md:flex-row">
 
                 {/* Datos principales */}
-                <div className="flex-1 p-6 flex flex-col md:flex-row gap-6">
+                <div className="flex-1 p-4 md:p-6 flex flex-col md:flex-row gap-4 md:gap-6">
                     <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <h4 className="text-xl font-black text-gray-900">{DOC_TITLES[type] || type}</h4>
-                            {doc && status && (
-                                <div className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${STATUS_STYLES[status]}`}>
-                                    {STATUS_LABELS[status]}
-                                </div>
-                            )}
-                            {processingVersion && processingVersion !== 'V1' && (
-                                <div className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-600 flex items-center gap-1">
-                                    <Cpu className="w-2.5 h-2.5" />
-                                    {processingVersion}
-                                </div>
-                            )}
-                        </div>
-
-                        {!doc ? (
+                            {!doc ? (
                             <p className="text-gray-400 text-sm font-medium">No se ha cargado este documento.</p>
                         ) : (
-                            <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-4">
+                            <div className="grid grid-cols-2 gap-x-3 gap-y-2 md:gap-x-6 md:gap-y-3 mt-3">
                                 {fields.map(field => {
                                     const val = getField(field)
                                     if (!val) return null
@@ -206,7 +207,7 @@ const DocumentCard = ({ type, doc, vehicleId, onUpload, onDeleted }) => {
 
                     {/* QR */}
                     {(doc?.images?.qr || doc?.qrUrl) && (
-                        <div className="w-full md:w-44 flex flex-col items-center justify-center bg-white rounded-2xl p-3 border border-indigo-100 shadow-sm">
+                        <div className="w-28 self-start md:w-44 flex flex-col items-center justify-center bg-white rounded-2xl p-3 border border-indigo-100 shadow-sm">
                             <div
                                 className="w-full aspect-square bg-white rounded-xl overflow-hidden border border-gray-100 flex items-center justify-center mb-2 cursor-pointer group relative"
                                 onClick={() => setShowFull(doc.images?.qr || doc.qrUrl)}
@@ -221,8 +222,8 @@ const DocumentCard = ({ type, doc, vehicleId, onUpload, onDeleted }) => {
                     )}
                 </div>
 
-                {/* Acciones laterales */}
-                <div className="bg-gray-50/50 p-4 flex md:flex-col gap-2 border-l border-gray-100 min-w-[120px]">
+                {/* Acciones — fila horizontal en mobile, columna vertical en desktop */}
+                <div className="bg-gray-50/50 px-4 py-3 md:p-4 flex md:flex-col gap-1 md:gap-2 border-t md:border-t-0 md:border-l border-gray-100 md:min-w-[110px] justify-around md:justify-start">
                     <button
                         onClick={loadHistory}
                         disabled={loadingHistory}
@@ -271,7 +272,7 @@ const DocumentCard = ({ type, doc, vehicleId, onUpload, onDeleted }) => {
                         {showAiComparison ? <ChevronUp className="w-3.5 h-3.5 ml-auto" /> : <ChevronDown className="w-3.5 h-3.5 ml-auto" />}
                     </button>
                     {showAiComparison && (
-                        <div className="px-6 pb-4 grid grid-cols-2 gap-4">
+                        <div className="px-4 pb-4 md:px-6 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                             <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Extraído por IA</p>
                                 <pre className="text-[10px] text-gray-600 bg-gray-50 rounded-xl p-3 overflow-auto max-h-48">
@@ -291,7 +292,7 @@ const DocumentCard = ({ type, doc, vehicleId, onUpload, onDeleted }) => {
 
             {/* Historial (colapsable) */}
             {showHistory && (
-                <div className="border-t border-gray-100 px-6 py-4">
+                <div className="border-t border-gray-100 px-4 py-4 md:px-6">
                     <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3">Historial de documentos</p>
                     {history.length === 0 ? (
                         <p className="text-sm text-gray-400">Sin historial anterior.</p>

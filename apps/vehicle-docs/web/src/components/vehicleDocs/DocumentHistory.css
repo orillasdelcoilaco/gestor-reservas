@@ -1,0 +1,205 @@
+.history-modal {
+    background: white;
+    border-radius: 12px;
+    max-width: 700px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+    background: white;
+    z-index: 10;
+}
+
+.history-header h2 {
+    margin: 0;
+}
+
+.history-content {
+    padding: 20px;
+}
+
+.loading-state,
+.error-state,
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 16px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.error-state button {
+    margin-top: 12px;
+    padding: 8px 20px;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.timeline {
+    position: relative;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 30px;
+    bottom: 30px;
+    width: 2px;
+    background: #e0e0e0;
+}
+
+.timeline-item {
+    display: flex;
+    margin-bottom: 24px;
+    position: relative;
+}
+
+.timeline-marker {
+    width: 30px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    padding-top: 16px;
+}
+
+.marker-current {
+    width: 12px;
+    height: 12px;
+    background: #28a745;
+    border-radius: 50%;
+    box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.2);
+    margin-left: 9px;
+}
+
+.marker-past {
+    width: 12px;
+    height: 12px;
+    background: white;
+    border: 2px solid #007bff;
+    border-radius: 50%;
+    margin-left: 9px;
+}
+
+.timeline-card {
+    flex: 1;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 16px;
+    margin-left: 12px;
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-current {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-expired {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-archived {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+.capture-date {
+    font-size: 12px;
+    color: #666;
+}
+
+.card-body {
+    margin-bottom: 12px;
+}
+
+.info-row {
+    display: flex;
+    margin-bottom: 8px;
+}
+
+.info-row .label {
+    font-weight: 600;
+    color: #555;
+    min-width: 100px;
+}
+
+.info-row .value {
+    color: #333;
+}
+
+.info-row.notes {
+    flex-direction: column;
+}
+
+.info-row.notes .value {
+    margin-top: 4px;
+    font-style: italic;
+    color: #666;
+}
+
+.card-footer {
+    display: flex;
+    gap: 8px;
+}
+
+.view-doc-btn,
+.view-qr-btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    display: inline-block;
+}
+
+.view-doc-btn {
+    background: #007bff;
+    color: white;
+}
+
+.view-qr-btn {
+    background: #e9ecef;
+    color: #333;
+}

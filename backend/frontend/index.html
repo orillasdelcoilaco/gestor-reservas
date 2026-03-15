@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Reservas - Iniciar Sesión</title>
-    
+
     <script>
         if (window.location.hostname.startsWith('www.')) {
             window.location.href = window.location.href.replace('www.', '');
@@ -12,19 +13,23 @@
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
+
 <body class="bg-gray-100 flex items-center justify-center h-screen">
     <div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-sm">
         <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Iniciar Sesión</h2>
         <form id="login-form" class="space-y-4">
             <div>
                 <label for="login-email" class="block text-sm font-medium text-gray-700">Email</label>
-                <input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <input type="email" id="login-email" name="login-email" required
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
             </div>
             <div>
                 <label for="login-password" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                <input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <input type="password" id="login-password" name="login-password" required
+                    class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
             </div>
-            <button type="submit" id="login-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
+            <button type="submit" id="login-btn"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700">
                 Acceder
             </button>
         </form>
@@ -32,52 +37,80 @@
     </div>
 
     <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
-        authDomain: "reservas-sodc.firebaseapp.com",
-        projectId: "reservas-sodc",
-        storageBucket: "reservas-sodc.firebasestorage.app",
-        messagingSenderId: "177883383809",
-        appId: "1:177883383809:web:329694a3dc2df074f7d800"
-    };
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_9_hrjyOLnBIARguITiY80Eg1riKjdCE",
+            authDomain: "reservas-sodc.firebaseapp.com",
+            projectId: "reservas-sodc",
+            storageBucket: "reservas-sodc.firebasestorage.app",
+            messagingSenderId: "177883383809",
+            appId: "1:177883383809:web:329694a3dc2df074f7d800"
+        };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
 
-    const loginForm = document.getElementById('login-form');
-    const loginError = document.getElementById('login-error');
-    const loginBtn = document.getElementById('login-btn');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const loginBtn = document.getElementById('login-btn');
 
-    localStorage.removeItem('firebaseIdToken');
-    sessionStorage.removeItem('userEmail');
+        localStorage.removeItem('firebaseIdToken');
+        sessionStorage.removeItem('userEmail');
 
-    loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        loginError.classList.add('hidden');
-        loginBtn.disabled = true;
-        loginBtn.textContent = 'Verificando...';
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            loginError.classList.add('hidden');
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Verificando...';
 
-        const email = loginForm['login-email'].value;
-        const password = loginForm['login-password'].value;
+            const email = loginForm['login-email'].value;
+            const password = loginForm['login-password'].value;
 
-        try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const idToken = await userCredential.user.getIdToken();
-            localStorage.setItem('firebaseIdToken', idToken);
-            sessionStorage.setItem('userEmail', userCredential.user.email);
-            window.location.href = 'dashboard.html';
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const idToken = await userCredential.user.getIdToken();
 
-        } catch (error) {
-            console.error("Falló el inicio de sesión:", error);
-            loginError.textContent = 'Credenciales incorrectas.';
-            loginError.classList.remove('hidden');
-            loginBtn.disabled = false;
-            loginBtn.textContent = 'Acceder';
-        }
-    });
-</script>
+                // 1. Guardar token para compatibilidad
+                localStorage.setItem('firebaseIdToken', idToken);
+                sessionStorage.setItem('userEmail', userCredential.user.email);
+
+                // 2. Consultar Router de Acceso Backend
+                const response = await fetch('/api/me', {
+                    headers: { 'Authorization': `Bearer ${idToken}` }
+                });
+
+                if (response.status === 403) {
+                    throw new Error('No tiene permisos para acceder al sistema.');
+                }
+
+                if (!response.ok) {
+                    throw new Error('Error de conexión con el servidor.');
+                }
+
+                const userData = await response.json();
+                const defaultApp = userData.defaultApp;
+
+                // 3. Redirigir según permisos
+                if (defaultApp === 'vehicle_docs') {
+                    window.location.href = '/vehiculos/app';
+                } else if (defaultApp === 'gestor_reservas') {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    // Fallback seguro
+                    window.location.href = 'dashboard.html';
+                }
+
+            } catch (error) {
+                console.error("Falló el inicio de sesión:", error);
+                loginError.textContent = error.message.includes('auth/') ? 'Credenciales incorrectas.' : error.message;
+                loginError.classList.remove('hidden');
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Acceder';
+            }
+        });
+    </script>
 </body>
+
 </html>

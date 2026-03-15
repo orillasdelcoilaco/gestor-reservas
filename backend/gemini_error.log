@@ -1,0 +1,159 @@
+Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async Object.generateText (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\geminiService.js:20:24)
+    at async test (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\test-gemini.js:8:26)
+[2026-01-31T01:27:37.255Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:104:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:183:31
+
+[2026-02-03T19:44:37.962Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent: [404 Not Found] models/gemini-2.0-flash-exp is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent: [404 Not Found] models/gemini-2.0-flash-exp is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:112:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:129:31
+
+[2026-02-03T19:46:16.203Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:112:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:129:31
+
+[2026-02-03T21:47:57.481Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:112:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:199:31
+
+[2026-02-03T21:49:49.051Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:112:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:199:31
+
+[2026-03-14T20:38:09.328Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:112:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:576:31
+
+[2026-03-14T20:40:00.779Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:112:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:576:31
+
+[2026-03-14T20:40:31.300Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:112:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:576:31
+
+[2026-03-14T23:12:36.578Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 16.167290818s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"16s"}]
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 16.167290818s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"16s"}]
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:112:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:234:31
+
+[2026-03-14T23:13:20.266Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 32.632628924s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"32s"}]
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 32.632628924s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"32s"}]
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:112:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:234:31
+
+[2026-03-14T23:33:33.947Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 18.809097015s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"18s"}]
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 18.809097015s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"18s"}]
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:163:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:261:31
+
+[2026-03-14T23:34:24.764Z] Gemini API Error:
+Msg: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 27.966905744s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"27s"}]
+Stack: Error: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent: [429 Too Many Requests] You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. 
+* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-2.5-flash
+Please retry in 27.966905744s. [{"@type":"type.googleapis.com/google.rpc.Help","links":[{"description":"Learn more about Gemini API quotas","url":"https://ai.google.dev/gemini-api/docs/rate-limits"}]},{"@type":"type.googleapis.com/google.rpc.QuotaFailure","violations":[{"quotaMetric":"generativelanguage.googleapis.com/generate_content_free_tier_requests","quotaId":"GenerateRequestsPerDayPerProjectPerModel-FreeTier","quotaDimensions":{"location":"global","model":"gemini-2.5-flash"},"quotaValue":"20"}]},{"@type":"type.googleapis.com/google.rpc.RetryInfo","retryDelay":"27s"}]
+    at handleResponseNotOk (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:434:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async makeRequest (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:403:9)
+    at async generateContent (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\node_modules\@google\generative-ai\dist\index.js:867:22)
+    at async extractVehicleDocumentData (D:\pmeza\Desarrollos Render\Gestor de reservas\backend\services\vehicleDocs\aiService.js:163:24)
+    at async D:\pmeza\Desarrollos Render\Gestor de reservas\backend\routes\vehicleDocs.js:261:31
+
+[2026-03-14T23:37:29.929Z] [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent: [404 Not Found] models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+
+[2026-03-14T23:44:54.697Z] [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent: [404 Not Found] models/gemini-1.5-flash-8b is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+
+[2026-03-15T00:11:54.166Z] [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent: [404 Not Found] models/gemini-1.5-flash-8b is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+
+[2026-03-15T00:56:55.780Z] [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent: [404 Not Found] models/gemini-1.5-flash-8b is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+
+[2026-03-15T01:04:55.216Z] [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent: [404 Not Found] models/gemini-1.5-flash-8b is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+
+[2026-03-15T01:14:55.463Z] [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent: [404 Not Found] models/gemini-1.5-flash-8b is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+
+[2026-03-15T01:32:36.991Z] [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent: [404 Not Found] models/gemini-1.5-flash-8b is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.
+
+[2026-03-15T01:35:54.975Z] [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent: [404 Not Found] models/gemini-1.5-flash-8b is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.

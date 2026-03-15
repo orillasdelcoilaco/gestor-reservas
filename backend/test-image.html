@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Test Procesamiento con Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 2px dashed #dee2e6;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        input[type="file"]:hover {
+            border-color: #667eea;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            background: white;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin: 5px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .editor-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .editor-canvas-wrapper {
+            background: #fff;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            max-height: 600px;
+            overflow: auto;
+        }
+
+        #editorCanvas {
+            max-width: 100%;
+            cursor: crosshair;
+            border: 1px solid #ccc;
+        }
+
+        .editor-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-success {
+            background: #28a745;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .help-text {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #0066cc;
+        }
+
+        .help-text p {
+            margin-bottom: 5px;
+            color: #004080;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            background: #fff3cd;
+            border-radius: 12px;
+            margin-bottom: 30px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .result {
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result-header {
+            background: #d4edda;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border-left: 4px solid #28a745;
+        }
+
+        .result-header h2 {
+            color: #155724;
+            margin-bottom: 10px;
+        }
+
+        .result-header pre {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 0.9em;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .image-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-card h3 {
+            margin-bottom: 15px;
+            color: #495057;
+        }
+
+        .image-card img {
+            width: 100%;
+            height: auto;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .image-card img:hover {
+            transform: scale(1.02);
+        }
+
+        .qr-section {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+        }
+
+        .qr-section.no-qr {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .qr-content {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🖼️ Test de Procesamiento con Editor</h1>
+            <p>Rota y recorta → OpenCV mejora y limpia</p>
+        </header>
+
+        <div class="content">
+            <!-- STEP 1: Upload -->
+            <div id="step1" class="step active">
+                <div class="upload-section">
+                    <div class="form-group">
+                        <label for="fileInput">📁 Selecciona imagen del documento:</label>
+                        <input type="file" id="fileInput" accept="image/*">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="docType">📄 Tipo de documento:</label>
+                        <select id="docType">
+                            <option value="PERMISO_CIRCULACION">Permiso de Circulación (triplicado)</option>
+                            <option value="REVISION_TECNICA">Revisión Técnica (triplicado)</option>
+                            <option value="SOAP">SOAP (triplicado)</option>
+                            <option value="PADRON">Padrón</option>
+                        </select>
+                    </div>
+
+                    <button onclick="loadImageToEditor()">📝 Editar Imagen</button>
+                </div>
+            </div>
+
+            <!-- STEP 2: Editor -->
+            <div id="step2" class="step">
+                <div class="editor-section">
+                    <div class="help-text">
+                        <p>✅ <strong>Rotar:</strong> Usa los botones para rotar la imagen</p>
+                        <p>✅ <strong>Recortar:</strong> Arrastra el mouse sobre la imagen para seleccionar área</p>
+                        <p>⚠️ El sistema OpenCV detectará bordes y enderezará automáticamente</p>
+                    </div>
+
+                    <div class="editor-canvas-wrapper">
+                        <canvas id="editorCanvas"></canvas>
+                    </div>
+
+                    <div class="editor-controls">
+                        <button class="btn-secondary" onclick="editor.rotate(90)">⟲ Rotar 90°</button>
+                        <button class="btn-secondary" onclick="editor.rotate(180)">⟲ Rotar 180°</button>
+                        <button class="btn-secondary" onclick="editor.rotate(270)">⟳ Rotar 270°</button>
+                        <button class="btn-secondary" onclick="editor.applyCrop()">✂️ Aplicar Recorte</button>
+                        <button class="btn-danger" onclick="editor.reset()">↺ Reset</button>
+                    </div>
+
+                    <div class="editor-controls">
+                        <button class="btn-secondary" onclick="goToStep(1)">← Volver</button>
+                        <button class="btn-success" onclick="processWithOpenCV()">🚀 Procesar con OpenCV</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2.5: Recorte Manual QR (solo para documentos con QR) -->
+            <div id="step2_5" class="step">
+                <div class="editor-section">
+                    <div class="help-text" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                        <h3>📱 Recorta SOLO el Código QR</h3>
+                        <p>✅ <strong>Importante:</strong> Arrastra un rectángulo que contenga ÚNICAMENTE el código QR
+                        </p>
+                        <p>⚠️ No incluyas texto ni otros elementos, solo el cuadrado del QR</p>
+                    </div>
+
+                    <div class="editor-canvas-wrapper">
+                        <canvas id="qrCropCanvas"></canvas>
+                    </div>
+
+                    <div class="editor-controls">
+                        <button class="btn-secondary" onclick="qrEditor.applyCrop()">✂️ Aplicar Recorte QR</button>
+                        <button class="btn-danger" onclick="qrEditor.reset()">↺ Reset</button>
+                    </div>
+
+                    <div class="editor-controls">
+                        <button class="btn-secondary" onclick="goToStep(2)">← Volver</button>
+                        <button class="btn-success" onclick="processWithManualQR()">🚀 Procesar con QR Manual</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="loading">
+                <p>⏳ Procesando con OpenCV...</p>
+                <p style="font-size: 0.9em; opacity: 0.7;">Detección de bordes → Corrección perspectiva → Threshold → QR
+                </p>
+                <div class="spinner"></div>
+            </div>
+
+            <!-- Results -->
+            <div id="result" class="result">
+                <div class="result-header">
+                    <h2>✅ Procesamiento Completado</h2>
+                    <pre id="metadata"></pre>
+                </div>
+
+                <div class="image-grid">
+                    <div class="image-card">
+                        <h3>📄 Imagen Procesada (Fotocopia)</h3>
+                        <img id="processedImg" alt="Imagen procesada" onclick="window.open(this.src)">
+                    </div>
+
+                    <div class="image-card">
+                        <h3>🔍 Thumbnail</h3>
+                        <img id="thumbnailImg" alt="Thumbnail" onclick="window.open(this.src)">
+                    </div>
+                </div>
+
+                <div id="qrSection"></div>
+
+                <div id="capturedSides"></div>
+
+                <div style="text-align: center; margin-top: 30px;">
+                    <button onclick="confirmAndCaptureAnother()" style="background: #4CAF50; margin-right: 10px;">✅
+                        Confirmar y Capturar Otra Cara</button>
+                    <button onclick="resetAll()">🔄 Nueva Imagen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * Image Editor for Document Processing
+         * Embedded inline to avoid server static file issues
+         */
+        class ImageEditor {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.originalImage = null;
+                this.currentImage = null;
+                this.rotation = 0;
+                this.cropArea = null;
+                this.isCropping = false;
+                this.cropStart = null;
+                this.displayScale = 1; // Track scale factor
+                this.maxWidth = 800; // Max canvas width
+                this.maxHeight = 600; // Max canvas height
+                this.setupEventListeners();
+            }
+
+            setupEventListeners() {
+                if (!this.canvas) return;
+                this.canvas.addEventListener('mousedown', this.startCrop.bind(this));
+                this.canvas.addEventListener('mousemove', this.updateCrop.bind(this));
+                this.canvas.addEventListener('mouseup', this.endCrop.bind(this));
+                this.canvas.addEventListener('mouseleave', this.endCrop.bind(this));
+            }
+
+            loadImage(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            this.originalImage = img;
+                            this.currentImage = img;
+                            this.rotation = 0;
+                            this.cropArea = null;
+                            this.drawImage();
+                            resolve(img);
+                        };
+                        img.onerror = reject;
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            drawImage() {
+                if (!this.currentImage) return;
+                const img = this.currentImage;
+
+                // Calculate display dimensions
+                let width = img.width;
+                let height = img.height;
+
+                // Swap dimensions if rotated 90 or 270
+                if (this.rotation === 90 || this.rotation === 270) {
+                    [width, height] = [height, width];
+                }
+
+                // Scale down if image is too large
+                this.displayScale = 1;
+                if (width > this.maxWidth || height > this.maxHeight) {
+                    const scaleX = this.maxWidth / width;
+                    const scaleY = this.maxHeight / height;
+                    this.displayScale = Math.min(scaleX, scaleY);
+                    width = Math.floor(width * this.displayScale);
+                    height = Math.floor(height * this.displayScale);
+                }
+
+                this.canvas.width = width;
+                this.canvas.height = height;
+
+                this.ctx.clearRect(0, 0, width, height);
+                this.ctx.save();
+
+                // Apply rotation
+                if (this.rotation !== 0) {
+                    const centerX = width / 2;
+                    const centerY = height / 2;
+                    this.ctx.translate(centerX, centerY);
+                    this.ctx.rotate((this.rotation * Math.PI) / 180);
+                    this.ctx.scale(this.displayScale, this.displayScale);
+                    this.ctx.translate(-img.width / 2, -img.height / 2);
+                    this.ctx.drawImage(img, 0, 0);
+                } else {
+                    this.ctx.scale(this.displayScale, this.displayScale);
+                    this.ctx.drawImage(img, 0, 0);
+                }
+
+                this.ctx.restore();
+
+                if (this.cropArea) {
+                    this.drawCropArea();
+                }
+            }
+
+            rotate(degrees) {
+                this.rotation = (this.rotation + degrees) % 360;
+                if (this.rotation < 0) this.rotation += 360;
+                this.cropArea = null;
+                this.drawImage();
+            }
+
+            reset() {
+                this.currentImage = this.originalImage;
+                this.rotation = 0;
+                this.cropArea = null;
+                this.drawImage();
+            }
+
+            startCrop(e) {
+                if (!this.currentImage) return;
+                const rect = this.canvas.getBoundingClientRect();
+                this.isCropping = true;
+                this.cropStart = {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+                this.cropArea = null;
+            }
+
+            updateCrop(e) {
+                if (!this.isCropping || !this.cropStart) return;
+                const rect = this.canvas.getBoundingClientRect();
+                const currentX = e.clientX - rect.left;
+                const currentY = e.clientY - rect.top;
+                this.cropArea = {
+                    x: Math.min(this.cropStart.x, currentX),
+                    y: Math.min(this.cropStart.y, currentY),
+                    width: Math.abs(currentX - this.cropStart.x),
+                    height: Math.abs(currentY - this.cropStart.y)
+                };
+                this.drawImage();
+            }
+
+            endCrop() {
+                this.isCropping = false;
+                this.cropStart = null;
+            }
+
+            drawCropArea() {
+                if (!this.cropArea) return;
+                this.ctx.strokeStyle = '#4CAF50';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.strokeRect(this.cropArea.x, this.cropArea.y, this.cropArea.width, this.cropArea.height);
+                this.ctx.setLineDash([]);
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.cropArea.y);
+                this.ctx.fillRect(0, this.cropArea.y, this.cropArea.x, this.cropArea.height);
+                this.ctx.fillRect(this.cropArea.x + this.cropArea.width, this.cropArea.y,
+                    this.canvas.width - this.cropArea.x - this.cropArea.width, this.cropArea.height);
+                this.ctx.fillRect(0, this.cropArea.y + this.cropArea.height, this.canvas.width,
+                    this.canvas.height - this.cropArea.y - this.cropArea.height);
+            }
+
+            applyCrop() {
+                if (!this.cropArea || !this.currentImage) return;
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.width = this.cropArea.width;
+                tempCanvas.height = this.cropArea.height;
+                tempCtx.drawImage(this.canvas, this.cropArea.x, this.cropArea.y,
+                    this.cropArea.width, this.cropArea.height, 0, 0, this.cropArea.width, this.cropArea.height);
+                const img = new Image();
+                img.onload = () => {
+                    this.currentImage = img;
+                    this.cropArea = null;
+                    this.drawImage();
+                };
+                img.src = tempCanvas.toDataURL('image/jpeg', 0.95);
+            }
+
+            getBlob() {
+                return new Promise((resolve) => {
+                    this.canvas.toBlob((blob) => {
+                        resolve(blob);
+                    }, 'image/jpeg', 0.95);
+                });
+            }
+
+            async getFile(filename = 'edited-image.jpg') {
+                const blob = await this.getBlob();
+                return new File([blob], filename, { type: 'image/jpeg' });
+            }
+
+            /**
+             * Get edited image at FULL RESOLUTION (not scaled down)
+             * This renders the current image with rotation and crop at original size.
+             */
+            async getFullResolutionFile(filename = 'edited-document.jpg') {
+                if (!this.currentImage) {
+                    throw new Error('No image loaded');
+                }
+
+                const img = this.currentImage;
+
+                // 1. Crear canvas de alta resolución para renderizar el estado actual
+                const fullCanvas = document.createElement('canvas');
+                const fullCtx = fullCanvas.getContext('2d');
+
+                if (this.rotation === 90 || this.rotation === 270) {
+                    fullCanvas.width = img.height;
+                    fullCanvas.height = img.width;
+                } else {
+                    fullCanvas.width = img.width;
+                    fullCanvas.height = img.height;
+                }
+
+                fullCtx.save();
+                if (this.rotation !== 0) {
+                    fullCtx.translate(fullCanvas.width / 2, fullCanvas.height / 2);
+                    fullCtx.rotate((this.rotation * Math.PI) / 180);
+                    fullCtx.translate(-img.width / 2, -img.height / 2);
+                }
+                fullCtx.drawImage(img, 0, 0);
+                fullCtx.restore();
+
+                // 2. Si hay un área de recorte manual (usado en el paso del QR)
+                if (this.cropArea) {
+                    const finalCanvas = document.createElement('canvas');
+                    const finalCtx = finalCanvas.getContext('2d');
+
+                    // Escalar área de recorte al tamaño real del canvas actual
+                    const screenWidth = this.canvas.width;
+                    const screenHeight = this.canvas.height;
+                    const scaleX = fullCanvas.width / screenWidth;
+                    const scaleY = fullCanvas.height / screenHeight;
+
+                    const crop = {
+                        x: Math.round(this.cropArea.x * scaleX),
+                        y: Math.round(this.cropArea.y * scaleY),
+                        w: Math.round(this.cropArea.width * scaleX),
+                        h: Math.round(this.cropArea.height * scaleY)
+                    };
+
+                    // Añadir Quiet Zone (margen blanco)
+                    const padding = 50;
+                    finalCanvas.width = crop.w + (padding * 2);
+                    finalCanvas.height = crop.h + (padding * 2);
+
+                    finalCtx.fillStyle = 'white';
+                    finalCtx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+
+                    finalCtx.drawImage(fullCanvas,
+                        crop.x, crop.y, crop.w, crop.h,
+                        padding, padding, crop.w, crop.h
+                    );
+
+                    return new Promise(resolve => {
+                        finalCanvas.toBlob(blob => resolve(new File([blob], filename, { type: 'image/jpeg' })), 'image/jpeg', 0.95);
+                    });
+                }
+
+                // 3. Devolver imagen completa (respetando rotación)
+                return new Promise(resolve => {
+                    fullCanvas.toBlob(blob => resolve(new File([blob], filename, { type: 'image/jpeg' })), 'image/jpeg', 0.95);
+                });
+            }
+
+            clear() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.originalImage = null;
+                this.currentImage = null;
+                this.rotation = 0;
+                this.cropArea = null;
+            }
+        }
+    </script>
+    <script>
+        let editor;
+        let qrEditor; // Segundo editor para recorte manual del QR
+        let selectedFile;
+        let docType;
+
+        // Array para almacenar múltiples capturas (frente/dorso)
+        let capturedSides = [];
+
+        // Documentos que requieren captura manual de QR
+        const DOCS_WITH_QR = ['PADRON'];
+
+        function goToStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+
+            // Soporte para step 2.5
+            if (step === 2.5) {
+                document.getElementById('step2_5').classList.add('active');
+            } else {
+                document.getElementById(`step${step}`).classList.add('active');
+            }
+        }
+
+        async function loadImageToEditor() {
+            const fileInput = document.getElementById('fileInput');
+            selectedFile = fileInput.files[0];
+            docType = document.getElementById('docType').value;
+
+            if (!selectedFile) {
+                alert('⚠️ Selecciona una imagen primero');
+                return;
+            }
+
+            // Initialize editor if not done yet
+            if (!editor) {
+                editor = new ImageEditor('editorCanvas');
+            }
+
+            // Load image
+            await editor.loadImage(selectedFile);
+            goToStep(2);
+        }
+
+        async function processWithOpenCV() {
+            // Si el documento requiere QR manual, ir a Step 2.5
+            if (DOCS_WITH_QR.includes(docType)) {
+                console.log(`📱 Documento ${docType} requiere captura manual de QR`);
+                await prepareQRCropStep();
+                return;
+            }
+
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('result').classList.remove('show');
+
+            try {
+                // Get edited image at FULL RESOLUTION (not scaled display version)
+                const editedFile = await editor.getFullResolutionFile('edited-document.jpg');
+
+                console.log('Sending edited image:', editedFile.name, editedFile.size, 'bytes');
+
+                // Create FormData
+                const formData = new FormData();
+                formData.append('document', editedFile);
+                formData.append('documentType', docType);
+
+                const startTime = Date.now();
+
+                // Send to OpenCV endpoint
+                const response = await fetch('http://localhost:4001/api/vehicle-docs/test-image-processing', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                const processingTime = ((Date.now() - startTime) / 1000).toFixed(2);
+
+                // Hide loading
+                document.getElementById('loading').classList.remove('show');
+
+                if (!data.success) {
+                    alert('❌ Error: ' + (data.message || 'Error desconocido'));
+                    console.error(data);
+                    return;
+                }
+
+                // Show results
+                document.querySelectorAll('.step').forEach(s => s.style.display = 'none');
+                document.getElementById('result').classList.add('show');
+
+                // Metadata
+                document.getElementById('metadata').textContent = JSON.stringify({
+                    ...data.processing,
+                    processingTimeSeconds: processingTime
+                }, null, 2);
+
+                // Images
+                document.getElementById('processedImg').src = data.images.processed;
+                document.getElementById('thumbnailImg').src = data.images.thumbnail;
+
+                // QR
+                const qrSection = document.getElementById('qrSection');
+                if (data.images.qr && data.processing.qrDetected) {
+                    qrSection.innerHTML = `
+                        <div class="qr-section">
+                            <h3>🎫 Código QR Detectado</h3>
+                            <img src="${data.images.qr}" alt="QR Code" style="max-width: 400px; border: 2px solid #000; border-radius: 8px; display: block; margin: 15px 0;">
+                            <div class="qr-content">
+                                <strong>Contenido:</strong><br>
+                                ${data.processing.qrContent || 'N/A'}
+                            </div>
+                        </div>`;
+                } else {
+                    qrSection.innerHTML = '<div class="qr-section no-qr"><strong>⚠️ No se detectó código QR</strong></div>';
+                }
+
+                // Guardar esta captura en el array
+                capturedSides.push({
+                    docType: docType,
+                    processing: data.processing,
+                    images: data.images,
+                    processingTime: processingTime,
+                    timestamp: new Date()
+                });
+
+                // Mostrar resumen de capturas
+                updateCapturedSidesDisplay();
+
+                // Scroll to result
+                document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (error) {
+                document.getElementById('loading').classList.remove('show');
+                alert('❌ Error: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        // Función para preparar el paso de recorte del QR
+        async function prepareQRCropStep() {
+            try {
+                // PRIMERO: Ir a Step 2.5 para que el canvas exista en el DOM
+                goToStep(2.5);
+
+                // Mostrar "Preparando editor..."
+                document.getElementById('qrCropCanvas').style.opacity = '0.5';
+
+                // Esperar un momento para que el DOM se actualice
+                await new Promise(resolve => setTimeout(resolve, 150));
+
+                // Inicializar el editor de QR
+                qrEditor = new ImageEditor('qrCropCanvas');
+
+                // MEJORA CRÍTICA: Obtener imagen en ALTA RESOLUCIÓN (ya rotada/recortada) 
+                // para que el paso del QR trabaje con la mejor calidad posible.
+                const highResFile = await editor.getFullResolutionFile('temp-doc.jpg');
+
+                await qrEditor.loadImage(highResFile);
+
+                document.getElementById('qrCropCanvas').style.opacity = '1';
+                console.log('✅ Imagen de ALTA RESOLUCIÓN cargada en editor QR');
+
+            } catch (error) {
+                console.error('Error preparando QR crop:', error);
+                alert('❌ Error al preparar recorte de QR: ' + error.message);
+            }
+        }
+
+        // Función para procesar con QR manual
+        async function processWithManualQR() {
+            // Show loading
+            document.getElementById('loading').classList.add('show');
+            document.getElementById('result').classList.remove('show');
+
+            try {
+                // Obtener imagen del documento (del editor principal)
+                const documentFile = await editor.getFullResolutionFile('edited-document.jpg');
+
+                // Obtener imagen del QR recortado (del editor QR)
+                const qrFile = await qrEditor.getFullResolutionFile('qr-code.jpg');
+
+                console.log('Sending document:', documentFile.size, 'bytes');
+                console.log('Sending manual QR:', qrFile.size, 'bytes');
+
+                // Create FormData con AMBOS archivos
+                const formData = new FormData();
+                formData.append('document', documentFile);
+                formData.append('qrImage', qrFile);  // NUEVO: QR pre-recortado
+                formData.append('documentType', docType);
+
+                const startTime = Date.now();
+
+                // Send to OpenCV endpoint
+                const response = await fetch('http://localhost:4001/api/vehicle-docs/test-image-processing', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                const processingTime = ((Date.now() - startTime) / 1000).toFixed(2);
+
+                // Hide loading
+                document.getElementById('loading').classList.remove('show');
+
+                if (!data.success) {
+                    alert('❌ Error: ' + (data.message || 'Error desconocido'));
+                    console.error(data);
+                    return;
+                }
+
+                // Show results (mismo código que processWithOpenCV)
+                document.getElementById('result').classList.add('show');
+                document.getElementById('metadata').textContent = JSON.stringify({
+                    ...data.processing,
+                    processingTimeSeconds: processingTime,
+                    manualQR: true  // Indicador
+                }, null, 2);
+
+                // Images
+                document.getElementById('processedImg').src = data.images.processed;
+                document.getElementById('thumbnailImg').src = data.images.thumbnail;
+
+                // QR
+                const qrSection = document.getElementById('qrSection');
+                if (data.images.qr && data.processing.qrDetected) {
+                    qrSection.innerHTML = `
+                        <div class="qr-section">
+                            <h3>🎫 Código QR Detectado (Manual)</h3>
+                            <img src="${data.images.qr}" alt="QR Code" style="max-width: 400px; border: 2px solid #000; border-radius: 8px; display: block; margin: 15px 0;">
+                            <div class="qr-content">
+                                <strong>Contenido:</strong><br>
+                                ${data.processing.qrContent || 'N/A'}
+                            </div>
+                        </div>`;
+                } else {
+                    qrSection.innerHTML = '<div class="qr-section no-qr"><strong>⚠️ No se detectó código QR en la región recortada</strong></div>';
+                }
+
+                // Guardar captura
+                capturedSides.push({
+                    docType: docType,
+                    processing: data.processing,
+                    images: data.images,
+                    processingTime: processingTime,
+                    timestamp: new Date(),
+                    manualQR: true
+                });
+
+                updateCapturedSidesDisplay();
+
+                // Scroll to result
+                document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (error) {
+                document.getElementById('loading').classList.remove('show');
+                alert('❌ Error: ' + error.message);
+                console.error(error);
+            }
+        }
+
+        function updateCapturedSidesDisplay() {
+            const container = document.getElementById('capturedSides');
+            if (capturedSides.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            let html = '<div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 20px 0;">';
+            html += `<h3>📸 Caras Capturadas: ${capturedSides.length}</h3>`;
+
+            capturedSides.forEach((capture, index) => {
+                const hasQR = capture.processing.qrDetected;
+                html += `<p>✅ Captura ${index + 1}: ${hasQR ? '🎫 Con QR' : '⬜ Sin QR'}</p>`;
+            });
+
+            if (capturedSides.length >= 2) {
+                html += '<p style="color: green; font-weight: bold;">🎉 ¡Ambas caras capturadas!</p>';
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function confirmAndCaptureAnother() {
+            // Obtener info de la última captura
+            const lastCapture = capturedSides[capturedSides.length - 1];
+            const hasQR = lastCapture ? lastCapture.processing.qrDetected : false;
+
+            // Confirmar con el usuario
+            const mensaje = hasQR
+                ? '✅ QR DETECTADO\n\n¿El resultado es correcto?\n¿Proceder a capturar la otra cara?'
+                : '⚠️ NO SE DETECTÓ QR\n\n¿El resultado es correcto de todas formas?\n¿Proceder a capturar la otra cara?';
+
+            if (!confirm(mensaje)) {
+                alert('❌ Captura cancelada. Puedes intentar de nuevo con "🔄 Nueva Imagen"');
+                return;
+            }
+
+            // Si confirma, guardar resultado y continuar
+            console.log('✅ Usuario confirmó resultado, guardando captura:', lastCapture);
+
+            // Resetear para nueva captura SIN borrar las anteriores
+            document.getElementById('result').classList.remove('show');
+            document.getElementById('fileInput').value = '';
+            selectedFile = null;
+
+            if (editor) {
+                editor.clear();
+                editor = null;
+            }
+
+            // Volver a step 1
+            document.getElementById('step1').classList.add('active');
+            document.getElementById('step2').classList.remove('active');
+
+            window.scrollTo(0, 0);
+            alert(`📸 Captura la otra cara del documento (${capturedSides.length + 1}°)`);
+        }
+
+        function resetAll() {
+            document.getElementById('result').classList.remove('show');
+            document.getElementById('fileInput').value = '';
+            selectedFile = null;
+            docType = null;
+            capturedSides = []; // Limpiar capturas anteriores
+
+            if (editor) {
+                editor.clear();
+                editor = null;
+            }
+
+            document.getElementById('step1').classList.add('active');
+            document.getElementById('step2').classList.remove('active');
+
+            // Limpiar visualización de capturas
+            updateCapturedSidesDisplay();
+        }
+    </script>
+</body>
+
+</html>

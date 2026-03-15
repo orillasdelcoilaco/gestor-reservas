@@ -19,7 +19,7 @@ async function updateTodaysDolarValue(db) {
     const offset = today.getTimezoneOffset() + (180); // Ajuste a zona horaria de Chile (aprox GMT-3)
     const chileanDate = new Date(today.getTime() - offset * 60 * 1000);
     const dateStr = chileanDate.toISOString().split('T')[0];
-    
+
     const dolarRef = db.collection('valorDolar').doc(dateStr);
 
     const doc = await dolarRef.get();
@@ -36,7 +36,7 @@ async function updateTodaysDolarValue(db) {
         if (response.ok) {
             const data = await response.json();
             const valor = data.usd.clp;
-            
+
             if (valor) {
                 await dolarRef.set({
                     valor: valor,
@@ -45,7 +45,7 @@ async function updateTodaysDolarValue(db) {
                 console.log(`Valor de hoy (${valor}) guardado exitosamente en Firestore.`);
                 return valor; // Devolvemos el nuevo valor
             } else {
-                 console.error(`No se pudo encontrar el valor CLP en la respuesta de la API.`);
+                console.error(`No se pudo encontrar el valor CLP en la respuesta de la API.`);
             }
         } else {
             console.error(`No se pudo obtener el valor de hoy desde la API. Status: ${response.status}`);
@@ -64,7 +64,7 @@ function processDolarCsv(db, buffer, year) {
     return new Promise((resolve, reject) => {
         const recordsToSave = [];
         const readableStream = new stream.Readable();
-        readableStream._read = () => {};
+        readableStream._read = () => { };
         readableStream.push(buffer);
         readableStream.push(null);
 
@@ -131,10 +131,10 @@ async function getValorDolar(db, targetDate) {
     const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
     const targetDateUTC = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate()));
     const dateStr = targetDateUTC.toISOString().split('T')[0];
-    
-    // --- LÓGICA PARA FECHAS FUTURAS ---
-    if (targetDateUTC > todayUTC) {
-        console.log(`La fecha ${dateStr} es futura. Usando el valor del dólar de hoy.`);
+
+    // --- LÓGICA PARA FECHAS FUTURAS Y HOY ---
+    if (targetDateUTC >= todayUTC) {
+        console.log(`La fecha ${dateStr} es futura o es hoy. Usando el valor del dólar de hoy.`);
         // Primero, intentamos obtener el valor de hoy de la base de datos
         const todayStr = todayUTC.toISOString().split('T')[0];
         const todayDoc = await db.collection('valorDolar').doc(todayStr).get();
@@ -167,7 +167,7 @@ async function getValorDolar(db, targetDate) {
             const ultimoValor = snapshot.docs[0].data().valor;
             const fechaEncontrada = snapshot.docs[0].id;
             console.log(`Usando el valor de respaldo de la fecha ${fechaEncontrada}: ${ultimoValor}`);
-            
+
             // --- NUEVO: Guardar el valor encontrado para la fecha que faltaba ---
             console.log(`Actualizando la colección 'valorDolar' para la fecha ${dateStr} con el valor ${ultimoValor}.`);
             await dolarRef.set({
@@ -183,7 +183,7 @@ async function getValorDolar(db, targetDate) {
         const valorPorDefecto = 950;
         console.error('No se encontró ningún valor de respaldo. Usando valor por defecto.');
         return valorPorDefecto;
-        
+
     } catch (error) {
         console.error(`Error crítico obteniendo valor del dólar para ${dateStr}: ${error.message}`);
         return 950; // Fallback final

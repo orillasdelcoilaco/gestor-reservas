@@ -266,7 +266,9 @@
                     totalDisplay += ` <div class="text-xs text-blue-600 font-bold mt-1">(USD ${totalUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })})</div>`;
 
                     // Calculate approximate USD balance
-                    const balanceUSD = dolarVal ? (saldo / dolarVal) : 0;
+                    // Correct logic: Total USD (Net) - Paid USD (approx)
+                    const paidUSD = dolarVal ? (grupo.abono / dolarVal) : 0;
+                    const balanceUSD = totalUSD - paidUSD;
                     balanceDisplay += ` <div class="text-xs text-blue-600 font-bold mt-1">(~ USD ${balanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2 })})</div>`;
                 } else if (isBooking) {
                     // Debug fallback if canal is Booking but esBookingUSD is false (e.g. was CLP original)

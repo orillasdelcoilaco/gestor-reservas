@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Guided Camera Capture Styles */
+.camera-container {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    z-index: 9999;
+}
+
+.camera-preview {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: #111;
+}
+
+.camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.camera-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.viewfinder {
+    width: 85%;
+    max-width: 500px;
+    aspect-ratio: 1.586;
+    /* Credit card / ISO ID-1 shape */
+    border: 3px solid #fff;
+    border-radius: 20px;
+    box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.6);
+    position: relative;
+    transition: border-color 0.3s ease;
+}
+
+.viewfinder.active {
+    border-color: #22c55e;
+}
+
+.viewfinder-text {
+    position: absolute;
+    bottom: -50px;
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.camera-controls {
+    height: 140px;
+    background: #000;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.btn-capture {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: #fff;
+    border: 6px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-capture:active {
+    transform: scale(0.9);
+    background: #eee;
+}
+
+.btn-camera-cancel {
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+}

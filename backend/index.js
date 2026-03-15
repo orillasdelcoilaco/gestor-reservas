@@ -33,6 +33,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 const bookingReconciliationRoutes = require('./routes/bookingReconciliationRoutes');
 const tinajasRoutes = require('./routes/tinajasRoutes');
+const aiRoutes = require('./routes/aiRoutes'); // [NEW] AI Routes
 
 const { initTelegramBot } = require('./services/notificationService');
 
@@ -93,6 +94,12 @@ const privateRouter = express.Router();
 //--- Configuración de Rutas Públicas (API) ---
 publicRouter.use('/auth', authRoutes(db));
 publicRouter.use(icalRoutes(db));
+// publicRouter.use('/ai', aiRoutes); // Opcional: si quisieras que fuera pública sin auth.
+// Por ahora la pondremos como pública para probar fácil o protegida según decidas. 
+// El plan decía /api/ai, así que lo pondré en privateRouter si requiere auth, o publicRouter si no.
+// Usualmente quieres proteger esto por costos. Lo pondré en privateRouter para requerir token,
+// O en un bloque separado bajo /api si quiero ser flexible.
+// Siguiendo el patrón existente:
 
 //--- Configuración de Rutas Privadas (API) ---
 privateRouter.use(reservasRoutes(db));
@@ -117,14 +124,42 @@ privateRouter.use(incidentsRoutes(db));
 privateRouter.use(historyRoutes(db));
 privateRouter.use(reportRoutes(db));
 privateRouter.use('/task-types', taskRoutes(db));
+const meRoutes = require('./routes/meRoutes');
+privateRouter.use('/me', meRoutes(db));
 privateRouter.use('/reconciliacion', bookingReconciliationRoutes(db));
 privateRouter.use('/tinajas', tinajasRoutes(db));
+privateRouter.use('/ai', aiRoutes); // [NEW] AI Endpoints (Protected)
+
+// --- Módulo Vehicle Docs ---
+// IMPORTANTE: El router vehicleDocs maneja su propia autenticación internamente
+// El endpoint /test-image-processing NO requiere auth, los demás sí
+const vehicleDocsRoutes = require('./routes/vehicleDocs');
+app.use('/api/vehicle-docs', vehicleDocsRoutes);
+
+
+// --- Módulo Vehicle Docs (Legacy/Optional - keep if needed or remove if migrating fully) ---
+// const vehicleDocsApp = require('../apps/vehicle-docs/server')(db, checkFirebaseToken, admin);
+// app.use('/vehiculos', vehicleDocsApp);
 
 //--- Aplicación de los Routers a la App ---
 app.use(publicRouter);
 app.use('/api', checkFirebaseToken, privateRouter);
 
-// --- 3. CATCH-ALL PARA MANEJAR RUTAS DEL FRONTEND ---
+// --- SERVIR APLICACIÓN DE VEHÍCULOS ---
+// Servir archivos estáticos de la app de vehículos
+app.use('/vehiculos/app', express.static(path.join(__dirname, '../apps/vehicle-docs/web/dist')));
+
+// Ruta específica para la app de vehículos (SPA routing)
+app.get('/vehiculos/app/*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../apps/vehicle-docs/web/dist', 'index.html'));
+});
+
+// --- RUTA ESPECÍFICA PARA TEST DE IMAGEN (Antes del catch-all) ---
+app.get('/test-image.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'test-image.html'));
+});
+
+// --- 3. CATCH-ALL PARA MANEJAR RUTAS DEL FRONTEND (LOGIN) ---
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });

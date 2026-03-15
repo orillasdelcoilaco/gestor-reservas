@@ -21,7 +21,12 @@ const checkFirebaseToken = async (req, res, next) => {
     let decodedToken;
     if (idToken === 'mock-token') {
       console.log('[AuthMiddleware] Mocking token for testing');
-      decodedToken = { email: 'mock@test.com', uid: 'mock-uid' };
+      decodedToken = {
+        email: 'mock@test.com',
+        uid: 'mock-uid',
+        familyGroup: 'test-family',
+        permissions: { vehicleDocs: true }
+      };
     } else {
       decodedToken = await admin.auth().verifyIdToken(idToken);
     }

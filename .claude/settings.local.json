@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"from ''../../App''\" \"d:/pmeza/Desarrollos Render/Gestor de reservas/apps/vehicle-docs/web/src/components/vehicleDocs/\")",
+      "Bash(node --check routes/vehicleDocs.js)",
+      "Bash(node --check services/vehicleDocs/firebaseService.js)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

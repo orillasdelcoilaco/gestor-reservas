@@ -52,9 +52,9 @@ Browser → Express (port 4001)
 ### Vehicle-Docs Module (`/api/vehicle-docs`)
 This is the most complex recent addition. Key concepts:
 
-- **`/extract` POST** — Takes an uploaded image, runs it through OpenCV Docker microservice (port 5000) or Sharp fallback, then sends a **cropped single-copy color image** to Gemini AI for OCR. Returns extracted document data + full-resolution original image (for display) + QR image.
+- **`/extract` POST** — Takes an uploaded image, processes it with Sharp + jsQR, then sends a **cropped single-copy color image** to Gemini AI for OCR. Returns extracted document data + full-resolution original image (for display) + QR image.
 - **`/documents` POST** — Saves the confirmed document. Stores `color.jpg` (full original, no crop) in Firebase Storage. The crop is only for Gemini, never for storage.
-- Image processing pipeline: OpenCV Docker (`processDocumentV3`) → Sharp fallback (`processDocumentForInspection`)
+- Image processing pipeline: Sharp + jsQR (`imageProcessingService.js`) — sin Docker, sin dependencias externas.
 - AI model cascade: `gemini-2.0-flash` → `gemini-1.5-flash-8b` → `gemini-2.5-flash` (quota-aware retry)
 - Document type aliases: `REVISION_TECNICA` → `REVISION`, `PERMISO_CIRCULACION` → `PERMISO` (canonical types used everywhere in frontend)
 
@@ -85,8 +85,8 @@ AI_ENABLED          # true/false toggle for AI features
 PORT                # Default 4001
 ```
 
-### OpenCV Microservice
-A Docker container runs at `http://localhost:5000` providing document processing. The backend gracefully falls back to Sharp (Node.js) if Docker is unavailable. Multi-copy detection (quadruplicate/triplicate certificates) uses H/W aspect ratio: `>1.2` = 4 copies, `>0.8` = 3 copies.
+### Image Processing
+Pure Node.js pipeline using **Sharp** (resize, contrast, crop) + **jsQR** (QR detection). Multi-copy detection uses H/W aspect ratio: `>1.2` = 4 copies, `>0.8` = 3 copies. No Docker or external services required.
 
 ### External Integrations
 - **Google Drive** — report storage and retrieval

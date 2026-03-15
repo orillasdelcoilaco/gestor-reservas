@@ -438,7 +438,8 @@ async function deleteVehicle(vehicleId, familyGroup) {
 }
 
 /**
- * Obtiene todos los vehículos de una familia con status de documentos
+ * Obtiene todos los vehículos de una familia con status de documentos.
+ * Usa Promise.all para lecturas paralelas (antes era secuencial → muy lento).
  */
 async function getFamilyVehiclesWithStatus(familyGroup) {
     try {
@@ -446,53 +447,53 @@ async function getFamilyVehiclesWithStatus(familyGroup) {
             .where('familyGroup', '==', familyGroup)
             .get();
 
-        if (vehiclesSnapshot.empty) {
-            return [];
-        }
+        if (vehiclesSnapshot.empty) return [];
 
-        const vehicles = [];
+        const CANONICAL_TYPES = ['PADRON', 'REVISION', 'PERMISO', 'SOAP'];
+        const LEGACY_ALIAS = { REVISION_TECNICA: 'REVISION', PERMISO_CIRCULACION: 'PERMISO' };
+        // Buscar también los nombres legacy por si hay datos históricos
+        const ALL_TYPES = [...CANONICAL_TYPES, 'REVISION_TECNICA', 'PERMISO_CIRCULACION'];
 
-        for (const doc of vehiclesSnapshot.docs) {
-            const vehicleData = {
-                id: doc.id,
-                ...doc.data()
-            };
+        const vehicles = await Promise.all(vehiclesSnapshot.docs.map(async (doc) => {
+            const vehicleData = { id: doc.id, ...doc.data() };
 
-            // Obtener status de documentos para este vehículo
-            const documentStatus = {};
-            const docTypes = ['PADRON', 'REVISION', 'PERMISO', 'SOAP', 'REVISION_TECNICA', 'PERMISO_CIRCULACION'];
-            const legacyAlias = { REVISION_TECNICA: 'REVISION', PERMISO_CIRCULACION: 'PERMISO' };
-            const seenStatus = new Set();
-
-            for (const type of docTypes) {
-                const canonicalType = legacyAlias[type] || type;
-                if (seenStatus.has(canonicalType)) continue;
+            // Leer todos los tipos de documento en paralelo
+            const typeResults = await Promise.all(ALL_TYPES.map(async (type) => {
                 try {
                     const typeRef = db.collection('vehicles').doc(doc.id)
                         .collection('documentTypes').doc(type);
                     const typeDoc = await typeRef.get();
+                    if (!typeDoc.exists || !typeDoc.data().currentDocumentId) return null;
 
-                    if (typeDoc.exists && typeDoc.data().currentDocumentId) {
-                        const currentDocId = typeDoc.data().currentDocumentId;
-                        const currentDoc = await typeRef.collection('history').doc(currentDocId).get();
+                    const currentDoc = await typeRef
+                        .collection('history')
+                        .doc(typeDoc.data().currentDocumentId)
+                        .get();
+                    if (!currentDoc.exists) return null;
 
-                        if (currentDoc.exists) {
-                            const docData = currentDoc.data();
-                            seenStatus.add(canonicalType);
-                            documentStatus[canonicalType] = {
-                                status: calculateDocumentStatus(docData.expiryDate),
-                                expiryDate: docData.expiryDate ? docData.expiryDate.toDate().toISOString() : null
-                            };
-                        }
-                    }
-                } catch (error) {
-                    console.error(`Error getting status for ${type}:`, error);
+                    const docData = currentDoc.data();
+                    const canonicalType = LEGACY_ALIAS[type] || type;
+                    return {
+                        canonicalType,
+                        status: calculateDocumentStatus(docData.expiryDate),
+                        expiryDate: docData.expiryDate ? docData.expiryDate.toDate().toISOString() : null
+                    };
+                } catch (_) {
+                    return null;
                 }
-            }
+            }));
+
+            // Consolidar evitando duplicados (REVISION_TECNICA y REVISION → mismo slot)
+            const documentStatus = {};
+            typeResults.filter(Boolean).forEach(r => {
+                if (!documentStatus[r.canonicalType]) {
+                    documentStatus[r.canonicalType] = { status: r.status, expiryDate: r.expiryDate };
+                }
+            });
 
             vehicleData.documentStatus = documentStatus;
-            vehicles.push(vehicleData);
-        }
+            return vehicleData;
+        }));
 
         return vehicles;
     } catch (error) {

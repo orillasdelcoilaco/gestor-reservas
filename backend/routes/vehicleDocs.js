@@ -3,8 +3,6 @@ const multer = require('multer');
 const { checkFirebaseToken } = require('../utils/authMiddleware');
 const { extractVehicleDocumentData } = require('../services/vehicleDocs/aiService');
 const { processDocumentForInspection } = require('../services/vehicleDocs/imageProcessingService');
-const { processDocumentForInspection: processDocumentV2 } = require('../services/vehicleDocs/imageProcessingServiceV2');
-const { processDocumentForInspection: processDocumentV3 } = require('../services/vehicleDocs/imageProcessingServiceV3');
 const {
     saveDocumentToFirebase,
     getVehicleDocuments,
@@ -135,15 +133,9 @@ router.post('/test-image-processing', upload.fields([
         }
         console.log('[DEBUG] Tipo:', documentType);
 
-        console.log('[DEBUG] → Llamando a processDocumentV3...');
-        // PROCESAR IMAGEN con V3 (OpenCV Docker)
-        const result = await processDocumentV3(
-            documentFile.buffer,
-            documentType,
-            'front',
-            qrImageFile ? qrImageFile.buffer : null
-        );
-        console.log('[DEBUG] ✅ processDocumentV3 retornó éxito');
+        console.log('[DEBUG] → Procesando imagen...');
+        const result = await processDocumentForInspection(documentFile.buffer, documentType, 'front');
+        console.log('[DEBUG] ✅ Procesamiento completado');
 
         // Convertir buffers a base64 para preview en navegador
         const response = {
@@ -203,21 +195,10 @@ router.post('/extract', upload.single('document'), async (req, res) => {
 
         const expectedDocType = req.body.expectedDocType || 'OTRO';
 
-        // PASO 1: Procesar imagen — intentar V3 (OpenCV Docker), fallback a V1 (Sharp+jsQR)
-        let processed;
-        let processingVersion;
-
-        try {
-            console.log('[1/3] Procesando imagen con V3 (OpenCV Docker)...');
-            processed = await processDocumentV3(req.file.buffer, expectedDocType, 'front');
-            processingVersion = processed.metadata?.warning ? 'V3_FALLBACK_SHARP' : 'V3';
-            console.log('[1/3] ✅ V3 completado, versión:', processingVersion);
-        } catch (v3Error) {
-            console.warn('[1/3] ⚠️ V3 falló, usando V1 (Sharp+jsQR):', v3Error.message);
-            processed = await processDocumentForInspection(req.file.buffer, expectedDocType, 'front');
-            processingVersion = 'V1';
-            console.log('[1/3] ✅ V1 completado');
-        }
+        // PASO 1: Procesar imagen con Sharp + jsQR
+        console.log('[1/3] Procesando imagen...');
+        const processed = await processDocumentForInspection(req.file.buffer, expectedDocType, 'front');
+        const processingVersion = 'V1';
 
         console.log('[1/3] Resultado procesamiento:', {
             success: processed.success,
@@ -230,8 +211,7 @@ router.post('/extract', upload.single('document'), async (req, res) => {
         });
 
         // PASO 2: Extraer datos con Gemini AI
-        // Usar imagen a color recortada (mejor OCR que B&W). Si no hay color de OpenCV,
-        // aplicar el mismo multi-copy crop con Sharp sobre el original.
+        // Preparar imagen a color con crop multi-copia para mejor OCR.
         console.log('[2/3] Preparando imagen para Gemini...');
         let imageForGemini = processed.colorProcessed || null;
         if (!imageForGemini) {
@@ -423,21 +403,9 @@ router.post('/documents', uploadFields, async (req, res) => {
         const qrFileUp  = req.files?.['qrFile']?.[0];
         if (!mainFile) throw new Error('No file provided');
 
-        // Procesar imagen — intentar V3, fallback a V1
-        let processed;
-        let usedVersion = processingVersion || 'V1';
-        try {
-            processed = await processDocumentV3(mainFile.buffer, type);
-            if (!processingVersion) usedVersion = processed.metadata?.warning ? 'V3_FALLBACK_SHARP' : 'V3';
-        } catch (v3Err) {
-            console.warn('[VehicleDocs] V3 falló en /documents, usando V1:', v3Err.message);
-            processed = await processDocumentForInspection(mainFile.buffer, type);
-            if (!processingVersion) usedVersion = 'V1';
-        }
-
-        if (!processed.success) {
-            console.warn('[VehicleDocs] Procesamiento parcial de imagen');
-        }
+        // Procesar imagen con Sharp + jsQR
+        const processed = await processDocumentForInspection(mainFile.buffer, type);
+        const usedVersion = processingVersion || 'V1';
 
         // Color image para tarjeta: SIEMPRE imagen original completa (sin recortar).
         // El recorte multi-copy solo se usa para Gemini (en /extract), nunca para almacenamiento.

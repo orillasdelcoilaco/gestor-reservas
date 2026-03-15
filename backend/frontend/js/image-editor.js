@@ -1,6 +1,6 @@
 /**
  * Image Editor for Document Processing
- * Allows users to rotate and crop images before sending to OpenCV
+ * Allows users to rotate and crop images before processing
  */
 
 class ImageEditor {

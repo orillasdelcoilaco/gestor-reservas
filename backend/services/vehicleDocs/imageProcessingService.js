@@ -98,9 +98,8 @@ async function autoRotateDocument(buffer) {
 }
 
 /**
- * Detecta los bordes del documento (algoritmo simplificado)
- * En producción real usarías OpenCV para Canny + findContours,
- * pero esto es suficiente para documentos que ocupan ~80% de la imagen
+ * Detecta los bordes del documento (algoritmo simplificado con Sharp)
+ * Asume que el documento ocupa ~80% de la imagen
  */
 async function detectDocumentBorders(buffer) {
     const metadata = await sharp(buffer).metadata();

@@ -4,7 +4,9 @@
       "Bash(grep -r \"from ''../../App''\" \"d:/pmeza/Desarrollos Render/Gestor de reservas/apps/vehicle-docs/web/src/components/vehicleDocs/\")",
       "Bash(node --check routes/vehicleDocs.js)",
       "Bash(node --check services/vehicleDocs/firebaseService.js)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(grep -r \"opencv\\\\|localhost:5000\\\\|OPENCV_SERVICE\\\\|docker\" 'd:\\\\pmeza\\\\Desarrollos Render\\\\Gestor de reservas\\\\backend' --include=*.js)",
+      "Bash(find 'd:/pmeza/Desarrollos Render/Gestor de reservas' -name Dockerfile -o -name docker-compose* -o -name .dockerignore)"
     ],
     "additionalDirectories": [
       "C:\\Users\\pmeza\\.claude\\projects\\d--pmeza-Desarrollos-Render-Gestor-de-reservas"

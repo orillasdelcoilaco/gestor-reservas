@@ -5,6 +5,9 @@
       "Bash(node --check routes/vehicleDocs.js)",
       "Bash(node --check services/vehicleDocs/firebaseService.js)",
       "Bash(npm run:*)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\pmeza\\.claude\\projects\\d--pmeza-Desarrollos-Render-Gestor-de-reservas"
     ]
   }
 }

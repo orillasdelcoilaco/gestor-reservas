@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Car, Plus } from 'lucide-react'
+import { Car, Plus, Settings } from 'lucide-react'
 import VehicleCard from './VehicleCard'
 import VehicleDetailView from './VehicleDetailView'
 import VehicleWizard from './VehicleWizard'
+import FleetAdmin from './FleetAdmin'
 
-const Dashboard = () => {
+const Dashboard = ({ userProfile }) => {
     const [vehicles, setVehicles] = useState([])
-    const [viewMode, setViewMode] = useState('LIST') // LIST or WIZARD
+    const [viewMode, setViewMode] = useState('LIST') // LIST, WIZARD, DETAIL, ADMIN
     const [selectedVehicle, setSelectedVehicle] = useState(null)
 
     useEffect(() => {
@@ -58,6 +59,10 @@ const Dashboard = () => {
         />
     }
 
+    if (viewMode === 'ADMIN') {
+        return <FleetAdmin onBack={() => setViewMode('LIST')} userProfile={userProfile} />
+    }
+
     return (
         <div className="p-6 max-w-6xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -65,13 +70,24 @@ const Dashboard = () => {
                     <h1 className="text-3xl font-bold text-gray-900">Mis Vehículos</h1>
                     <p className="text-gray-500 mt-1">Gestiona la documentación de tu flota.</p>
                 </div>
-                <button
-                    onClick={() => startWizard(null)}
-                    className="flex items-center px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition-all"
-                >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Nuevo Vehículo (Asistente IA)
-                </button>
+                <div className="flex items-center gap-3">
+                    {userProfile?.isAdmin && (
+                        <button
+                            onClick={() => setViewMode('ADMIN')}
+                            className="flex items-center px-4 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm transition-all"
+                        >
+                            <Settings className="w-4 h-4 mr-2 text-gray-500" />
+                            Administrar Flotas
+                        </button>
+                    )}
+                    <button
+                        onClick={() => startWizard(null)}
+                        className="flex items-center px-5 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm transition-all"
+                    >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Nuevo Vehículo (Asistente IA)
+                    </button>
+                </div>
             </div>
 
             {vehicles.length === 0 ? (

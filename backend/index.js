@@ -136,6 +136,9 @@ privateRouter.use('/ai', aiRoutes); // [NEW] AI Endpoints (Protected)
 const vehicleDocsRoutes = require('./routes/vehicleDocs');
 app.use('/api/vehicle-docs', vehicleDocsRoutes);
 
+const feedbackRoutes = require('./routes/feedback');
+app.use('/api/feedback', checkFirebaseToken, feedbackRoutes);
+
 
 // --- Módulo Vehicle Docs (Legacy/Optional - keep if needed or remove if migrating fully) ---
 // const vehicleDocsApp = require('../apps/vehicle-docs/server')(db, checkFirebaseToken, admin);

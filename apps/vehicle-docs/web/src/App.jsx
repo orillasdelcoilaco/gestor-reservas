@@ -4,9 +4,10 @@ import axios from 'axios'
 import VehicleDocs from './pages/VehicleDocs'
 import TestExtraction from './pages/TestExtraction'
 import Dashboard from './components/vehicleDocs/Dashboard'
+import FeedbackButton from './components/FeedbackButton'
 
 // Helper: Auth Layout
-const AuthLayout = ({ children }) => {
+const AuthLayout = ({ children, onUserProfile }) => {
     const [loading, setLoading] = useState(true)
     const [authorized, setAuthorized] = useState(false)
 
@@ -20,6 +21,11 @@ const AuthLayout = ({ children }) => {
             try {
                 await axios.get('/api/me', { headers: { Authorization: `Bearer ${token}` } })
                 setAuthorized(true)
+                // Obtener perfil del módulo vehicle-docs (incluye isAdmin y familyGroup)
+                try {
+                    const profileRes = await axios.get('/api/vehicle-docs/me', { headers: { Authorization: `Bearer ${token}` } })
+                    onUserProfile?.(profileRes.data)
+                } catch (_) { /* usuario sin acceso a vehicle-docs, ignorar */ }
             } catch (error) {
                 console.error("Auth error", error)
                 localStorage.removeItem('firebaseIdToken')
@@ -60,14 +66,21 @@ const AuthLayout = ({ children }) => {
 }
 
 const App = () => {
+    const [userProfile, setUserProfile] = useState(null)
+
     return (
         <BrowserRouter basename="/vehiculos/app">
             <Routes>
-                <Route path="/" element={<AuthLayout><Dashboard /></AuthLayout>} />
-                <Route path="/vehicle-docs" element={<AuthLayout><VehicleDocs /></AuthLayout>} />
+                <Route path="/" element={
+                    <AuthLayout onUserProfile={setUserProfile}>
+                        <Dashboard userProfile={userProfile} />
+                    </AuthLayout>
+                } />
+                <Route path="/vehicle-docs" element={<AuthLayout onUserProfile={setUserProfile}><VehicleDocs /></AuthLayout>} />
                 <Route path="/test-extraction" element={<TestExtraction />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <FeedbackButton />
         </BrowserRouter>
     )
 }

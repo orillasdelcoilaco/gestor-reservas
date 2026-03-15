@@ -740,4 +740,251 @@ router.post('/test-extract', upload.single('document'), async (req, res) => {
 
 
 
+// ========================================
+// ADMIN ROUTES - Solo para pmezavergara@gmail.com
+// ========================================
+const ADMIN_EMAILS = ['pmezavergara@gmail.com'];
+
+const checkAdminPermission = (req, res, next) => {
+    if (!ADMIN_EMAILS.includes(req.user.email)) {
+        return res.status(403).json({ success: false, error: 'Acceso denegado: se requieren permisos de administrador' });
+    }
+    next();
+};
+
+// GET /api/vehicle-docs/me - Perfil del usuario actual
+router.get('/me', (req, res) => {
+    res.json({
+        uid: req.user.uid,
+        email: req.user.email,
+        familyGroup: req.user.familyGroup,
+        isAdmin: ADMIN_EMAILS.includes(req.user.email)
+    });
+});
+
+// GET /api/vehicle-docs/admin/users - Listar todos los usuarios
+router.get('/admin/users', checkAdminPermission, async (req, res) => {
+    try {
+        const admin = require('firebase-admin');
+        const db = admin.firestore();
+        const snapshot = await db.collection('users').get();
+        const users = snapshot.docs.map(doc => ({
+            uid: doc.id,
+            email: doc.data().email,
+            familyGroup: doc.data().familyGroup || null,
+            permissions: doc.data().permissions || {}
+        }));
+        res.json({ success: true, users });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/vehicle-docs/admin/families - Listar todas las flotas
+router.get('/admin/families', checkAdminPermission, async (req, res) => {
+    try {
+        const admin = require('firebase-admin');
+        const db = admin.firestore();
+        const snapshot = await db.collection('families').get();
+        const families = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json({ success: true, families });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/vehicle-docs/admin/families - Crear nueva flota
+// Acepta opcional `id` para reutilizar un familyGroup existente sin romper vehículos
+router.post('/admin/families', checkAdminPermission, async (req, res) => {
+    try {
+        const { name, id } = req.body;
+        if (!name || !name.trim()) {
+            return res.status(400).json({ success: false, error: 'Nombre de flota requerido' });
+        }
+        const admin = require('firebase-admin');
+        const db = admin.firestore();
+        const data = {
+            name: name.trim(),
+            createdBy: req.user.uid,
+            members: [],
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+        let docId;
+        if (id && id.trim()) {
+            // Upsert con ID específico (preserva vehículos existentes)
+            await db.collection('families').doc(id.trim()).set(data, { merge: true });
+            docId = id.trim();
+        } else {
+            const ref = await db.collection('families').add(data);
+            docId = ref.id;
+        }
+        res.json({ success: true, id: docId, name: name.trim() });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// PUT /api/vehicle-docs/admin/users/:uid/family - Asignar usuario a flota
+router.put('/admin/users/:uid/family', checkAdminPermission, async (req, res) => {
+    try {
+        const { uid } = req.params;
+        const { familyId } = req.body;
+        const admin = require('firebase-admin');
+        const db = admin.firestore();
+
+        // Si la flota no existe, crearla automáticamente con ID dado
+        const familyRef = db.collection('families').doc(familyId);
+        const familyDoc = await familyRef.get();
+        if (!familyDoc.exists) {
+            await familyRef.set({
+                name: familyId,
+                createdBy: req.user.uid,
+                members: [],
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        // Remover de flotas anteriores
+        const familiesSnap = await db.collection('families').where('members', 'array-contains', uid).get();
+        const batch = db.batch();
+        familiesSnap.docs.forEach(doc => {
+            batch.update(doc.ref, { members: admin.firestore.FieldValue.arrayRemove(uid) });
+        });
+
+        // Actualizar familyGroup del usuario
+        batch.update(db.collection('users').doc(uid), { familyGroup: familyId });
+
+        // Agregar a la nueva flota
+        batch.update(db.collection('families').doc(familyId), {
+            members: admin.firestore.FieldValue.arrayUnion(uid)
+        });
+
+        await batch.commit();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/vehicle-docs/admin/users - Registrar usuario por email (busca en Firebase Auth y crea doc en users)
+router.post('/admin/users', checkAdminPermission, async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email || !email.trim()) {
+            return res.status(400).json({ success: false, error: 'Email requerido' });
+        }
+        const admin = require('firebase-admin');
+        const db = admin.firestore();
+
+        // Buscar usuario en Firebase Auth
+        let firebaseUser;
+        try {
+            firebaseUser = await admin.auth().getUserByEmail(email.trim().toLowerCase());
+        } catch (authErr) {
+            return res.status(404).json({ success: false, error: `No existe una cuenta Firebase con el email: ${email}` });
+        }
+
+        // Verificar si ya tiene documento en users
+        const userRef = db.collection('users').doc(firebaseUser.uid);
+        const userDoc = await userRef.get();
+
+        if (userDoc.exists) {
+            // Ya existe, devolver tal como está
+            return res.json({
+                success: true,
+                user: { uid: firebaseUser.uid, email: firebaseUser.email, ...userDoc.data() },
+                alreadyExists: true
+            });
+        }
+
+        // Crear documento con permisos vehicleDocs
+        const newUser = {
+            email: firebaseUser.email,
+            permissions: { vehicleDocs: true },
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+        await userRef.set(newUser);
+
+        res.json({
+            success: true,
+            user: { uid: firebaseUser.uid, email: firebaseUser.email, familyGroup: null, permissions: { vehicleDocs: true } },
+            alreadyExists: false
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// GET /api/vehicle-docs/admin/orphan-vehicles - Vehículos que NO pertenecen a ningún familyGroup activo
+router.get('/admin/orphan-vehicles', checkAdminPermission, async (req, res) => {
+    try {
+        const admin = require('firebase-admin');
+        const db = admin.firestore();
+
+        // familyGroups activos (los que tienen usuarios)
+        const usersSnap = await db.collection('users').get();
+        const activeGroups = new Set(usersSnap.docs.map(d => d.data().familyGroup).filter(Boolean));
+
+        // Todos los vehículos
+        const vehiclesSnap = await db.collection('vehicles').get();
+        const orphans = vehiclesSnap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(v => v.familyGroup && !activeGroups.has(v.familyGroup));
+
+        res.json({ success: true, vehicles: orphans, activeGroups: [...activeGroups] });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// POST /api/vehicle-docs/admin/migrate-vehicles - Migrar vehículos de un familyGroup a otro
+router.post('/admin/migrate-vehicles', checkAdminPermission, async (req, res) => {
+    try {
+        const { fromFamilyGroup, toFamilyGroup } = req.body;
+        if (!fromFamilyGroup || !toFamilyGroup) {
+            return res.status(400).json({ success: false, error: 'fromFamilyGroup y toFamilyGroup son requeridos' });
+        }
+        const admin = require('firebase-admin');
+        const db = admin.firestore();
+
+        const vehiclesSnap = await db.collection('vehicles')
+            .where('familyGroup', '==', fromFamilyGroup)
+            .get();
+
+        if (vehiclesSnap.empty) {
+            return res.json({ success: true, migrated: 0 });
+        }
+
+        const batch = db.batch();
+        vehiclesSnap.docs.forEach(doc => {
+            batch.update(doc.ref, { familyGroup: toFamilyGroup });
+        });
+        await batch.commit();
+
+        res.json({ success: true, migrated: vehiclesSnap.size });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// DELETE /api/vehicle-docs/admin/users/:uid/family - Quitar usuario de su flota
+router.delete('/admin/users/:uid/family', checkAdminPermission, async (req, res) => {
+    try {
+        const { uid } = req.params;
+        const admin = require('firebase-admin');
+        const db = admin.firestore();
+
+        const familiesSnap = await db.collection('families').where('members', 'array-contains', uid).get();
+        const batch = db.batch();
+        familiesSnap.docs.forEach(doc => {
+            batch.update(doc.ref, { members: admin.firestore.FieldValue.arrayRemove(uid) });
+        });
+        batch.update(db.collection('users').doc(uid), { familyGroup: admin.firestore.FieldValue.delete() });
+        await batch.commit();
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

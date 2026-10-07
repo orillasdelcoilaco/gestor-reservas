@@ -17,14 +17,13 @@ function cleanPhoneNumber(phone) {
  */
 function cleanCabanaName(cabanaName) {
     if (!cabanaName || typeof cabanaName !== 'string') return '';
-    const trimmedLower = cabanaName.trim().toLowerCase();
+    const trimmed = cabanaName.trim().replace(/\s+/g, ' ');
 
-    // Corregir casos específicos devolviendo el formato correcto
-    if (trimmedLower === 'cabaña 9 1') return 'Cabaña 9';
-    if (trimmedLower === 'cabaña 10 1') return 'Cabaña 10';
-    
-    // Para los demás casos, solo limpiar espacios en blanco, manteniendo la capitalización original.
-    return cabanaName.trim();
+    // SODC a veces agrega la cantidad de unidades: "Cabaña 8 1". El calendario usa "Cabaña 8".
+    const withQuantity = trimmed.match(/^cabaña\s+(\d+)\s+1$/i);
+    if (withQuantity) return `Cabaña ${withQuantity[1]}`;
+
+    return trimmed;
 }
 
 /**

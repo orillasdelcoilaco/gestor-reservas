@@ -3,6 +3,7 @@ const router = express.Router();
 const admin = require('firebase-admin');
 const path = require('path');
 const { getReservasPendientes } = require('../services/gestionService');
+const { reflejarEstadoEnRezerva } = require('../services/puenteSodc.status');
 const { getValorDolar } = require('../services/dolarService');
 const storageService = require('../services/storageService');
 
@@ -215,6 +216,7 @@ module.exports = (db) => {
             // Pero el cambio de estado ya libera el calendario porque los queries filtran por 'Confirmada'
 
             await batch.commit();
+            await reflejarEstadoEnRezerva(db, reservaIdOriginal, nuevoEstado);
             res.status(200).json({ message: `Reserva ${reservaIdOriginal} actualizada a estado: ${nuevoEstado}.` });
         } catch (error) {
             console.error(`Error al cambiar estado de reserva ${reservaIdOriginal}:`, error);

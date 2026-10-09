@@ -5,6 +5,7 @@ const jsonParser = express.json();
 const { updateClientMaster } = require('../services/clienteService');
 const { createManualReservation } = require('../services/reservaService');
 const { getAvailabilityData } = require('../services/presupuestoService');
+const { reflejarEstadoEnRezerva } = require('../services/puenteSodc.status');
 
 module.exports = (db) => {
     // --- OBTENER TODAS LAS RESERVAS (GET) ---
@@ -504,6 +505,7 @@ module.exports = (db) => {
                 batch.update(doc.ref, { estado: nuevoEstado });
             });
             await batch.commit();
+            await reflejarEstadoEnRezerva(db, reservaIdOriginal, nuevoEstado);
 
             res.status(200).json({ message: `La propuesta ${reservaIdOriginal} ha sido actualizada a: ${nuevoEstado}` });
         } catch (error) {

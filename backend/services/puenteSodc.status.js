@@ -32,10 +32,10 @@ function postJson(urlString, headers, body) {
 async function reflejarEstadoEnRezerva(db, reservaIdOriginal, estado) {
     if (!puenteActivo()) return;
     const ref = String(reservaIdOriginal || '');
-    const secret = secretoEsperado();
-    const origin = origenRezerva();
-    if (!ref || secret.length < 16 || !origin) return;
     try {
+        const secret = secretoEsperado();
+        const origin = origenRezerva();
+        if (!ref || secret.length < 16 || !origin) return;
         const snapshot = await db.collection('reservas').where('reservaIdOriginal', '==', ref).limit(1).get();
         if (snapshot.empty) return;
         const row = snapshot.docs[0].data();

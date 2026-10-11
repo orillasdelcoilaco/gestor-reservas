@@ -26,6 +26,7 @@ function origenRezerva() {
 
 module.exports = {
     puenteActivo,
+    secretoEsperado,
     secretoCoincide,
     origenRezerva,
 };

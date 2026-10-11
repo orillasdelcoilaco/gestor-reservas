@@ -34,6 +34,7 @@ const taskRoutes = require('./routes/taskRoutes');
 const bookingReconciliationRoutes = require('./routes/bookingReconciliationRoutes');
 const tinajasRoutes = require('./routes/tinajasRoutes');
 const bloqueoCabanasRoutes = require('./routes/bloqueoCabanas');
+const exportarRoutes = require('./routes/exportar');
 const aiRoutes = require('./routes/aiRoutes'); // [NEW] AI Routes
 
 const { initTelegramBot } = require('./services/notificationService');
@@ -130,6 +131,7 @@ privateRouter.use('/me', meRoutes(db));
 privateRouter.use('/reconciliacion', bookingReconciliationRoutes(db));
 privateRouter.use('/tinajas', tinajasRoutes(db));
 privateRouter.use(bloqueoCabanasRoutes(db));
+privateRouter.use(exportarRoutes(db));
 privateRouter.use('/ai', aiRoutes); // [NEW] AI Endpoints (Protected)
 
 // --- Módulo Vehicle Docs ---

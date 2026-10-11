@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exportar Datos | Gestor de Reservas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+    <div id="loader" class="text-center p-8">
+        <p class="text-gray-500">Verificando sesión...</p>
+    </div>
+
+    <div id="app-content" class="min-h-screen hidden">
+        <nav class="bg-white shadow-sm">
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-center justify-between h-16">
+                    <a href="dashboard.html" class="text-xl font-bold text-gray-800">Gestor de Reservas</a>
+                    <div id="auth-info" class="flex items-center space-x-4"></div>
+                </div>
+            </div>
+        </nav>
+
+<div class="max-w-3xl mx-auto py-10 px-4">
+
+    <!-- Header -->
+    <div class="bg-white rounded-2xl shadow p-6 mb-6">
+        <h1 class="text-2xl font-bold text-gray-900 mb-1">Exportar Datos del Sistema</h1>
+        <p class="text-gray-500 text-sm">Genera un archivo JSON con reservas, clientes y cabañas para importar en otro sistema (ej: SuiteManagers).</p>
+    </div>
+
+    <!-- Formulario de exportación -->
+    <div class="bg-white rounded-2xl shadow p-6 mb-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Parámetros de exportación</h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha llegada desde</label>
+                <input type="date" id="desde" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha llegada hasta</label>
+                <input type="date" id="hasta" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Estado de reservas</label>
+            <select id="estado" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="todas">Todas</option>
+                <option value="Confirmada" selected>Solo Confirmadas</option>
+                <option value="Cancelada">Solo Canceladas</option>
+            </select>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+            <button id="btn-json" type="button"
+                class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                Exportar JSON completo
+            </button>
+            <button id="btn-muestra" type="button"
+                class="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white font-semibold px-5 py-2.5 rounded-lg text-sm transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                Exportar muestra (5 reservas)
+            </button>
+        </div>
+    </div>
+
+    <!-- Estado / Resultado -->
+    <div id="resultado" class="hidden bg-white rounded-2xl shadow p-6 mb-6">
+        <div id="resultado-contenido"></div>
+    </div>
+
+    <!-- Descripción del formato -->
+    <div class="bg-white rounded-2xl shadow p-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-3">Estructura del archivo exportado</h2>
+        <div class="space-y-3 text-sm text-gray-600">
+            <div class="flex gap-3 p-3 bg-blue-50 rounded-lg">
+                <span class="font-bold text-blue-700 w-24 shrink-0">meta</span>
+                <span>Información de la exportación: fecha, filtros aplicados, totales de registros.</span>
+            </div>
+            <div class="flex gap-3 p-3 bg-green-50 rounded-lg">
+                <span class="font-bold text-green-700 w-24 shrink-0">cabanas</span>
+                <span>Todas las propiedades/alojamientos con nombre, capacidad y descripción.</span>
+            </div>
+            <div class="flex gap-3 p-3 bg-yellow-50 rounded-lg">
+                <span class="font-bold text-yellow-700 w-24 shrink-0">clientes</span>
+                <span>Huéspedes referenciados por las reservas exportadas: nombre, teléfono, email, país.</span>
+            </div>
+            <div class="flex gap-3 p-3 bg-purple-50 rounded-lg">
+                <span class="font-bold text-purple-700 w-24 shrink-0">reservas</span>
+                <span>Reservas con: fechas, estado, canal, valores CLP/USD, descuentos, y dentro de cada reserva sus <b>transacciones</b> (pagos/abonos) con medio de pago, monto y fecha.</span>
+            </div>
+        </div>
+
+        <div class="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-500">
+            <b>Campos de dinero:</b> valorCLP (monto final), valorPotencialCLP (sin descuento), abono (pagado), pendiente (por cobrar), transacciones[].monto (detalle de cada pago).
+        </div>
+    </div>
+
+</div>
+    </div>
+
+<script type="module">
+    import { checkSession, logout } from './api.js';
+
+    const session = checkSession();
+    if (session) {
+        document.getElementById('loader').style.display = 'none';
+        document.getElementById('app-content').classList.remove('hidden');
+        document.getElementById('auth-info').innerHTML = `
+            <span class="text-sm text-gray-600 hidden sm:block">${session.userEmail}</span>
+            <button id="logout-btn" class="px-3 py-2 bg-red-600 text-white text-xs font-medium rounded-md hover:bg-red-700">Cerrar Sesión</button>
+        `;
+        document.getElementById('logout-btn').addEventListener('click', logout);
+    }
+
+    const now = new Date();
+    document.getElementById('desde').value = `${now.getFullYear()}-01-01`;
+    document.getElementById('hasta').value = `${now.getFullYear()}-12-31`;
+
+    document.getElementById('btn-json').addEventListener('click', () => exportar('json'));
+    document.getElementById('btn-muestra').addEventListener('click', () => exportar('json-muestra'));
+
+    async function exportar(formato) {
+        const desde  = document.getElementById('desde').value;
+        const hasta  = document.getElementById('hasta').value;
+        const estado = document.getElementById('estado').value;
+
+        if (!desde || !hasta) {
+            mostrarResultado('error', 'Selecciona un rango de fechas.');
+            return;
+        }
+
+        mostrarResultado('loading', 'Generando exportación, por favor espera...');
+
+        try {
+            const token = localStorage.getItem('firebaseIdToken');
+            const params = new URLSearchParams({ desde, hasta, estado, formato });
+            const url = `/api/exportar?${params}`;
+
+            const resp = await fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!resp.ok) {
+                const err = await resp.json();
+                mostrarResultado('error', `Error del servidor: ${err.error || resp.statusText}`);
+                return;
+            }
+
+            // Obtener metadata del Content-Disposition
+            const disposition = resp.headers.get('Content-Disposition') || '';
+            const match = disposition.match(/filename="([^"]+)"/);
+            const filename = match ? match[1] : `exportacion-${desde}-${hasta}.json`;
+
+            const blob = await resp.blob();
+            const sizeKB = (blob.size / 1024).toFixed(1);
+
+            // Descarga automática
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(a.href);
+
+            mostrarResultado('success', `
+                <div class="flex items-center gap-3 mb-2">
+                    <svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <span class="font-semibold text-green-800">Exportación descargada exitosamente</span>
+                </div>
+                <p class="text-sm text-gray-600">Archivo: <b>${filename}</b> (${sizeKB} KB)</p>
+            `);
+
+        } catch (err) {
+            mostrarResultado('error', `Error: ${err.message}`);
+        }
+    }
+
+    function mostrarResultado(tipo, html) {
+        const div = document.getElementById('resultado');
+        const contenido = document.getElementById('resultado-contenido');
+        div.classList.remove('hidden');
+
+        if (tipo === 'loading') {
+            contenido.innerHTML = `<div class="flex items-center gap-3 text-blue-700">
+                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg>
+                <span>${html}</span>
+            </div>`;
+        } else if (tipo === 'error') {
+            contenido.innerHTML = `<div class="text-red-700 flex items-start gap-2">
+                <svg class="h-5 w-5 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>${html}</span>
+            </div>`;
+        } else {
+            contenido.innerHTML = html;
+        }
+    }
+</script>
+</body>
+</html>

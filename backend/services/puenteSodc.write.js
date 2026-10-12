@@ -31,9 +31,8 @@ function validarAlta(body) {
     const nombre = String(guest.nombre || '').trim();
     const email = String(guest.email || '').trim();
     const telefono = String(guest.telefono || '').trim();
-    if (nombre.length < 2 || nombre.length > 120 || email.length > 120 || !/^[^\s@]+@[^\s@]+$/.test(email)) {
-        throw datoInvalido();
-    }
+    if (nombre.length < 2 || nombre.length > 120 || email.length > 120) throw datoInvalido();
+    if (email && !/^[^\s@]+@[^\s@]+$/.test(email)) throw datoInvalido();
     if (!/^\+?[0-9]{8,15}$/.test(telefono)) throw datoInvalido();
     if (!Array.isArray(body.alojamientos) || body.alojamientos.length < 1 || body.alojamientos.length > 8) {
         throw datoInvalido();

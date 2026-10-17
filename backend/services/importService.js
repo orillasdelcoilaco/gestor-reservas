@@ -5,6 +5,11 @@ const csv = require('csv-parser');
 const stream = require('stream');
 const { getValorDolar } = require('./dolarService');
 const { cleanPhoneNumber, cleanCabanaName, parseDate, parseCurrency } = require('../utils/helpers');
+const {
+    propiedadIdDesdeReserva,
+    syncPendienteInicial,
+    avisarAltasGestor,
+} = require('./puenteSodc.outbound');
 
 /**
  * Parsea un buffer de un archivo CSV a un array de objetos.
@@ -122,6 +127,7 @@ async function processHistoricalBookings(db, fileBuffer) {
     const batch = db.batch();
     let newReservations = 0;
     let newClientsFromBookings = 0;
+    const creadasIds = [];
 
     for (const row of rows) {
         const reservaIdOriginal = row['Número de reserva'];
@@ -173,6 +179,7 @@ async function processHistoricalBookings(db, fileBuffer) {
             totalNoches: totalNoches > 0 ? totalNoches : 1,
             invitados: parseInt(row['Personas'] || 0),
             alojamiento: cabana,
+            propiedadId: propiedadIdDesdeReserva({ alojamiento: cabana }),
             monedaOriginal: 'USD',
             valorOriginal: valorOriginal,
             valorCLP: valorCLPCalculado,
@@ -189,16 +196,19 @@ async function processHistoricalBookings(db, fileBuffer) {
             pagado: false,
             pendiente: valorCLPCalculado,
             boleta: false,
-            estadoGestion: 'Pendiente Bienvenida'
+            estadoGestion: 'Pendiente Bienvenida',
+            rezervaSync: syncPendienteInicial(),
         };
 
         const reservaRef = db.collection('reservas').doc(idCompuesto);
         batch.set(reservaRef, dataToSave);
+        creadasIds.push(idCompuesto);
         newReservations++;
     }
 
     if (newReservations > 0 || newClientsFromBookings > 0) {
         await batch.commit();
+        avisarAltasGestor(db, creadasIds);
     }
     
     return {

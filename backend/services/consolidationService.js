@@ -4,6 +4,11 @@ const admin = require('firebase-admin');
 const { getValorDolar } = require('./dolarService');
 const { createGoogleContact } = require('./googleContactsService');
 const { cleanCabanaName, parseDate, parseCurrency, cleanPhoneNumber } = require('../utils/helpers');
+const {
+    propiedadIdDesdeReserva,
+    syncPendienteInicial,
+    avisarAltasGestor,
+} = require('./puenteSodc.outbound');
 
 function extractCabanaNameFromAirbnb(anuncio) {
     if (!anuncio || typeof anuncio !== 'string') return '';
@@ -28,6 +33,7 @@ async function processChannel(db, channel) {
     }
 
     let clientesNuevos = 0, reservasCreadas = 0, reservasActualizadas = 0;
+    const reservasCreadasIds = [];
 
     const reservationsByOriginalId = new Map();
     const allReservasSnapshot = await db.collection('reservas').get();
@@ -159,6 +165,7 @@ async function processChannel(db, channel) {
                 const valorCLPCalculado = isBooking ? Math.round(precioPorCabana * valorDolarDia * 1.19) : precioPorCabana;
                 const totalNoches = Math.round((reservaData.fechaSalida - reservaData.fechaLlegada) / (1000 * 60 * 60 * 24));
 
+                const propiedadId = propiedadIdDesdeReserva({ alojamiento: cabana });
                 const dataToSave = {
                     reservaIdOriginal: reservaData.reservaIdOriginal,
                     clienteId: clienteId,
@@ -171,6 +178,7 @@ async function processChannel(db, channel) {
                     totalNoches: totalNoches > 0 ? totalNoches : 1,
                     invitados: parseInt(isBooking ? rawData['Adultos/Invitados'] || rawData['Persons'] : rawData['Personas'] || 0),
                     alojamiento: cabana,
+                    propiedadId,
                     monedaOriginal: isBooking ? 'USD' : 'CLP',
                     valorOriginal: precioPorCabana,
                     valorCLP: isAirbnb ? reservaData.valorCLP : valorCLPCalculado,
@@ -186,9 +194,11 @@ async function processChannel(db, channel) {
                     boleta: false,
                     estadoGestion: 'Pendiente Bienvenida',
                     estadoReporte: reservaData.estado, // Guardamos también el estado inicial del reporte
-                    fechaUltimoReporte: admin.firestore.FieldValue.serverTimestamp()
+                    fechaUltimoReporte: admin.firestore.FieldValue.serverTimestamp(),
+                    rezervaSync: syncPendienteInicial(),
                 };
                 batch.set(reservaRef, dataToSave, { merge: true });
+                reservasCreadasIds.push(idCompuesto);
             }
         }
         batch.delete(doc.ref);
@@ -196,6 +206,7 @@ async function processChannel(db, channel) {
 
     if (clientesNuevos > 0 || reservasCreadas > 0 || reservasActualizadas > 0) {
         await batch.commit();
+        avisarAltasGestor(db, reservasCreadasIds);
     }
 
     return {

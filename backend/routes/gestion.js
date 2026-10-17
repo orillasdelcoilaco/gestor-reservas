@@ -4,6 +4,12 @@ const admin = require('firebase-admin');
 const path = require('path');
 const { getReservasPendientes } = require('../services/gestionService');
 const { reflejarEstadoEnRezerva } = require('../services/puenteSodc.status');
+const {
+    avisarAltasGestor,
+    avisarPagoGestor,
+    syncPendienteInicial,
+    debeOmitirAlta,
+} = require('../services/puenteSodc.outbound');
 const { getValorDolar } = require('../services/dolarService');
 const storageService = require('../services/storageService');
 
@@ -37,6 +43,7 @@ module.exports = (db) => {
         const batch = db.batch();
         const detallesParseados = detalles ? JSON.parse(detalles) : {};
         const individualIds = JSON.parse(idsIndividuales);
+        const pagosCreados = [];
 
         try {
             let publicUrl = null;
@@ -66,7 +73,10 @@ module.exports = (db) => {
 
                 switch (accion) {
                     case 'marcar_bienvenida_enviada':
-                        batch.update(reservaRef, { estadoGestion: 'Pendiente Cobro' });
+                        batch.update(reservaRef, {
+                            estadoGestion: 'Pendiente Cobro',
+                            rezervaSync: syncPendienteInicial(),
+                        });
                         break;
                     case 'marcar_cobro_enviado':
                         // LOGICA DE CONGELAMIENTO DE DÓLAR
@@ -74,7 +84,10 @@ module.exports = (db) => {
                         const cobroReservaDoc = await reservaRef.get();
                         const cobroData = cobroReservaDoc.data();
 
-                        const updateData = { estadoGestion: 'Pendiente Pago' };
+                        const updateData = {
+                            estadoGestion: 'Pendiente Pago',
+                            rezervaSync: syncPendienteInicial(),
+                        };
 
                         if (cobroData.canal === 'Booking' && cobroData.monedaOriginal === 'USD' && !cobroData.valorDolarFijo) {
                             const todayUTC = getTodayUTC();
@@ -127,18 +140,27 @@ module.exports = (db) => {
                             medioDePago: detallesParseados.medioDePago,
                             tipo: detallesParseados.esPagoFinal ? 'Pago Final' : 'Abono',
                             fecha: admin.firestore.FieldValue.serverTimestamp(),
-                            enlaceComprobante: publicUrl
+                            enlaceComprobante: publicUrl,
+                            rezervaSync: syncPendienteInicial(),
                         });
+                        pagosCreados.push({ reservaId: id, txId: newTransactionRef.id });
 
                         if (detallesParseados.esPagoFinal) {
-                            batch.update(reservaRef, { estadoGestion: 'Pendiente Boleta', pagado: true });
+                            batch.update(reservaRef, {
+                                estadoGestion: 'Pendiente Boleta',
+                                pagado: true,
+                                rezervaSync: syncPendienteInicial(),
+                            });
+                        } else {
+                            batch.update(reservaRef, { rezervaSync: syncPendienteInicial() });
                         }
                         break;
                     case 'marcar_boleta_enviada':
                         const boletaUpdate = {
                             estadoGestion: 'Pendiente Salida', // CAMBIO: Ahora pasa a Pendiente Salida, no Facturado
                             fechaBoletaEnviada: admin.firestore.FieldValue.serverTimestamp(),
-                            boleta: true
+                            boleta: true,
+                            rezervaSync: syncPendienteInicial(),
                         };
                         if (publicUrl) boletaUpdate['documentos.enlaceBoleta'] = publicUrl;
                         batch.update(reservaRef, boletaUpdate);
@@ -146,7 +168,8 @@ module.exports = (db) => {
                     case 'marcar_salida_enviada':
                         batch.update(reservaRef, {
                             estadoGestion: 'Facturado', // FINAL: Aquí sale de la gestión diaria
-                            fechaSalidaEnviada: admin.firestore.FieldValue.serverTimestamp()
+                            fechaSalidaEnviada: admin.firestore.FieldValue.serverTimestamp(),
+                            rezervaSync: syncPendienteInicial(),
                         });
                         break;
                     case 'gestionar_reserva':
@@ -177,6 +200,23 @@ module.exports = (db) => {
 
                     await reservaRef.update(updatePayload);
                 }
+                for (const pago of pagosCreados) {
+                    avisarPagoGestor(db, pago.reservaId, pago.txId);
+                }
+            }
+
+            const accionesEspejo = new Set([
+                'marcar_bienvenida_enviada',
+                'marcar_cobro_enviado',
+                'registrar_pago',
+                'marcar_boleta_enviada',
+                'marcar_salida_enviada',
+            ]);
+            if (accionesEspejo.has(accion)) {
+                avisarAltasGestor(db, individualIds);
+                reflejarEstadoEnRezerva(db, reservaIdOriginal).catch((err) => {
+                    console.error('puente espejo gestion:', err.message);
+                });
             }
 
             res.status(200).json({ message: `Acción '${accion}' registrada para el grupo ${reservaIdOriginal}.` });
@@ -208,15 +248,24 @@ module.exports = (db) => {
                 return res.status(404).json({ error: 'Reserva no encontrada.' });
             }
 
+            const idsEstado = [];
             snapshot.forEach(doc => {
-                batch.update(doc.ref, { estado: nuevoEstado });
+                const update = { estado: nuevoEstado };
+                if (!debeOmitirAlta(doc.id, doc.data())) {
+                    update.rezervaSync = syncPendienteInicial();
+                    idsEstado.push(doc.id);
+                }
+                batch.update(doc.ref, update);
             });
 
             // Si es Cancelada o No Presentado, opcionalmente podríamos limpiar otras banderas
             // Pero el cambio de estado ya libera el calendario porque los queries filtran por 'Confirmada'
 
             await batch.commit();
-            await reflejarEstadoEnRezerva(db, reservaIdOriginal, nuevoEstado);
+            reflejarEstadoEnRezerva(db, reservaIdOriginal, nuevoEstado).catch((err) => {
+                console.error('puente espejo estado:', err.message);
+            });
+            avisarAltasGestor(db, idsEstado);
             res.status(200).json({ message: `Reserva ${reservaIdOriginal} actualizada a estado: ${nuevoEstado}.` });
         } catch (error) {
             console.error(`Error al cambiar estado de reserva ${reservaIdOriginal}:`, error);
@@ -477,9 +526,16 @@ module.exports = (db) => {
             const batch = db.batch();
             for (const id of idsIndividuales) {
                 const reservaRef = db.collection('reservas').doc(id);
-                batch.update(reservaRef, { estadoGestion: nuevoEstado });
+                batch.update(reservaRef, {
+                    estadoGestion: nuevoEstado,
+                    rezervaSync: syncPendienteInicial(),
+                });
             }
             await batch.commit();
+            avisarAltasGestor(db, idsIndividuales);
+            reflejarEstadoEnRezerva(db, reservaIdOriginal, undefined, nuevoEstado).catch((err) => {
+                console.error('puente espejo revertir:', err.message);
+            });
             res.status(200).json({ message: `El estado del grupo ${reservaIdOriginal} se ha revertido a "${nuevoEstado}".` });
         } catch (error) {
             console.error(`Error al revertir el estado del grupo ${reservaIdOriginal}:`, error);

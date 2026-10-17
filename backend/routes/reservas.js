@@ -6,6 +6,12 @@ const { updateClientMaster } = require('../services/clienteService');
 const { createManualReservation } = require('../services/reservaService');
 const { getAvailabilityData } = require('../services/presupuestoService');
 const { reflejarEstadoEnRezerva } = require('../services/puenteSodc.status');
+const {
+    avisarAltaGestor,
+    avisarAltasGestor,
+    syncPendienteInicial,
+    debeOmitirAlta,
+} = require('../services/puenteSodc.outbound');
 
 module.exports = (db) => {
     // --- OBTENER TODAS LAS RESERVAS (GET) ---
@@ -148,7 +154,12 @@ module.exports = (db) => {
                 datosActualizados.fechaSalida = admin.firestore.Timestamp.fromDate(new Date(datosActualizados.fechaSalida + 'T00:00:00Z'));
             }
 
-            await reservaRef.update(datosActualizados);
+            const actual = await reservaRef.get();
+            const payload = { ...datosActualizados };
+            const omitir = actual.exists && actual.data().puenteSodc === true;
+            if (!omitir) payload.rezervaSync = syncPendienteInicial();
+            await reservaRef.update(payload);
+            if (!omitir) avisarAltaGestor(db, id);
             res.status(200).json({ message: 'Reserva actualizada correctamente.' });
         } catch (error) {
             console.error("Error al actualizar la reserva:", error);
@@ -193,6 +204,8 @@ module.exports = (db) => {
                 });
             }
 
+            const idsGrupo = snapshot.docs.map(doc => doc.id);
+            const huboCambioGrupo = nuevoTotalCLP !== undefined || !!(clienteNombre || telefono);
             if (nuevoTotalCLP !== undefined) {
                 const batch = db.batch();
                 let totalActualCLP = 0;
@@ -201,10 +214,21 @@ module.exports = (db) => {
                     const docRef = db.collection('reservas').doc(doc.id);
                     const proporcion = totalActualCLP > 0 ? doc.data().valorCLP / totalActualCLP : 1 / snapshot.size;
                     const nuevoValorIndividual = Math.round(nuevoTotalCLP * proporcion);
-                    batch.update(docRef, { valorCLP: nuevoValorIndividual, valorManual: true });
+                    batch.update(docRef, {
+                        valorCLP: nuevoValorIndividual,
+                        valorManual: true,
+                        rezervaSync: syncPendienteInicial(),
+                    });
+                });
+                await batch.commit();
+            } else if (clienteNombre || telefono) {
+                const batch = db.batch();
+                snapshot.forEach(doc => {
+                    batch.update(doc.ref, { rezervaSync: syncPendienteInicial() });
                 });
                 await batch.commit();
             }
+            if (huboCambioGrupo) avisarAltasGestor(db, idsGrupo);
 
             res.status(200).json({ message: `Grupo de reserva ${reservaIdOriginal} actualizado.` });
         } catch (error) {
@@ -501,11 +525,18 @@ module.exports = (db) => {
             }
 
             const batch = db.batch();
+            const idsPropuesta = [];
             snapshot.docs.forEach(doc => {
-                batch.update(doc.ref, { estado: nuevoEstado });
+                const update = { estado: nuevoEstado };
+                if (!debeOmitirAlta(doc.id, doc.data())) {
+                    update.rezervaSync = syncPendienteInicial();
+                    idsPropuesta.push(doc.id);
+                }
+                batch.update(doc.ref, update);
             });
             await batch.commit();
             await reflejarEstadoEnRezerva(db, reservaIdOriginal, nuevoEstado);
+            avisarAltasGestor(db, idsPropuesta);
 
             res.status(200).json({ message: `La propuesta ${reservaIdOriginal} ha sido actualizada a: ${nuevoEstado}` });
         } catch (error) {

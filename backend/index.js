@@ -78,6 +78,8 @@ console.log(process.env.RENDER ? "Firebase Admin SDK inicializado desde Secret F
 const db = admin.firestore();
 // Init Telegram Bot Listener
 initTelegramBot(db).catch(err => console.error('Failed to init Telegram Bot:', err));
+const { startRezervaSyncRetryJob } = require('./services/puenteSodc.retry');
+startRezervaSyncRetryJob(db);
 
 const app = express();
 const PORT = process.env.PORT || 4001;

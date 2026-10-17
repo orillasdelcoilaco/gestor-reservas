@@ -3,6 +3,11 @@
 const admin = require('firebase-admin');
 const { findOrCreateClient } = require('./clienteService');
 const { getValorDolar } = require('./dolarService');
+const {
+    propiedadIdDesdeReserva,
+    syncPendienteInicial,
+    avisarAltasGestor,
+} = require('./puenteSodc.outbound');
 
 /**
  * Crea una o más reservas en Firestore a partir de una solicitud manual.
@@ -21,6 +26,7 @@ async function createManualReservation(db, data) {
 
     const reservaIdOriginal = `APP-${Date.now()}`;
     const batch = db.batch();
+    const creadas = [];
 
     for (const reserva of propuesta.reservas) {
         const fechaLlegada = new Date(reserva.fechaLlegada + 'T00:00:00Z');
@@ -40,6 +46,7 @@ async function createManualReservation(db, data) {
 
         const idCompuesto = `${canal.toUpperCase()}_${reservaIdOriginal}_${reserva.alojamiento.replace(/\s+/g, '')}`;
         const reservaRef = db.collection('reservas').doc(idCompuesto);
+        const propiedadId = propiedadIdDesdeReserva({ alojamiento: reserva.alojamiento });
 
         const dataToSave = {
             reservaIdOriginal,
@@ -53,6 +60,7 @@ async function createManualReservation(db, data) {
             totalNoches: totalNoches > 0 ? totalNoches : 1,
             invitados: propuesta.personas,
             alojamiento: reserva.alojamiento,
+            propiedadId,
             valorPotencialCLP: valorPotencialCLP,
             valorPotencialUSD: isBooking ? valorPotencialUSD : null,
             valorCLP: valorFinalCLP,
@@ -69,13 +77,16 @@ async function createManualReservation(db, data) {
             abono: 0,
             pagado: false,
             boleta: false,
-            pendiente: valorFinalCLP
+            pendiente: valorFinalCLP,
+            rezervaSync: syncPendienteInicial(),
         };
 
         batch.set(reservaRef, dataToSave);
+        creadas.push(idCompuesto);
     }
 
     await batch.commit();
+    avisarAltasGestor(db, creadas);
     return reservaIdOriginal;
 }
 

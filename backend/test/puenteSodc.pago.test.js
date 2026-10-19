@@ -1,5 +1,5 @@
 const assert = require('assert');
-const { validarPagoDesdeRezerva } = require('../services/puenteSodc.pago');
+const { validarPagoDesdeRezerva, validarBajaPagoDesdeRezerva } = require('../services/puenteSodc.pago');
 
 const ok = validarPagoDesdeRezerva({
     origenId: 'APP_APP-1792411118675_Cabaña7',
@@ -37,6 +37,16 @@ assert.throws(() => validarPagoDesdeRezerva({
     medioDePago: 'Transferencia',
     tipo: 'Pago Final',
     fecha: '2026-10-19',
+}), /datos_invalidos/);
+
+const baja = validarBajaPagoDesdeRezerva({
+    origenId: 'APP_APP-1792411118675_Cabaña7',
+    origenPagoId: 'rzv_abono_0001',
+});
+assert.strictEqual(baja.origenPagoId, 'rzv_abono_0001');
+assert.throws(() => validarBajaPagoDesdeRezerva({
+    origenId: 'APP_APP-1_Cabaña7',
+    origenPagoId: 'ab',
 }), /datos_invalidos/);
 
 console.log('puenteSodc.pago.test ok');

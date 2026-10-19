@@ -81,7 +81,50 @@ async function aplicarPagoDesdeRezerva(db, body) {
     };
 }
 
+function validarBajaPagoDesdeRezerva(body) {
+    if (!body || typeof body !== 'object') throw datoInvalido();
+    const origenId = String(body.origenId || '').trim();
+    const origenPagoId = String(body.origenPagoId || '').trim();
+    if (!origenId || origenId.length > 120) throw datoInvalido();
+    if (!/^[A-Za-z0-9_-]{4,80}$/.test(origenPagoId)) throw datoInvalido();
+    return { origenId, origenPagoId };
+}
+
+/**
+ * Borra un abono que Rezerva ya eliminó.
+ * Idempotente si el doc no está. No cambia estado. No reenvía a Rezerva.
+ */
+async function aplicarBajaPagoDesdeRezerva(db, body) {
+    const data = validarBajaPagoDesdeRezerva(body);
+    const reservaRef = db.collection('reservas').doc(data.origenId);
+    const reservaSnap = await reservaRef.get();
+    if (!reservaSnap.exists) throw noEncontrado();
+
+    const txRef = reservaRef.collection('transacciones').doc(data.origenPagoId);
+    const txSnap = await txRef.get();
+    if (!txSnap.exists) {
+        return { ok: true, ya_ausente: true, origenId: data.origenId, origenPagoId: data.origenPagoId };
+    }
+
+    await txRef.delete();
+    const txs = await reservaRef.collection('transacciones').get();
+    const totalAbonado = txs.docs.reduce((sum, doc) => sum + (Number(doc.data().monto) || 0), 0);
+    await reservaRef.update({
+        abono: totalAbonado,
+        fechaUltimoPuentePago: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    return {
+        ok: true,
+        eliminado: true,
+        origenId: data.origenId,
+        origenPagoId: data.origenPagoId,
+        abono: totalAbonado,
+    };
+}
+
 module.exports = {
     validarPagoDesdeRezerva,
     aplicarPagoDesdeRezerva,
+    validarBajaPagoDesdeRezerva,
+    aplicarBajaPagoDesdeRezerva,
 };

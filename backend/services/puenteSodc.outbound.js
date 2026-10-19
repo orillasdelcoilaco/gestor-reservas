@@ -2,10 +2,6 @@ const https = require('https');
 const { puenteActivo, secretoEsperado, origenRezerva } = require('./puenteSodc.auth');
 const { cleanCabanaName } = require('../utils/helpers');
 
-const EXCLUIDAS_ALTA = new Set([
-    'APP_APP-1792024232886_Cabaña10',
-]);
-
 const BACKOFF_MS = [
     60 * 1000,
     5 * 60 * 1000,
@@ -50,7 +46,7 @@ function syncPendienteInicial() {
 }
 
 function debeOmitirAlta(reservaId, data) {
-    if (!reservaId || EXCLUIDAS_ALTA.has(reservaId)) return true;
+    if (!reservaId) return true;
     if (data && data.puenteSodc === true) return true;
     return false;
 }
@@ -253,7 +249,6 @@ function avisarAltasGestor(db, reservaIds) {
 }
 
 module.exports = {
-    EXCLUIDAS_ALTA,
     propiedadIdDesdeReserva,
     syncPendienteInicial,
     debeOmitirAlta,

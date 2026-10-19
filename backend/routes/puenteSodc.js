@@ -5,6 +5,7 @@ const { consultarDisponibilidad } = require('../services/puenteSodc.disponibilid
 const { aplicarEstadoDesdeRezerva } = require('../services/puenteSodc.estado');
 const { aplicarPagoDesdeRezerva, aplicarBajaPagoDesdeRezerva } = require('../services/puenteSodc.pago');
 const { aplicarNotaDesdeRezerva } = require('../services/puenteSodc.nota');
+const { aplicarDocumentoDesdeRezerva } = require('../services/puenteSodc.documento');
 
 const hits = new Map();
 const hitsDisponibilidad = new Map();
@@ -12,6 +13,7 @@ const hitsEstado = new Map();
 const hitsPago = new Map();
 const hitsBajaPago = new Map();
 const hitsNota = new Map();
+const hitsDocumento = new Map();
 
 function limitado(ip, mapa = hits, max = 30) {
     const now = Date.now();
@@ -107,6 +109,28 @@ module.exports = (db) => {
             const mensaje = status === 404
                 ? 'reserva_no_encontrada'
                 : (status >= 500 ? 'No se pudo registrar la nota.' : 'datos_invalidos');
+            res.status(status).json({ error: mensaje });
+        }
+    });
+
+    router.post('/documento', async (req, res) => {
+        if (!puenteActivo()) return res.status(404).json({ error: 'No disponible.' });
+        const ip = String(req.ip || '0');
+        if (!limitado(ip, hitsDocumento, 60)) {
+            return res.status(429).json({ error: 'Demasiados intentos.' });
+        }
+        if (!secretoCoincide(req.get('X-Puente-Secreto'))) {
+            return res.status(401).json({ error: 'No autorizado.' });
+        }
+        try {
+            const result = await aplicarDocumentoDesdeRezerva(db, req.body || {});
+            res.status(200).json(result);
+        } catch (error) {
+            const status = Number(error.statusCode) || 500;
+            if (status >= 500) console.error('puente sodc documento inbound:', error.message);
+            const mensaje = status === 404
+                ? 'reserva_no_encontrada'
+                : (status >= 500 ? 'No se pudo actualizar el documento.' : 'datos_invalidos');
             res.status(status).json({ error: mensaje });
         }
     });

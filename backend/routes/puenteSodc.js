@@ -3,10 +3,12 @@ const { puenteActivo, secretoCoincide } = require('../services/puenteSodc.auth')
 const { crearDesdeSodc } = require('../services/puenteSodc.write');
 const { consultarDisponibilidad } = require('../services/puenteSodc.disponibilidad');
 const { aplicarEstadoDesdeRezerva } = require('../services/puenteSodc.estado');
+const { aplicarPagoDesdeRezerva } = require('../services/puenteSodc.pago');
 
 const hits = new Map();
 const hitsDisponibilidad = new Map();
 const hitsEstado = new Map();
+const hitsPago = new Map();
 
 function limitado(ip, mapa = hits, max = 30) {
     const now = Date.now();
@@ -58,6 +60,28 @@ module.exports = (db) => {
             const mensaje = status === 404
                 ? 'reserva_no_encontrada'
                 : (status >= 500 ? 'No se pudo actualizar el estado.' : 'datos_invalidos');
+            res.status(status).json({ error: mensaje });
+        }
+    });
+
+    router.post('/pago', async (req, res) => {
+        if (!puenteActivo()) return res.status(404).json({ error: 'No disponible.' });
+        const ip = String(req.ip || '0');
+        if (!limitado(ip, hitsPago, 60)) {
+            return res.status(429).json({ error: 'Demasiados intentos.' });
+        }
+        if (!secretoCoincide(req.get('X-Puente-Secreto'))) {
+            return res.status(401).json({ error: 'No autorizado.' });
+        }
+        try {
+            const result = await aplicarPagoDesdeRezerva(db, req.body || {});
+            res.status(200).json(result);
+        } catch (error) {
+            const status = Number(error.statusCode) || 500;
+            if (status >= 500) console.error('puente sodc pago inbound:', error.message);
+            const mensaje = status === 404
+                ? 'reserva_no_encontrada'
+                : (status >= 500 ? 'No se pudo registrar el pago.' : 'datos_invalidos');
             res.status(status).json({ error: mensaje });
         }
     });

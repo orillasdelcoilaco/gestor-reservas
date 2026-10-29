@@ -12,48 +12,89 @@ function noEncontrado() {
     return err;
 }
 
+function enlaceComprobanteValido(value) {
+    const url = String(value || '').trim();
+    if (!url || url === 'SIN_DOCUMENTO') return null;
+    if (!/^https:\/\/[^\s]{1,500}$/i.test(url)) return null;
+    return url.slice(0, 500);
+}
+
+function textoOpcional(value, max) {
+    if (value === undefined || value === null || value === '') return null;
+    const text = String(value).trim();
+    if (!text || text.length > max) throw datoInvalido();
+    return text;
+}
+
 function validarPagoDesdeRezerva(body) {
     if (!body || typeof body !== 'object') throw datoInvalido();
 
-    const origenId = String(body.origenId || '').trim();
-    const origenPagoId = String(body.origenPagoId || '').trim();
+    const origenId = textoOpcional(body.origenId, 120);
+    const reservaId = textoOpcional(body.reservaId, 80);
+    const reservaIdOriginal = textoOpcional(body.reservaIdOriginal, 80);
+    const empresaId = textoOpcional(body.empresaId, 80);
     const medioDePago = String(body.medioDePago || '').trim();
     const tipo = String(body.tipo || '').trim();
     const fecha = String(body.fecha || '').trim();
     const monto = Number(body.monto);
+    const enlaceComprobante = enlaceComprobanteValido(body.enlaceComprobante);
 
-    if (!origenId || origenId.length > 120) throw datoInvalido();
-    if (!/^[A-Za-z0-9_-]{4,80}$/.test(origenPagoId)) throw datoInvalido();
+    if (!origenId && !reservaId && !reservaIdOriginal) throw datoInvalido();
+    if (!/^[A-Za-z0-9_-]{4,80}$/.test(String(body.origenPagoId || '').trim())) throw datoInvalido();
     if (!Number.isInteger(monto) || monto < 1 || monto > 100000000) throw datoInvalido();
     if (!medioDePago || medioDePago.length > 80) throw datoInvalido();
     if (tipo !== 'Abono') throw datoInvalido();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) throw datoInvalido();
 
-    return { origenId, origenPagoId, monto, medioDePago, tipo, fecha };
+    return {
+        origenId,
+        reservaId,
+        reservaIdOriginal,
+        empresaId,
+        origenPagoId: String(body.origenPagoId).trim(),
+        monto,
+        medioDePago,
+        tipo,
+        fecha,
+        enlaceComprobante,
+    };
 }
 
-/**
- * Registra un abono nacido en Rezerva.
- * Idempotente por origenPagoId. No cambia estado/estadoGestion. No reenvía a Rezerva.
- */
-async function aplicarPagoDesdeRezerva(db, body) {
-    const data = validarPagoDesdeRezerva(body);
-    const reservaRef = db.collection('reservas').doc(data.origenId);
-    const reservaSnap = await reservaRef.get();
-    if (!reservaSnap.exists) throw noEncontrado();
+async function buscarReservasPago(db, data) {
+    if (data.origenId) {
+        const snap = await db.collection('reservas').doc(data.origenId).get();
+        return snap.exists ? [snap] : [];
+    }
+    if (data.reservaId) {
+        let query = db.collection('reservas').where('rezervaReservaId', '==', data.reservaId);
+        if (data.empresaId) query = query.where('empresaId', '==', data.empresaId);
+        const snap = await query.limit(20).get();
+        if (!snap.empty) return snap.docs;
+    }
+    if (data.reservaIdOriginal) {
+        const snap = await db.collection('reservas')
+            .where('reservaIdOriginal', '==', data.reservaIdOriginal)
+            .limit(20)
+            .get();
+        return snap.docs;
+    }
+    return [];
+}
 
+async function aplicarPagoEnReserva(reservaRef, data) {
     const txRef = reservaRef.collection('transacciones').doc(data.origenPagoId);
     const txSnap = await txRef.get();
     if (txSnap.exists) {
-        return {
-            ok: true,
-            ya_registrado: true,
-            origenId: data.origenId,
-            origenPagoId: data.origenPagoId,
-        };
+        const prev = txSnap.data() || {};
+        const prevUrl = String(prev.enlaceComprobante || '').trim();
+        if (data.enlaceComprobante && (!prevUrl || prevUrl === 'SIN_DOCUMENTO')) {
+            await txRef.set({ enlaceComprobante: data.enlaceComprobante }, { merge: true });
+            return { ya_registrado: true, comprobante_actualizado: true };
+        }
+        return { ya_registrado: true, comprobante_actualizado: false };
     }
 
-    const batch = db.batch();
+    const batch = dbBatchFor(reservaRef);
     batch.set(txRef, {
         monto: data.monto,
         medioDePago: data.medioDePago,
@@ -61,7 +102,7 @@ async function aplicarPagoDesdeRezerva(db, body) {
         fecha: admin.firestore.Timestamp.fromDate(new Date(`${data.fecha}T00:00:00Z`)),
         origenPagoId: data.origenPagoId,
         puenteDesdeRezerva: true,
-        enlaceComprobante: null,
+        enlaceComprobante: data.enlaceComprobante,
     });
 
     const txs = await reservaRef.collection('transacciones').get();
@@ -70,24 +111,65 @@ async function aplicarPagoDesdeRezerva(db, body) {
         abono: totalAbonado,
         fechaUltimoPuentePago: admin.firestore.FieldValue.serverTimestamp(),
     });
-
     await batch.commit();
+    return { registrado: true, abono: totalAbonado };
+}
+
+function dbBatchFor(reservaRef) {
+    return reservaRef.firestore.batch();
+}
+
+/**
+ * Registra un abono nacido en Rezerva.
+ * Idempotente por origenPagoId. No cambia estado/estadoGestion. No reenvía a Rezerva.
+ * Acepta origenId (doc gestor) o reservaId/reservaIdOriginal como el aviso de estado.
+ */
+async function aplicarPagoDesdeRezerva(db, body) {
+    const data = validarPagoDesdeRezerva(body);
+    const docs = await buscarReservasPago(db, data);
+    if (!docs.length) throw noEncontrado();
+
+    let registrado = false;
+    let comprobanteActualizado = false;
+    let abono = null;
+    const ids = [];
+    for (const doc of docs) {
+        const result = await aplicarPagoEnReserva(doc.ref, data);
+        ids.push(doc.id);
+        if (result.registrado) {
+            registrado = true;
+            abono = result.abono;
+        }
+        if (result.comprobante_actualizado) comprobanteActualizado = true;
+    }
+
     return {
         ok: true,
-        registrado: true,
-        origenId: data.origenId,
+        registrado,
+        ya_registrado: !registrado,
+        comprobante_actualizado: comprobanteActualizado,
+        origenId: data.origenId || ids[0] || null,
         origenPagoId: data.origenPagoId,
-        abono: totalAbonado,
+        ids,
+        abono,
     };
 }
 
 function validarBajaPagoDesdeRezerva(body) {
     if (!body || typeof body !== 'object') throw datoInvalido();
-    const origenId = String(body.origenId || '').trim();
+    const origenId = textoOpcional(body.origenId, 120);
+    const reservaId = textoOpcional(body.reservaId, 80);
+    const reservaIdOriginal = textoOpcional(body.reservaIdOriginal, 80);
     const origenPagoId = String(body.origenPagoId || '').trim();
-    if (!origenId || origenId.length > 120) throw datoInvalido();
+    if (!origenId && !reservaId && !reservaIdOriginal) throw datoInvalido();
     if (!/^[A-Za-z0-9_-]{4,80}$/.test(origenPagoId)) throw datoInvalido();
-    return { origenId, origenPagoId };
+    return {
+        origenId,
+        reservaId,
+        reservaIdOriginal,
+        empresaId: textoOpcional(body.empresaId, 80),
+        origenPagoId,
+    };
 }
 
 /**
@@ -96,29 +178,32 @@ function validarBajaPagoDesdeRezerva(body) {
  */
 async function aplicarBajaPagoDesdeRezerva(db, body) {
     const data = validarBajaPagoDesdeRezerva(body);
-    const reservaRef = db.collection('reservas').doc(data.origenId);
-    const reservaSnap = await reservaRef.get();
-    if (!reservaSnap.exists) throw noEncontrado();
+    const docs = await buscarReservasPago(db, data);
+    if (!docs.length) throw noEncontrado();
 
-    const txRef = reservaRef.collection('transacciones').doc(data.origenPagoId);
-    const txSnap = await txRef.get();
-    if (!txSnap.exists) {
-        return { ok: true, ya_ausente: true, origenId: data.origenId, origenPagoId: data.origenPagoId };
+    let eliminado = false;
+    let abono = 0;
+    for (const doc of docs) {
+        const txRef = doc.ref.collection('transacciones').doc(data.origenPagoId);
+        const txSnap = await txRef.get();
+        if (txSnap.exists) {
+            await txRef.delete();
+            eliminado = true;
+        }
+        const txs = await doc.ref.collection('transacciones').get();
+        abono = txs.docs.reduce((sum, row) => sum + (Number(row.data().monto) || 0), 0);
+        await doc.ref.update({
+            abono,
+            fechaUltimoPuentePago: admin.firestore.FieldValue.serverTimestamp(),
+        });
     }
-
-    await txRef.delete();
-    const txs = await reservaRef.collection('transacciones').get();
-    const totalAbonado = txs.docs.reduce((sum, doc) => sum + (Number(doc.data().monto) || 0), 0);
-    await reservaRef.update({
-        abono: totalAbonado,
-        fechaUltimoPuentePago: admin.firestore.FieldValue.serverTimestamp(),
-    });
     return {
         ok: true,
-        eliminado: true,
-        origenId: data.origenId,
+        eliminado,
+        ya_ausente: !eliminado,
+        origenId: data.origenId || docs[0].id,
         origenPagoId: data.origenPagoId,
-        abono: totalAbonado,
+        abono,
     };
 }
 

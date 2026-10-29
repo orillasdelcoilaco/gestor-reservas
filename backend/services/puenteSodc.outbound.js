@@ -115,6 +115,13 @@ function payloadAlta(reservaId, data) {
     const propiedadId = propiedadIdDesdeReserva(data);
     const total = Math.round(Number(data.valorCLP) || 0);
     const abono = Math.round(Number(data.abono) || 0);
+    const monedaOriginal = String(data.monedaOriginal || '').trim().toUpperCase() === 'USD' ? 'USD' : 'CLP';
+    const valorOriginalRaw = Number(
+        monedaOriginal === 'USD'
+            ? (data.valorFinalUSD || data.valorOriginal || data.valorPotencialUSD || 0)
+            : (data.valorOriginal || total)
+    );
+    const valorDolarDiaRaw = Number(data.valorDolarDia || data.valorDolarFacturacion || 0);
     return {
         origenId: reservaId,
         reservaIdOriginal: data.reservaIdOriginal || reservaId,
@@ -130,6 +137,11 @@ function payloadAlta(reservaId, data) {
         estadoGestion: data.estadoGestion || '',
         pagado: !!data.pagado,
         canal: data.canal || '',
+        monedaOriginal,
+        valorOriginal: Number.isFinite(valorOriginalRaw) ? valorOriginalRaw : total,
+        valorDolarDia: Number.isFinite(valorDolarDiaRaw) && valorDolarDiaRaw > 0 ? valorDolarDiaRaw : null,
+        comision: Math.round(Number(data.comision) || 0) || 0,
+        precioIncluyeIva: data.precioIncluyeIva !== false,
         huesped: {
             nombre: data.clienteNombre || '',
             email: data.correo || '',

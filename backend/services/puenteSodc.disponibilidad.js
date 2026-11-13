@@ -1,4 +1,4 @@
-const { cleanCabanaName } = require('../utils/helpers');
+const { cleanCabanaName, nombreCabanaDesdeId } = require('../utils/helpers');
 
 const NOCHES_MAX = 120;
 
@@ -38,14 +38,6 @@ function validarConsulta(body) {
     const noches = nochesEntre(body.desde, body.hasta);
     if (noches < 1 || noches > NOCHES_MAX) throw datosInvalidos();
     return { empresaId, alojamientoId, desde: body.desde, hasta: body.hasta };
-}
-
-function nombreCabanaDesdeId(alojamientoId) {
-    const match = String(alojamientoId || '').match(/^cabana-?(\d{1,2})$/);
-    if (!match) return '';
-    const numero = Number(match[1]);
-    if (numero < 1) return '';
-    return `Cabaña ${numero}`;
 }
 
 function bloqueaCalendario(estado) {

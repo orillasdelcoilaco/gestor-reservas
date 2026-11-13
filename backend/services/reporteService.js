@@ -1,4 +1,18 @@
 const admin = require('firebase-admin');
+const { cleanCabanaName, nombreCabanaDesdeId } = require('../utils/helpers');
+
+function reservaDeCabana(reserva, nombreCabana) {
+    const canon = nombreCabanaDesdeId(reserva && reserva.propiedadId);
+    if (canon && canon.toLowerCase() === String(nombreCabana || '').toLowerCase()) return true;
+    const alojamiento = cleanCabanaName(String(reserva && reserva.alojamiento || ''));
+    return alojamiento.toLowerCase() === String(nombreCabana || '').toLowerCase();
+}
+
+function instante(value) {
+    if (!value || typeof value.toDate !== 'function') return null;
+    const date = value.toDate();
+    return Number.isNaN(date.getTime()) ? null : date;
+}
 
 /**
  * Obtiene un resumen de la actividad diaria (llegadas, estadías, libres).
@@ -8,7 +22,6 @@ const admin = require('firebase-admin');
  */
 async function getActividadDiaria(db, fechaStr) {
     const fecha = new Date(fechaStr + 'T00:00:00Z');
-    const fechaTimestamp = admin.firestore.Timestamp.fromDate(fecha);
 
     const [cabanasSnapshot, reservasSnapshot] = await Promise.all([
         db.collection('cabanas').orderBy('nombre', 'asc').get(),
@@ -16,20 +29,16 @@ async function getActividadDiaria(db, fechaStr) {
     ]);
 
     const cabanas = cabanasSnapshot.docs.map(doc => doc.data());
+    const reservas = reservasSnapshot.docs
+        .map(d => d.data())
+        .filter(r => instante(r.fechaLlegada) && instante(r.fechaSalida));
     const reporte = [];
 
     for (const cabana of cabanas) {
-        const llegadaHoy = reservasSnapshot.docs
-            .map(d => d.data())
-            .find(r => r.alojamiento === cabana.nombre && r.fechaLlegada.toDate().getTime() === fecha.getTime());
-
-        const salidaHoy = reservasSnapshot.docs
-            .map(d => d.data())
-            .find(r => r.alojamiento === cabana.nombre && r.fechaSalida.toDate().getTime() === fecha.getTime());
-
-        const enEstadia = reservasSnapshot.docs
-            .map(d => d.data())
-            .find(r => r.alojamiento === cabana.nombre && r.fechaLlegada.toDate() < fecha && r.fechaSalida.toDate() > fecha);
+        const deEsta = reservas.filter(r => reservaDeCabana(r, cabana.nombre));
+        const llegadaHoy = deEsta.find(r => instante(r.fechaLlegada).getTime() === fecha.getTime());
+        const salidaHoy = deEsta.find(r => instante(r.fechaSalida).getTime() === fecha.getTime());
+        const enEstadia = deEsta.find(r => instante(r.fechaLlegada) < fecha && instante(r.fechaSalida) > fecha);
 
         const cabanaInfo = { cabana: cabana.nombre };
 
@@ -57,17 +66,12 @@ async function getActividadDiaria(db, fechaStr) {
         }
 
         if (!llegadaHoy && !salidaHoy && !enEstadia) {
-            const proximaReservaSnapshot = await db.collection('reservas')
-                .where('alojamiento', '==', cabana.nombre)
-                .where('estado', '==', 'Confirmada')
-                .where('fechaLlegada', '>=', fechaTimestamp)
-                .orderBy('fechaLlegada', 'asc')
-                .limit(1)
-                .get();
+            const proxima = deEsta
+                .filter(r => instante(r.fechaLlegada).getTime() >= fecha.getTime())
+                .sort((a, b) => instante(a.fechaLlegada) - instante(b.fechaLlegada))[0];
 
-            if (!proximaReservaSnapshot.empty) {
-                const proxima = proximaReservaSnapshot.docs[0].data();
-                const diasFaltantes = Math.ceil((proxima.fechaLlegada.toDate() - fecha) / (1000 * 60 * 60 * 24));
+            if (proxima) {
+                const diasFaltantes = Math.ceil((instante(proxima.fechaLlegada) - fecha) / (1000 * 60 * 60 * 24));
                 cabanaInfo.proxima = {
                     fecha: proxima.fechaLlegada.toDate().toLocaleDateString('es-CL', { timeZone: 'UTC' }),
                     diasFaltantes: diasFaltantes,
@@ -121,7 +125,7 @@ async function getDisponibilidadPeriodo(db, fechaInicioStr, fechaFinStr, exactas
 
         const reservasDeCabana = reservasSnapshot.docs
             .map(doc => doc.data())
-            .filter(r => r.alojamiento === cabana.nombre && r.fechaLlegada.toDate() < fechaFin)
+            .filter(r => reservaDeCabana(r, cabana.nombre) && instante(r.fechaLlegada) && instante(r.fechaLlegada) < fechaFin)
             .sort((a, b) => a.fechaLlegada.toDate() - b.fechaLlegada.toDate());
 
         const periodosDisponibles = [];

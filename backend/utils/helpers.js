@@ -26,6 +26,15 @@ function cleanCabanaName(cabanaName) {
     return trimmed;
 }
 
+/** `cabana10` y `cabana-10` son la cabaña que el gestor llama "Cabaña 10". */
+function nombreCabanaDesdeId(alojamientoId) {
+    const match = String(alojamientoId || '').match(/^cabana-?(\d{1,2})$/);
+    if (!match) return '';
+    const numero = Number(match[1]);
+    if (numero < 1) return '';
+    return `Cabaña ${numero}`;
+}
+
 /**
  * Parsea diferentes formatos de fecha a un objeto Date de JavaScript.
  */
@@ -76,6 +85,7 @@ function parseCurrency(value, currency = 'USD') {
 module.exports = {
   cleanPhoneNumber,
   cleanCabanaName,
+  nombreCabanaDesdeId,
   parseDate,
   parseCurrency
 };

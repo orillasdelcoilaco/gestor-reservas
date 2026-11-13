@@ -6,6 +6,7 @@ const { updateClientMaster } = require('../services/clienteService');
 const { createManualReservation } = require('../services/reservaService');
 const { getAvailabilityData } = require('../services/presupuestoService');
 const { reflejarEstadoEnRezerva } = require('../services/puenteSodc.status');
+const { nombreCabanaDesdeId } = require('../utils/helpers');
 const {
     avisarAltaGestor,
     avisarAltasGestor,
@@ -306,7 +307,7 @@ module.exports = (db) => {
                         title: uniqueTitle,
                         start: data.fechaLlegada.toDate().toISOString().split('T')[0],
                         end: fechaSalida.toISOString().split('T')[0],
-                        resourceId: data.alojamiento,
+                        resourceId: nombreCabanaDesdeId(data.propiedadId) || data.alojamiento,
                         extendedProps: {
                             canal: data.canal,
                             reservaIdOriginal: data.reservaIdOriginal

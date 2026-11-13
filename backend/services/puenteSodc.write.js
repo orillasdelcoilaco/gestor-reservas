@@ -1,6 +1,6 @@
 const admin = require('firebase-admin');
 const { findOrCreateClient } = require('./clienteService');
-const { cleanPhoneNumber, cleanCabanaName } = require('../utils/helpers');
+const { cleanPhoneNumber, cleanCabanaName, nombreCabanaDesdeId } = require('../utils/helpers');
 
 function datoInvalido() {
     const err = new Error('datos_invalidos');
@@ -55,7 +55,7 @@ function validarAlta(body) {
     const vistos = new Set();
     const alojamientos = body.alojamientos.map((row) => {
         const id = String(row?.id || '');
-        const nombreCabana = cleanCabanaName(String(row?.nombre || '')).slice(0, 80);
+        const nombreCabana = (nombreCabanaDesdeId(id) || cleanCabanaName(String(row?.nombre || ''))).slice(0, 80);
         if (!/^[a-z0-9-]{1,64}$/.test(id) || !nombreCabana || vistos.has(id)) throw datoInvalido();
         if (!entero(row.total, 0, body.total) || !entero(row.abono, 0, row.total)) throw datoInvalido();
         const valorOriginalRaw = Number(row.valorOriginal);

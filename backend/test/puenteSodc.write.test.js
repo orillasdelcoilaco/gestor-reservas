@@ -45,4 +45,25 @@ const sitio = validarAlta({
 assert.strictEqual(sitio.canal, 'SODC');
 assert.strictEqual(sitio.monedaOriginal, 'CLP');
 
+const publico = validarAlta({
+    ...base,
+    reservaId: 'ssr-12112026-001',
+    canal: 'SODC',
+    monedaOriginal: 'CLP',
+    valorDolarDia: undefined,
+    total: 180000,
+    abono: 18000,
+    llegada: '2026-11-14',
+    salida: '2026-11-15',
+    noches: 1,
+    personas: 2,
+    alojamientos: [{
+        id: 'cabana10',
+        nombre: 'Cabaña 10 con Tinaja en Pucón para 8',
+        total: 180000,
+        abono: 18000,
+    }],
+});
+assert.strictEqual(publico.alojamientos[0].nombre, 'Cabaña 10');
+
 console.log('puenteSodc.write.test ok');

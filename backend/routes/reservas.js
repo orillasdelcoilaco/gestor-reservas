@@ -148,6 +148,7 @@ module.exports = (db) => {
             const datosActualizados = req.body;
             const reservaRef = db.collection('reservas').doc(id);
 
+            const cambioManualFechas = Boolean(datosActualizados.fechaLlegada || datosActualizados.fechaSalida);
             if (datosActualizados.fechaLlegada) {
                 datosActualizados.fechaLlegada = admin.firestore.Timestamp.fromDate(new Date(datosActualizados.fechaLlegada + 'T00:00:00Z'));
             }
@@ -159,8 +160,15 @@ module.exports = (db) => {
             const payload = { ...datosActualizados };
             const omitir = actual.exists && actual.data().puenteSodc === true;
             if (!omitir) payload.rezervaSync = syncPendienteInicial();
+            if (cambioManualFechas) {
+                payload.modificacionManual = {
+                    ok: true,
+                    at: new Date().toISOString(),
+                    origen: 'gestor',
+                };
+            }
             await reservaRef.update(payload);
-            if (!omitir) avisarAltaGestor(db, id);
+            if (!omitir) avisarAltaGestor(db, id, { manual: cambioManualFechas });
             res.status(200).json({ message: 'Reserva actualizada correctamente.' });
         } catch (error) {
             console.error("Error al actualizar la reserva:", error);

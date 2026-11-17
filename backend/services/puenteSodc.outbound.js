@@ -168,7 +168,7 @@ function payloadPago(reservaId, txId, reservaData, txData) {
     };
 }
 
-async function enviarAltaGestor(db, reservaId) {
+async function enviarAltaGestor(db, reservaId, opciones = {}) {
     if (!puenteActivo()) return;
     const ref = db.collection('reservas').doc(reservaId);
     const snap = await ref.get();
@@ -185,6 +185,7 @@ async function enviarAltaGestor(db, reservaId) {
     }
 
     const body = payloadAlta(reservaId, data);
+    if (opciones.manual === true) body.manual = true;
     if (!body.propiedadId || !body.llegada || !body.salida) {
         await marcarSync(ref, prev, false, 'payload_invalido');
         return;
@@ -243,9 +244,9 @@ async function enviarPagoGestor(db, reservaId, txId) {
     }
 }
 
-function avisarAltaGestor(db, reservaId) {
+function avisarAltaGestor(db, reservaId, opciones) {
     Promise.resolve()
-        .then(() => enviarAltaGestor(db, reservaId))
+        .then(() => enviarAltaGestor(db, reservaId, opciones))
         .catch((error) => console.error('puente alta-gestor:', reservaId, error.message));
 }
 
